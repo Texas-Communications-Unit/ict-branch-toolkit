@@ -838,9 +838,8 @@ components:
           nullable: true
         bandwidth_hz:
           type: integer
-          maximum: 9223372036854775807
+          maximum: 2147483647
           minimum: 0
-          format: int64
           nullable: true
         mode:
           $ref: '#/components/schemas/ModeEnum'
@@ -920,9 +919,8 @@ components:
           nullable: true
         bandwidth_hz:
           type: integer
-          maximum: 9223372036854775807
+          maximum: 2147483647
           minimum: 0
-          format: int64
           nullable: true
         mode:
           $ref: '#/components/schemas/ModeEnum'
