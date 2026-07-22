@@ -1,0 +1,48 @@
+name: Implementation task
+description: Define a bounded engineering, documentation, security, or operations task
+title: "task: "
+labels: ["ai:managed", "status:triage"]
+assignees: ["KD7CAO"]
+type: task
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not include real incident data, protected channel information, credentials, personal information, private endpoints, or operational connection details.
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Required outcome
+      description: State the observable result, not only the implementation idea.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: Use a short checklist when possible.
+    validations:
+      required: true
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: Dependencies and relationships
+      description: Link blocking, blocked, parent, sub-issue, or related work.
+  - type: textarea
+    id: verification
+    attributes:
+      label: Required verification
+      description: Identify tests, reviews, or evidence expected before completion.
+    validations:
+      required: true
+  - type: dropdown
+    id: risk
+    attributes:
+      label: Risk level
+      options:
+        - Low - reversible and isolated
+        - Moderate - cross-component or operational effect
+        - High - security, data, legal, RF, release, or deployment effect
+      default: 0
+    validations:
+      required: true

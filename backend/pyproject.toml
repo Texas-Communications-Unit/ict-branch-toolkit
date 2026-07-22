@@ -1,0 +1,47 @@
+[build-system]
+requires = ["hatchling==1.27.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "ict-branch-toolkit-backend"
+version = "0.1.0"
+description = "Backend API for ICT Branch Toolkit"
+requires-python = ">=3.12,<3.14"
+license = { text = "AGPL-3.0-only" }
+dependencies = [
+  "Django==5.2.16",
+  "django-cors-headers==4.9.0",
+  "djangorestframework==3.17.1",
+  "drf-spectacular==0.30.0",
+  "dj-database-url==3.0.1",
+  "gunicorn==23.0.0",
+  "psycopg[binary]==3.3.4",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pip-audit==2.10.0",
+  "pytest==9.0.3",
+  "pytest-django==4.12.0",
+  "pytest-cov==7.0.0",
+  "ruff==0.13.2",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["config", "apps"]
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.settings"
+python_files = ["test_*.py"]
+addopts = "--strict-markers --disable-warnings --cov=apps --cov=config --cov-report=term-missing"
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "DJ", "UP"]
+ignore = ["DJ001"]
+
+[tool.ruff.lint.per-file-ignores]
+"**/migrations/*.py" = ["E501"]

@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security report
+    url: https://github.com/Texas-Communications-Unit/ict-branch-toolkit/security/advisories/new
+    about: Privately report vulnerabilities or concerns that cannot be demonstrated safely with synthetic data.

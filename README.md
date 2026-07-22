@@ -2,7 +2,7 @@
 
 ICT Branch Toolkit is an open-source web application for incident communications planning, radio-site mapping, coverage visualization, and frequency deconfliction. It is intended to support Communications Unit and Information and Communications Technology (ICT) Branch personnel during incidents, planned events, exercises, and pre-incident planning.
 
-> **Project status:** Initial design and requirements phase. No production-ready release is available yet.
+> **Project status:** P1.0 non-production prototype scaffold. No production-ready release is available yet, and the application must use synthetic data only.
 
 ## Vision
 
@@ -96,7 +96,65 @@ Future TAK support will be implemented through a replaceable interface. No agenc
 - **Secure by default:** Secrets, certificates, database dumps, uploads, and operational incident data must remain outside source control.
 - **Open source:** The project will be developed in public for reuse and improvement by the incident communications community.
 
-The implementation stack and installation procedure have not yet been selected. They will be documented after the architecture and first-release requirements are finalized.
+The P1.0 baseline is Django/GeoDjango and Django REST Framework, PostgreSQL/PostGIS, React/TypeScript/Vite, MapLibre GL JS, and Docker Compose. The decision and its boundaries are recorded in [ADR-0001](docs/adr/0001-application-architecture.md).
+
+## P1.0 quick start
+
+Prerequisites: Git, Docker Engine with Compose v2, and at least 4 GB of memory available to Docker.
+
+```sh
+cp .env.example .env
+docker compose up --build
+```
+
+Open <http://localhost:5173>. The local administrator credentials come from `.env`. Change the example password before use, even in a shared development environment.
+
+The backend API is at <http://localhost:8000/api/>, its OpenAPI UI is at <http://localhost:8000/api/docs/>, and the health endpoint is at <http://localhost:8000/api/health/>. A healthy PostgreSQL-backed response includes the detected PostGIS version.
+
+### Verification
+
+```sh
+make check
+docker compose config --quiet
+docker compose up --build --wait
+curl http://localhost:8000/api/health/
+```
+
+Without `make`, run the commands defined in the Makefile individually. Reset the local development database with `make reset`; this deletes only the Compose volume for this project and must not be used against an operational database.
+
+### Local non-container checks
+
+Backend tests intentionally support SQLite so contributors can run unit/API tests without PostGIS. Docker and CI remain authoritative for the PostGIS integration path.
+
+```sh
+cd backend
+python -m venv .venv
+. .venv/bin/activate
+pip install -e ".[dev]"
+pytest
+python manage.py makemigrations --check --dry-run
+python manage.py spectacular --file openapi.yaml --validate
+
+cd ../frontend
+corepack enable
+pnpm install --frozen-lockfile
+pnpm lint
+pnpm typecheck
+pnpm exec vitest run
+pnpm build
+pnpm exec playwright install chromium
+pnpm test:e2e
+```
+
+Windows PowerShell uses `.venv\Scripts\Activate.ps1` for virtual-environment activation.
+
+### Shared test deployment
+
+The shared synthetic-data test deployment uses a separate production Compose definition, a single configurable frontend port, and an external reverse proxy. Follow [the shared test deployment runbook](docs/operations/shared-test-deployment.md). It intentionally does not modify or share another application's database or document root.
+
+## P1.0 vertical slice
+
+The current slice provides token-based local authentication, administrator-only mutation, incident and operational-period creation, an authenticated incident list, an offline-safe MapLibre shell, PostGIS health verification, and synthetic automated tests. It does not yet implement channel libraries, ICS-205 revision control, site data, deconfliction, official exports, or production authentication hardening.
 
 ## Important limitations
 
