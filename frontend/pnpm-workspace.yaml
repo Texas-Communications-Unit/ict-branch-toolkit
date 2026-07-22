@@ -1,0 +1,2 @@
+minimumReleaseAgeExclude:
+  - maplibre-gl@6.0.0
