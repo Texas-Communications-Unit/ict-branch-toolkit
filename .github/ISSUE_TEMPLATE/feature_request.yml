@@ -1,7 +1,9 @@
 name: Feature request
 description: Propose a scoped improvement
 title: "feature: "
-labels: ["enhancement"]
+labels: ["enhancement", "ai:managed", "status:triage"]
+assignees: ["KD7CAO"]
+type: feature
 body:
   - type: textarea
     id: need
@@ -20,4 +22,16 @@ body:
     id: risks
     attributes:
       label: Security, policy, legal, RF, or data risks
-
+  - type: dropdown
+    id: phase
+    attributes:
+      label: Suggested roadmap phase
+      description: Maintainers make the final roadmap decision.
+      options:
+        - Phase 1 - Operational planning prototype
+        - Phase 2 - Calculated estimates and field calibration
+        - Phase 3 - Advanced operations
+        - Unassigned
+      default: 3
+    validations:
+      required: true

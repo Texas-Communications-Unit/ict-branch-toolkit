@@ -1,0 +1,176 @@
+name: Bootstrap issue management
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  bootstrap:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create lifecycle metadata and Phase 1 relationships
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const labelDefinitions = [
+              ['ai:managed', '1d76db', 'Issue participates in the AI-assisted work queue'],
+              ['ai:queued', 'd4c5f9', 'Trusted task input is waiting for Codex'],
+              ['ai:in-progress', '0052cc', 'Codex implementation is actively running'],
+              ['ai:assessed', '0e8a16', 'Codex posted a read-only task assessment'],
+              ['ai:review', '5319e7', 'Codex implementation is in a draft pull request'],
+              ['ai:failed', 'b60205', 'Automated Codex processing failed'],
+              ['status:triage', 'fbca04', 'Maintainer triage is required'],
+              ['status:ready', 'c2e0c6', 'Acceptance criteria and dependencies are ready'],
+              ['status:in-progress', '1d76db', 'Implementation is active'],
+              ['status:blocked', 'd93f0b', 'Work is blocked by another issue or decision'],
+              ['status:review', '0e8a16', 'Work is awaiting human review'],
+              ['needs:maintainer-review', 'f9d0c4', 'External input requires maintainer review'],
+              ['needs:human', 'd93f0b', 'A human decision or approval gate is required'],
+              ['phase:1', 'bfdadc', 'Phase 1 operational planning prototype'],
+              ['domain:backend', '0366d6', 'Backend or API work'],
+              ['domain:frontend', 'c5def5', 'Frontend or user experience work'],
+              ['domain:gis', '0e8a16', 'GIS, coordinate, map, or spatial work'],
+              ['domain:security', 'b60205', 'Security, privacy, authorization, or audit work'],
+              ['domain:documentation', '0075ca', 'Documentation or governance work'],
+              ['data:synthetic-only', 'ededed', 'Only synthetic or explicitly approved data is permitted'],
+            ];
+            for (const [name, color, description] of labelDefinitions) {
+              try {
+                await github.rest.issues.getLabel({ ...context.repo, name });
+                await github.rest.issues.updateLabel({
+                  ...context.repo, name, new_name: name, color, description,
+                });
+              } catch (error) {
+                if (error.status !== 404) throw error;
+                await github.rest.issues.createLabel({
+                  ...context.repo, name, color, description,
+                });
+              }
+            }
+
+            const milestones = await github.paginate(github.rest.issues.listMilestones, {
+              ...context.repo, state: 'all', per_page: 100,
+            });
+            const milestoneTitle = 'Phase 1 — Operational Planning Prototype';
+            let milestone = milestones.find(item => item.title === milestoneTitle);
+            if (!milestone) {
+              const created = await github.rest.issues.createMilestone({
+                ...context.repo,
+                title: milestoneTitle,
+                description: 'P1.0 through P1.6: foundation, operational planning, exports, and non-production release hardening.',
+              });
+              milestone = created.data;
+            }
+
+            let issues = await github.paginate(github.rest.issues.listForRepo, {
+              ...context.repo, state: 'all', per_page: 100,
+            });
+            issues = issues.filter(item => !item.pull_request);
+            const phaseIssues = issues
+              .filter(item => /^P1\.[1-6]:/.test(item.title))
+              .sort((a, b) => a.number - b.number);
+
+            const domainLabels = {
+              'P1.1': ['domain:backend', 'domain:security'],
+              'P1.2': ['domain:backend', 'domain:frontend', 'domain:documentation'],
+              'P1.3': ['domain:gis', 'domain:frontend'],
+              'P1.4': ['domain:backend', 'domain:security'],
+              'P1.5': ['domain:backend', 'domain:documentation'],
+              'P1.6': ['domain:security', 'domain:documentation'],
+            };
+
+            for (const issue of phaseIssues) {
+              await github.rest.issues.update({
+                ...context.repo,
+                issue_number: issue.number,
+                milestone: milestone.number,
+                assignees: ['KD7CAO'],
+              });
+              const labels = ['ai:managed', 'phase:1', 'data:synthetic-only'];
+              const phaseCode = issue.title.split(':', 1)[0];
+              labels.push(...(domainLabels[phaseCode] ?? []));
+              if (!issue.labels.some(label => (label.name ?? label) === 'status:triage')) {
+                labels.push('status:triage');
+              }
+              await github.rest.issues.addLabels({
+                ...context.repo, issue_number: issue.number, labels,
+              });
+            }
+
+            const parentTitle = 'Phase 1: Operational Planning Prototype';
+            let parent = issues.find(item => item.title === parentTitle);
+            if (!parent) {
+              const created = await github.rest.issues.create({
+                ...context.repo,
+                title: parentTitle,
+                body: [
+                  'Tracks the complete Phase 1 delivery sequence defined in `docs/requirements/phase-1.md`.',
+                  '',
+                  'Use the native sub-issue list for milestone progress and native dependencies for execution order. Completion requires human acceptance; AI assessment or a draft pull request is not acceptance.',
+                ].join('\n'),
+                assignees: ['KD7CAO'],
+                labels: ['ai:managed', 'phase:1', 'status:triage', 'data:synthetic-only'],
+                milestone: milestone.number,
+              });
+              parent = created.data;
+              issues.push(parent);
+            }
+
+            const existingChildren = await github.paginate(
+              'GET /repos/{owner}/{repo}/issues/{issue_number}/sub_issues',
+              { ...context.repo, issue_number: parent.number, per_page: 100 },
+            );
+            const childIds = new Set(existingChildren.map(item => item.id));
+            for (const issue of phaseIssues) {
+              if (childIds.has(issue.id)) continue;
+              try {
+                await github.request(
+                  'POST /repos/{owner}/{repo}/issues/{issue_number}/sub_issues',
+                  {
+                    ...context.repo,
+                    issue_number: parent.number,
+                    sub_issue_id: issue.id,
+                    headers: { 'X-GitHub-Api-Version': '2026-03-10' },
+                  },
+                );
+              } catch (error) {
+                if (error.status !== 422) throw error;
+              }
+            }
+
+            for (let index = 1; index < phaseIssues.length; index += 1) {
+              const current = phaseIssues[index];
+              const blocker = phaseIssues[index - 1];
+              const dependencies = await github.paginate(
+                'GET /repos/{owner}/{repo}/issues/{issue_number}/dependencies/blocked_by',
+                { ...context.repo, issue_number: current.number, per_page: 100 },
+              );
+              if (dependencies.some(item => item.id === blocker.id)) continue;
+              try {
+                await github.request(
+                  'POST /repos/{owner}/{repo}/issues/{issue_number}/dependencies/blocked_by',
+                  {
+                    ...context.repo,
+                    issue_number: current.number,
+                    issue_id: blocker.id,
+                    headers: { 'X-GitHub-Api-Version': '2026-03-10' },
+                  },
+                );
+              } catch (error) {
+                if (error.status !== 422) throw error;
+              }
+            }
+
+            core.summary
+              .addHeading('Issue management bootstrap complete')
+              .addList([
+                `${labelDefinitions.length} lifecycle labels ensured`,
+                `Milestone: ${milestoneTitle}`,
+                `${phaseIssues.length} Phase 1 issues assigned and classified`,
+                `Parent issue: #${parent.number}`,
+                'Sequential Phase 1 dependencies ensured',
+              ])
+              .write();

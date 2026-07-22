@@ -1,0 +1,483 @@
+name: Issue lifecycle and Codex
+
+on:
+  issues:
+    types: [opened, reopened]
+  issue_comment:
+    types: [created, edited]
+
+permissions: {}
+
+concurrency:
+  group: >-
+    issue-lifecycle-${{ github.repository }}-${{
+      github.event.issue.number || github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  intake:
+    if: >-
+      github.event_name == 'issues' ||
+      (github.event_name == 'issue_comment' &&
+       !github.event.issue.pull_request &&
+       github.event.comment.user.type != 'Bot')
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    outputs:
+      trusted: ${{ steps.intake.outputs.trusted }}
+      command: ${{ steps.intake.outputs.command }}
+      issue_number: ${{ steps.intake.outputs.issue_number }}
+    steps:
+      - name: Record task input
+        id: intake
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issue = context.payload.issue;
+            const comment = context.payload.comment;
+            const trustedAssociations = new Set(['OWNER', 'MEMBER', 'COLLABORATOR']);
+            const association = comment?.author_association ?? issue.author_association ?? 'NONE';
+            const trusted = trustedAssociations.has(association);
+            const text = (comment?.body ?? issue.body ?? '').trim();
+            const firstLine = text.split(/\r?\n/, 1)[0].trim().toLowerCase();
+            let command = 'assess';
+            if (firstLine.startsWith('/codex implement')) command = 'implement';
+            if (firstLine.startsWith('/codex ignore')) command = 'ignore';
+
+            const labelDefinitions = {
+              'ai:managed': ['1d76db', 'Issue participates in the AI-assisted work queue'],
+              'ai:queued': ['d4c5f9', 'Trusted task input is waiting for Codex'],
+              'status:triage': ['fbca04', 'Maintainer triage is required'],
+              'needs:maintainer-review': ['f9d0c4', 'External input requires maintainer review'],
+            };
+            for (const [name, [color, description]] of Object.entries(labelDefinitions)) {
+              try {
+                await github.rest.issues.getLabel({ ...context.repo, name });
+              } catch (error) {
+                if (error.status !== 404) throw error;
+                await github.rest.issues.createLabel({
+                  ...context.repo, name, color, description,
+                });
+              }
+            }
+
+            const labels = ['ai:managed'];
+            if (context.eventName === 'issues') labels.push('status:triage');
+            if (comment && trusted && command !== 'ignore') labels.push('ai:queued');
+            if (comment && !trusted) labels.push('needs:maintainer-review');
+            if (labels.length) {
+              await github.rest.issues.addLabels({
+                ...context.repo,
+                issue_number: issue.number,
+                labels,
+              });
+            }
+
+            if (comment) {
+              await github.rest.reactions.createForIssueComment({
+                ...context.repo,
+                comment_id: comment.id,
+                content: 'eyes',
+              });
+              const marker = `<!-- ai-intake:${comment.id} -->`;
+              const existing = await github.paginate(github.rest.issues.listComments, {
+                ...context.repo,
+                issue_number: issue.number,
+                per_page: 100,
+              });
+              if (!existing.some(item => item.body?.includes(marker))) {
+                const message = trusted
+                  ? command === 'ignore'
+                    ? 'This comment is recorded in the issue history and excluded from automated AI processing.'
+                    : command === 'implement'
+                      ? 'Task input recorded. A Codex implementation run is queued; active work and any resulting draft pull request will be reported separately.'
+                      : 'Task input recorded. A read-only Codex assessment is queued; the assessment will identify acceptance checks, relationships, risks, and the next action.'
+                  : 'Suggestion recorded as task input and queued for maintainer review. External comments cannot trigger paid AI execution or repository writes by themselves.';
+                await github.rest.issues.createComment({
+                  ...context.repo,
+                  issue_number: issue.number,
+                  body: `${marker}\n${message}`,
+                });
+              }
+            }
+
+            core.setOutput('trusted', String(trusted));
+            core.setOutput('command', command);
+            core.setOutput('issue_number', String(issue.number));
+
+  assess:
+    needs: intake
+    if: >-
+      needs.intake.outputs.trusted == 'true' &&
+      needs.intake.outputs.command == 'assess'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Check Codex credential
+        id: key
+        shell: bash
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          if [[ -n "$OPENAI_API_KEY" ]]; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build read-only issue context
+        if: steps.key.outputs.configured == 'true'
+        shell: bash
+        run: |
+          jq -r '
+            "# GitHub issue task input\n\n" +
+            "Repository: " + .repository.full_name + "\n" +
+            "Issue: #" + (.issue.number|tostring) + " - " + .issue.title + "\n" +
+            "Author association: " + (.comment.author_association // .issue.author_association // "NONE") + "\n" +
+            "Issue URL: " + .issue.html_url + "\n\n" +
+            "## Issue body\n\n" + (.issue.body // "") + "\n\n" +
+            "## Newest task input\n\n" + (.comment.body // .issue.body // "")
+          ' "$GITHUB_EVENT_PATH" > /tmp/codex-issue-context.md
+
+      - name: Run Codex assessment
+        id: codex
+        if: steps.key.outputs.configured == 'true'
+        uses: openai/codex-action@v1
+        with:
+          openai-api-key: ${{ secrets.OPENAI_API_KEY }}
+          prompt-file: .github/codex/prompts/issue-assessment.md
+          sandbox: read-only
+          safety-strategy: drop-sudo
+          codex-args: '["--ephemeral"]'
+
+      - name: Post assessment and update lifecycle
+        if: steps.key.outputs.configured == 'true' && always()
+        uses: actions/github-script@v7
+        env:
+          CODEX_RESULT: ${{ steps.codex.outputs.final-message }}
+          CODEX_OUTCOME: ${{ steps.codex.outcome }}
+        with:
+          script: |
+            const issueNumber = Number('${{ needs.intake.outputs.issue_number }}');
+            const succeeded = process.env.CODEX_OUTCOME === 'success' && process.env.CODEX_RESULT;
+            const result = succeeded
+              ? process.env.CODEX_RESULT
+              : 'Codex could not complete the automated assessment. Review the workflow run before retrying.';
+            await github.rest.issues.createComment({
+              ...context.repo,
+              issue_number: issueNumber,
+              body: `<!-- codex-assessment:${context.runId} -->\n## Codex task assessment\n\n${result}`,
+            });
+            for (const label of ['ai:queued', 'ai:in-progress']) {
+              try {
+                await github.rest.issues.removeLabel({
+                  ...context.repo, issue_number: issueNumber, name: label,
+                });
+              } catch (error) {
+                if (error.status !== 404) throw error;
+              }
+            }
+            const finalLabel = succeeded ? 'ai:assessed' : 'ai:failed';
+            const color = succeeded ? '0e8a16' : 'b60205';
+            try {
+              await github.rest.issues.getLabel({ ...context.repo, name: finalLabel });
+            } catch (error) {
+              if (error.status !== 404) throw error;
+              await github.rest.issues.createLabel({
+                ...context.repo,
+                name: finalLabel,
+                color,
+                description: succeeded
+                  ? 'Codex has posted a read-only task assessment'
+                  : 'Automated Codex processing failed',
+              });
+            }
+            await github.rest.issues.addLabels({
+              ...context.repo, issue_number: issueNumber, labels: [finalLabel],
+            });
+            if (succeeded && result.includes('NEEDS-HUMAN')) {
+              try {
+                await github.rest.issues.getLabel({ ...context.repo, name: 'needs:human' });
+              } catch (error) {
+                if (error.status !== 404) throw error;
+                await github.rest.issues.createLabel({
+                  ...context.repo,
+                  name: 'needs:human',
+                  color: 'd93f0b',
+                  description: 'A human decision or approval gate is required',
+                });
+              }
+              await github.rest.issues.addLabels({
+                ...context.repo, issue_number: issueNumber, labels: ['needs:human'],
+              });
+            }
+
+      - name: Explain missing credential
+        if: steps.key.outputs.configured != 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issueNumber = Number('${{ needs.intake.outputs.issue_number }}');
+            const marker = '<!-- codex-configuration-required -->';
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              ...context.repo, issue_number: issueNumber, per_page: 100,
+            });
+            if (!comments.some(item => item.body?.includes(marker))) {
+              await github.rest.issues.createComment({
+                ...context.repo,
+                issue_number: issueNumber,
+                body: `${marker}\nAutomated task intake is active, but Codex execution is paused until the repository administrator adds the \`OPENAI_API_KEY\` Actions secret. No AI work has been claimed or performed.`,
+              });
+            }
+
+  implement:
+    needs: intake
+    if: >-
+      needs.intake.outputs.trusted == 'true' &&
+      needs.intake.outputs.command == 'implement'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Check Codex credential
+        id: key
+        shell: bash
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          if [[ -n "$OPENAI_API_KEY" ]]; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Mark implementation active
+        if: steps.key.outputs.configured == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const number = Number('${{ needs.intake.outputs.issue_number }}');
+            for (const [name, color, description] of [
+              ['ai:in-progress', '0052cc', 'Codex implementation is actively running'],
+              ['status:in-progress', '1d76db', 'Implementation is active'],
+            ]) {
+              try {
+                await github.rest.issues.getLabel({ ...context.repo, name });
+              } catch (error) {
+                if (error.status !== 404) throw error;
+                await github.rest.issues.createLabel({ ...context.repo, name, color, description });
+              }
+            }
+            await github.rest.issues.addLabels({
+              ...context.repo,
+              issue_number: number,
+              labels: ['ai:in-progress', 'status:in-progress'],
+            });
+
+      - name: Build implementation context
+        if: steps.key.outputs.configured == 'true'
+        shell: bash
+        run: |
+          jq -r '
+            "# Trusted GitHub implementation request\n\n" +
+            "Repository: " + .repository.full_name + "\n" +
+            "Issue: #" + (.issue.number|tostring) + " - " + .issue.title + "\n" +
+            "Requested by: @" + .comment.user.login + " (" + .comment.author_association + ")\n" +
+            "Issue URL: " + .issue.html_url + "\n" +
+            "Comment URL: " + .comment.html_url + "\n\n" +
+            "## Issue body\n\n" + (.issue.body // "") + "\n\n" +
+            "## Authorized implementation instruction\n\n" + .comment.body
+          ' "$GITHUB_EVENT_PATH" > /tmp/codex-issue-context.md
+
+      - name: Run Codex implementation
+        id: codex
+        if: steps.key.outputs.configured == 'true'
+        uses: openai/codex-action@v1
+        with:
+          openai-api-key: ${{ secrets.OPENAI_API_KEY }}
+          prompt-file: .github/codex/prompts/issue-implementation.md
+          sandbox: workspace-write
+          safety-strategy: drop-sudo
+          codex-args: '["--ephemeral"]'
+
+      - name: Create focused branch
+        id: branch
+        if: steps.codex.outcome == 'success'
+        shell: bash
+        env:
+          ISSUE_NUMBER: ${{ needs.intake.outputs.issue_number }}
+          COMMENT_ID: ${{ github.event.comment.id }}
+        run: |
+          if [[ -z "$(git status --porcelain)" ]]; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if git status --porcelain | grep -E '(^| )((\.env($|\.)|.*\.(pem|key|p12|pfx)$)|.*(credential|secret).*)' -i; then
+            echo "Refusing to publish a change containing a sensitive-looking path."
+            exit 1
+          fi
+          branch="codex/issue-${ISSUE_NUMBER}-comment-${COMMENT_ID}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -c "$branch"
+          git add -A
+          git commit -m "Address issue #${ISSUE_NUMBER} comment ${COMMENT_ID}"
+          git push origin "$branch"
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+          echo "name=$branch" >> "$GITHUB_OUTPUT"
+
+      - name: Open draft pull request
+        if: steps.branch.outputs.changed == 'true'
+        uses: actions/github-script@v7
+        env:
+          BRANCH_NAME: ${{ steps.branch.outputs.name }}
+          CODEX_RESULT: ${{ steps.codex.outputs.final-message }}
+        with:
+          script: |
+            const issueNumber = Number('${{ needs.intake.outputs.issue_number }}');
+            const issue = context.payload.issue;
+            const response = await github.rest.pulls.create({
+              ...context.repo,
+              title: `Address #${issueNumber}: ${issue.title}`,
+              head: process.env.BRANCH_NAME,
+              base: 'main',
+              draft: true,
+              body: [
+                `Addresses task input in #${issueNumber}.`,
+                '',
+                `Source comment: ${context.payload.comment.html_url}`,
+                '',
+                '## Codex implementation summary',
+                '',
+                process.env.CODEX_RESULT || 'See the commit and CI results for implementation details.',
+                '',
+                'This draft does not close the issue automatically. A maintainer must verify scope, tests, relationships, and acceptance criteria before merge.',
+              ].join('\n'),
+            });
+            await github.rest.issues.createComment({
+              ...context.repo,
+              issue_number: issueNumber,
+              body: `<!-- codex-implementation:${context.runId} -->\nCodex completed a scoped implementation and opened draft PR #${response.data.number}: ${response.data.html_url}`,
+            });
+            for (const label of ['ai:queued', 'ai:in-progress', 'status:in-progress']) {
+              try {
+                await github.rest.issues.removeLabel({
+                  ...context.repo, issue_number: issueNumber, name: label,
+                });
+              } catch (error) {
+                if (error.status !== 404) throw error;
+              }
+            }
+            for (const [name, color, description] of [
+              ['ai:review', '5319e7', 'Codex implementation is in a draft pull request'],
+              ['status:review', '0e8a16', 'Work is awaiting human review'],
+            ]) {
+              try {
+                await github.rest.issues.getLabel({ ...context.repo, name });
+              } catch (error) {
+                if (error.status !== 404) throw error;
+                await github.rest.issues.createLabel({ ...context.repo, name, color, description });
+              }
+            }
+            await github.rest.issues.addLabels({
+              ...context.repo,
+              issue_number: issueNumber,
+              labels: ['ai:review', 'status:review'],
+            });
+
+      - name: Report no-change completion
+        if: steps.key.outputs.configured == 'true' && steps.codex.outcome == 'success' && steps.branch.outputs.changed != 'true'
+        uses: actions/github-script@v7
+        env:
+          CODEX_RESULT: ${{ steps.codex.outputs.final-message }}
+        with:
+          script: |
+            const number = Number('${{ needs.intake.outputs.issue_number }}');
+            await github.rest.issues.createComment({
+              ...context.repo,
+              issue_number: number,
+              body: `<!-- codex-implementation:${context.runId} -->\nCodex completed the implementation attempt without a repository change.\n\n${process.env.CODEX_RESULT || 'Review the workflow log for details.'}`,
+            });
+            for (const label of ['ai:queued', 'ai:in-progress', 'status:in-progress']) {
+              try {
+                await github.rest.issues.removeLabel({
+                  ...context.repo, issue_number: number, name: label,
+                });
+              } catch (error) {
+                if (error.status !== 404) throw error;
+              }
+            }
+            try {
+              await github.rest.issues.getLabel({ ...context.repo, name: 'ai:assessed' });
+            } catch (error) {
+              if (error.status !== 404) throw error;
+              await github.rest.issues.createLabel({
+                ...context.repo,
+                name: 'ai:assessed',
+                color: '0e8a16',
+                description: 'Codex posted a task assessment without a code change',
+              });
+            }
+            await github.rest.issues.addLabels({
+              ...context.repo, issue_number: number, labels: ['ai:assessed'],
+            });
+
+      - name: Explain missing credential
+        if: steps.key.outputs.configured != 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.createComment({
+              ...context.repo,
+              issue_number: Number('${{ needs.intake.outputs.issue_number }}'),
+              body: 'Codex implementation is paused because the `OPENAI_API_KEY` Actions secret is not configured. No code change was made.',
+            });
+
+      - name: Mark failed implementation
+        if: steps.key.outputs.configured == 'true' && failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const number = Number('${{ needs.intake.outputs.issue_number }}');
+            await github.rest.issues.createComment({
+              ...context.repo,
+              issue_number: number,
+              body: `<!-- codex-implementation-failed:${context.runId} -->\nThe automated implementation did not complete. Review workflow run ${context.runId}; no merge or deployment occurred.`,
+            });
+            for (const label of ['ai:queued', 'ai:in-progress', 'status:in-progress']) {
+              try {
+                await github.rest.issues.removeLabel({
+                  ...context.repo, issue_number: number, name: label,
+                });
+              } catch (error) {
+                if (error.status !== 404) throw error;
+              }
+            }
+            try {
+              await github.rest.issues.getLabel({ ...context.repo, name: 'ai:failed' });
+            } catch (error) {
+              if (error.status !== 404) throw error;
+              await github.rest.issues.createLabel({
+                ...context.repo,
+                name: 'ai:failed',
+                color: 'b60205',
+                description: 'Automated Codex processing failed',
+              });
+            }
+            await github.rest.issues.addLabels({
+              ...context.repo, issue_number: number, labels: ['ai:failed'],
+            });

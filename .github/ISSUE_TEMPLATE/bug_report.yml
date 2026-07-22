@@ -1,7 +1,9 @@
 name: Bug report
 description: Report reproducible behavior using synthetic data only
 title: "bug: "
-labels: ["bug"]
+labels: ["bug", "ai:managed", "status:triage"]
+assignees: ["KD7CAO"]
+type: bug
 body:
   - type: markdown
     attributes:
@@ -30,4 +32,16 @@ body:
       label: Commit or version
     validations:
       required: true
-
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Suggested priority
+      description: Maintainers make the final priority decision.
+      options:
+        - P0 - Operational or security emergency
+        - P1 - High impact
+        - P2 - Normal
+        - P3 - Low impact
+      default: 2
+    validations:
+      required: true
