@@ -104,7 +104,15 @@ jobs:
 
   containers:
     runs-on: ubuntu-latest
+    env:
+      POSTGRES_PASSWORD: synthetic-ci-password
+      DJANGO_SECRET_KEY: synthetic-ci-secret-key
+      DJANGO_SUPERUSER_USERNAME: synthetic-admin
+      DJANGO_SUPERUSER_EMAIL: synthetic-admin@example.invalid
+      DJANGO_SUPERUSER_PASSWORD: synthetic-ci-admin-password
     steps:
       - uses: actions/checkout@v7
       - run: docker compose config --quiet
       - run: docker compose build
+      - run: docker compose -f compose.production.yaml config --quiet
+      - run: docker compose -f compose.production.yaml build

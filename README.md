@@ -148,6 +148,10 @@ pnpm test:e2e
 
 Windows PowerShell uses `.venv\Scripts\Activate.ps1` for virtual-environment activation.
 
+### TX-COMU test deployment
+
+The shared synthetic-data test deployment uses a separate production Compose definition, a single LAN-bound frontend port, and an edge Apache reverse proxy. Follow [the TX-COMU test deployment runbook](docs/operations/tx-comu-test-deployment.md). It intentionally does not modify or share the CiviCRM application, database, or Apache document root.
+
 ## P1.0 vertical slice
 
 The current slice provides token-based local authentication, administrator-only mutation, incident and operational-period creation, an authenticated incident list, an offline-safe MapLibre shell, PostGIS health verification, and synthetic automated tests. It does not yet implement channel libraries, ICS-205 revision control, site data, deconfliction, official exports, or production authentication hardening.
