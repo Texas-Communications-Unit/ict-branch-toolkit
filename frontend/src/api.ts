@@ -1,4 +1,11 @@
-import type { Incident, Paginated } from "./types";
+import type {
+  ConventionalChannel,
+  CurrentUser,
+  ImportResult,
+  Incident,
+  Paginated,
+  TrunkedTalkgroup,
+} from "./types";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
 
@@ -32,6 +39,33 @@ export async function listIncidents(): Promise<Incident[]> {
   return result.results;
 }
 
+export function getCurrentUser(): Promise<CurrentUser> {
+  return request<CurrentUser>("/api/me/");
+}
+
+export async function listConventionalChannels(): Promise<
+  ConventionalChannel[]
+> {
+  const result = await request<Paginated<ConventionalChannel>>(
+    "/api/conventional-channels/",
+  );
+  return result.results;
+}
+
+export async function listTrunkedTalkgroups(): Promise<TrunkedTalkgroup[]> {
+  const result = await request<Paginated<TrunkedTalkgroup>>(
+    "/api/trunked-talkgroups/",
+  );
+  return result.results;
+}
+
+export function importChannelLibrary(payload: object): Promise<ImportResult> {
+  return request<ImportResult>("/api/channel-imports/", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
 export async function createIncident(
   name: string,
   incidentNumber: string,
@@ -57,4 +91,8 @@ export async function createOperationalPeriod(
       ends_at: new Date(endsAt).toISOString(),
     }),
   });
+}
+
+export async function archiveIncident(incident: string): Promise<void> {
+  await request(`/api/incidents/${incident}/archive/`, { method: "POST" });
 }
