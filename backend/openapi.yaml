@@ -1,0 +1,527 @@
+openapi: 3.0.3
+info:
+  title: ICT Branch Toolkit API
+  version: 0.1.0
+  description: Incident communications planning prototype API.
+paths:
+  /api/auth/token/:
+    post:
+      operationId: auth_token_create
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/AuthToken'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AuthToken'
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthToken'
+        required: true
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthToken'
+          description: ''
+  /api/incidents/:
+    get:
+      operationId: incidents_list
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - incidents
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedIncidentList'
+          description: ''
+    post:
+      operationId: incidents_create
+      tags:
+      - incidents
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Incident'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Incident'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Incident'
+        required: true
+      security:
+      - tokenAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Incident'
+          description: ''
+  /api/incidents/{id}/:
+    get:
+      operationId: incidents_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this incident.
+        required: true
+      tags:
+      - incidents
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Incident'
+          description: ''
+    put:
+      operationId: incidents_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this incident.
+        required: true
+      tags:
+      - incidents
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Incident'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Incident'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Incident'
+        required: true
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Incident'
+          description: ''
+    patch:
+      operationId: incidents_partial_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this incident.
+        required: true
+      tags:
+      - incidents
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedIncident'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedIncident'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedIncident'
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Incident'
+          description: ''
+    delete:
+      operationId: incidents_destroy
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this incident.
+        required: true
+      tags:
+      - incidents
+      security:
+      - tokenAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/operational-periods/:
+    get:
+      operationId: operational_periods_list
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - operational-periods
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedOperationalPeriodList'
+          description: ''
+    post:
+      operationId: operational_periods_create
+      tags:
+      - operational-periods
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OperationalPeriod'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/OperationalPeriod'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/OperationalPeriod'
+        required: true
+      security:
+      - tokenAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperationalPeriod'
+          description: ''
+  /api/operational-periods/{id}/:
+    get:
+      operationId: operational_periods_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this operational period.
+        required: true
+      tags:
+      - operational-periods
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperationalPeriod'
+          description: ''
+    put:
+      operationId: operational_periods_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this operational period.
+        required: true
+      tags:
+      - operational-periods
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OperationalPeriod'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/OperationalPeriod'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/OperationalPeriod'
+        required: true
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperationalPeriod'
+          description: ''
+    patch:
+      operationId: operational_periods_partial_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this operational period.
+        required: true
+      tags:
+      - operational-periods
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedOperationalPeriod'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedOperationalPeriod'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedOperationalPeriod'
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperationalPeriod'
+          description: ''
+    delete:
+      operationId: operational_periods_destroy
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this operational period.
+        required: true
+      tags:
+      - operational-periods
+      security:
+      - tokenAuth: []
+      responses:
+        '204':
+          description: No response body
+components:
+  schemas:
+    AuthToken:
+      type: object
+      properties:
+        username:
+          type: string
+          writeOnly: true
+        password:
+          type: string
+          writeOnly: true
+        token:
+          type: string
+          readOnly: true
+      required:
+      - password
+      - token
+      - username
+    Incident:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+          maxLength: 200
+        incident_number:
+          type: string
+          maxLength: 80
+        status:
+          $ref: '#/components/schemas/StatusEnum'
+        operational_periods:
+          type: array
+          items:
+            $ref: '#/components/schemas/OperationalPeriod'
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - id
+      - name
+      - operational_periods
+      - updated_at
+    OperationalPeriod:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        incident:
+          type: string
+          format: uuid
+        name:
+          type: string
+          maxLength: 120
+        starts_at:
+          type: string
+          format: date-time
+        ends_at:
+          type: string
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - ends_at
+      - id
+      - incident
+      - name
+      - starts_at
+    PaginatedIncidentList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Incident'
+    PaginatedOperationalPeriodList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/OperationalPeriod'
+    PatchedIncident:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+          maxLength: 200
+        incident_number:
+          type: string
+          maxLength: 80
+        status:
+          $ref: '#/components/schemas/StatusEnum'
+        operational_periods:
+          type: array
+          items:
+            $ref: '#/components/schemas/OperationalPeriod'
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+    PatchedOperationalPeriod:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        incident:
+          type: string
+          format: uuid
+        name:
+          type: string
+          maxLength: 120
+        starts_at:
+          type: string
+          format: date-time
+        ends_at:
+          type: string
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+    StatusEnum:
+      enum:
+      - planning
+      - active
+      - closed
+      type: string
+      description: |-
+        * `planning` - Planning
+        * `active` - Active
+        * `closed` - Closed
+  securitySchemes:
+    tokenAuth:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: Token-based authentication with required prefix "Token"
