@@ -81,7 +81,9 @@ class ConventionalChannel(models.Model):
         blank=True,
         validators=[MinValueValidator(1), MaxValueValidator(10_000_000_000)],
     )
-    bandwidth_hz = models.PositiveIntegerField(null=True, blank=True)
+    bandwidth_hz = models.PositiveIntegerField(
+        null=True, blank=True, validators=[MaxValueValidator(2_147_483_647)]
+    )
     mode = models.CharField(max_length=20, choices=Mode.choices)
     rx_squelch = models.CharField(max_length=40, blank=True)
     tx_squelch = models.CharField(max_length=40, blank=True)
