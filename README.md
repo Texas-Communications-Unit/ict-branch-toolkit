@@ -152,9 +152,13 @@ Windows PowerShell uses `.venv\Scripts\Activate.ps1` for virtual-environment act
 
 The shared synthetic-data test deployment uses a separate production Compose definition, a single configurable frontend port, and an external reverse proxy. Follow [the shared test deployment runbook](docs/operations/shared-test-deployment.md). It intentionally does not modify or share another application's database or document root.
 
-## P1.0 vertical slice
+## P1.1 vertical slice
 
-The current slice provides token-based local authentication, administrator-only mutation, incident and operational-period creation, an authenticated incident list, an offline-safe MapLibre shell, PostGIS health verification, and synthetic automated tests. It does not yet implement channel libraries, ICS-205 revision control, site data, deconfliction, official exports, or production authentication hardening.
+The current slice provides token-based local authentication; centralized Administrator, COML, COMC, COMT, Contributor, and Read-only policy defaults; incident memberships; audit-preserving archival; append-only API audit events; and separate source-versioned conventional-channel and trunked-talkgroup libraries. Administrators can validate an import without writing data and apply an atomic approved import. CISA reference releases remain blocked from application until their exact type, version, authoritative URL, and digest pass the configured human gate.
+
+The browser workspace consumes backend capabilities, displays library provenance, and provides an administrator-only validation/import panel using a clearly synthetic example. See [reference import operations](docs/operations/reference-library-imports.md), [account and audit controls](docs/security/accounts-and-audit.md), and [ADR-0002](docs/adr/0002-identity-authorization-and-audit.md).
+
+The prototype does not yet implement ICS-205 revision control, site data, deconfliction, official exports, or production authentication hardening.
 
 ## Important limitations
 
