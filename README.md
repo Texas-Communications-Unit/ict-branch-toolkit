@@ -148,6 +148,10 @@ pnpm test:e2e
 
 Windows PowerShell uses `.venv\Scripts\Activate.ps1` for virtual-environment activation.
 
+### Shared test deployment
+
+The shared synthetic-data test deployment uses a separate production Compose definition, a single configurable frontend port, and an external reverse proxy. Follow [the shared test deployment runbook](docs/operations/shared-test-deployment.md). It intentionally does not modify or share another application's database or document root.
+
 ## P1.0 vertical slice
 
 The current slice provides token-based local authentication, administrator-only mutation, incident and operational-period creation, an authenticated incident list, an offline-safe MapLibre shell, PostGIS health verification, and synthetic automated tests. It does not yet implement channel libraries, ICS-205 revision control, site data, deconfliction, official exports, or production authentication hardening.
