@@ -1,0 +1,23 @@
+name: Feature request
+description: Propose a scoped improvement
+title: "feature: "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: need
+    attributes:
+      label: Operational need
+      description: Describe the role, workflow, and outcome without sensitive information.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Proposed acceptance criteria
+    validations:
+      required: true
+  - type: textarea
+    id: risks
+    attributes:
+      label: Security, policy, legal, RF, or data risks
+
