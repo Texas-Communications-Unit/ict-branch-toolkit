@@ -16,7 +16,7 @@
     },
     {
       "id": "osm-standard",
-      "status": "conditionally-approved-for-limited-synthetic-testing",
+      "status": "approved-for-shared-synthetic-test",
       "endpoint_template": "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
       "data_source": "OpenStreetMap contributors",
       "style_source": "OpenStreetMap Carto standard raster tiles",
