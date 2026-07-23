@@ -1,0 +1,43 @@
+{
+  "dry_run": true,
+  "source": {
+    "slug": "synthetic-p1-1",
+    "name": "Synthetic P1.1 Fixture",
+    "source_type": "synthetic",
+    "authoritative_url": "https://example.invalid/synthetic-p1-1"
+  },
+  "release": {
+    "version": "SYN-1",
+    "released_on": "2026-07-22",
+    "effective_status": "effective",
+    "content_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+  },
+  "conventional_channels": [
+    {
+      "identifier": "SYN-VHF-1",
+      "name": "Synthetic VHF Calling",
+      "band": "VHF",
+      "rx_frequency_hz": 155000000,
+      "tx_frequency_hz": 155000000,
+      "bandwidth_hz": 12500,
+      "mode": "analog_fm",
+      "rx_squelch": "CSQ",
+      "tx_squelch": "CSQ",
+      "restrictions": "Synthetic exercise use only",
+      "notes": "Not an assigned or authorized frequency",
+      "is_active": true
+    }
+  ],
+  "trunked_talkgroups": [
+    {
+      "identifier": "SYN-TG-1",
+      "name": "Synthetic Operations",
+      "system_name": "Synthetic Regional System",
+      "talkgroup_id": 65001,
+      "mode": "P25 Phase 2",
+      "restrictions": "Synthetic exercise use only",
+      "notes": "Not a real talkgroup",
+      "is_active": true
+    }
+  ]
+}

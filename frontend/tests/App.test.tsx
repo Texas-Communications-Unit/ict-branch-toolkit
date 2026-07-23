@@ -17,6 +17,17 @@ test("signs in and lists incidents from the API", async () => {
     .mockResolvedValueOnce(
       new Response(
         JSON.stringify({
+          username: "admin",
+          display_name: "Synthetic Administrator",
+          role: "administrator",
+          permissions: ["incident.create", "library.import"],
+        }),
+        { status: 200 },
+      ),
+    )
+    .mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
           count: 1,
           next: null,
           previous: null,
@@ -27,8 +38,34 @@ test("signs in and lists incidents from the API", async () => {
               incident_number: "SYN-001",
               status: "planning",
               operational_periods: [],
+              archived_at: null,
+              permissions: ["incident.view", "period.create"],
             },
           ],
+        }),
+        { status: 200 },
+      ),
+    )
+    .mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({ count: 0, next: null, previous: null, results: [] }),
+        { status: 200 },
+      ),
+    )
+    .mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({ count: 0, next: null, previous: null, results: [] }),
+        { status: 200 },
+      ),
+    )
+    .mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          valid: true,
+          dry_run: true,
+          approval_required: false,
+          would_create: { releases: 1 },
+          errors: [],
         }),
         { status: 200 },
       ),
@@ -46,6 +83,16 @@ test("signs in and lists incidents from the API", async () => {
   );
   expect(sessionStorage.getItem("ict-toolkit-token")).toBe("test-token");
   expect(screen.getByTestId("map")).toBeInTheDocument();
+  expect(
+    screen.getByRole("heading", { name: "Channel library" }),
+  ).toBeInTheDocument();
+  expect(screen.getByText("Synthetic Administrator")).toBeInTheDocument();
+  await userEvent.click(
+    screen.getByRole("button", { name: "Validate dry run" }),
+  );
+  expect(await screen.findByRole("status")).toHaveTextContent(
+    "Validation passed",
+  );
 });
 
 test("shows an actionable message when sign-in fails", async () => {

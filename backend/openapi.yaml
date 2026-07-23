@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: ICT Branch Toolkit API
-  version: 0.1.0
+  version: 0.2.0
   description: Incident communications planning prototype API.
 paths:
   /api/auth/token/:
@@ -30,6 +30,243 @@ paths:
               schema:
                 $ref: '#/components/schemas/AuthToken'
           description: ''
+  /api/channel-imports/:
+    post:
+      operationId: channel_imports_create
+      tags:
+      - channel-imports
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChannelImport'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ChannelImport'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ChannelImport'
+        required: true
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChannelImportResponse'
+          description: ''
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChannelImportResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChannelImportResponse'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChannelImportResponse'
+          description: ''
+  /api/conventional-channels/:
+    get:
+      operationId: conventional_channels_list
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - conventional-channels
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedConventionalChannelList'
+          description: ''
+  /api/conventional-channels/{id}/:
+    get:
+      operationId: conventional_channels_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this conventional channel.
+        required: true
+      tags:
+      - conventional-channels
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConventionalChannel'
+          description: ''
+  /api/incident-memberships/:
+    get:
+      operationId: incident_memberships_list
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - incident-memberships
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedIncidentMembershipList'
+          description: ''
+    post:
+      operationId: incident_memberships_create
+      tags:
+      - incident-memberships
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IncidentMembership'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/IncidentMembership'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/IncidentMembership'
+        required: true
+      security:
+      - tokenAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IncidentMembership'
+          description: ''
+  /api/incident-memberships/{id}/:
+    get:
+      operationId: incident_memberships_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this incident membership.
+        required: true
+      tags:
+      - incident-memberships
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IncidentMembership'
+          description: ''
+    put:
+      operationId: incident_memberships_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this incident membership.
+        required: true
+      tags:
+      - incident-memberships
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IncidentMembership'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/IncidentMembership'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/IncidentMembership'
+        required: true
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IncidentMembership'
+          description: ''
+    patch:
+      operationId: incident_memberships_partial_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this incident membership.
+        required: true
+      tags:
+      - incident-memberships
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedIncidentMembership'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedIncidentMembership'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedIncidentMembership'
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IncidentMembership'
+          description: ''
+    delete:
+      operationId: incident_memberships_destroy
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this incident membership.
+        required: true
+      tags:
+      - incident-memberships
+      security:
+      - tokenAuth: []
+      responses:
+        '204':
+          description: No response body
   /api/incidents/:
     get:
       operationId: incidents_list
@@ -180,6 +417,54 @@ paths:
       responses:
         '204':
           description: No response body
+  /api/incidents/{id}/archive/:
+    post:
+      operationId: incidents_archive_create
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this incident.
+        required: true
+      tags:
+      - incidents
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Incident'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Incident'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Incident'
+        required: true
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Incident'
+          description: ''
+  /api/me/:
+    get:
+      operationId: me_retrieve
+      tags:
+      - me
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CurrentUser'
+          description: ''
   /api/operational-periods/:
     get:
       operationId: operational_periods_list
@@ -330,6 +615,126 @@ paths:
       responses:
         '204':
           description: No response body
+  /api/operational-periods/{id}/archive/:
+    post:
+      operationId: operational_periods_archive_create
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this operational period.
+        required: true
+      tags:
+      - operational-periods
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OperationalPeriod'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/OperationalPeriod'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/OperationalPeriod'
+        required: true
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperationalPeriod'
+          description: ''
+  /api/resource-releases/:
+    get:
+      operationId: resource_releases_list
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - resource-releases
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedResourceReleaseList'
+          description: ''
+  /api/resource-releases/{id}/:
+    get:
+      operationId: resource_releases_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this resource release.
+        required: true
+      tags:
+      - resource-releases
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResourceRelease'
+          description: ''
+  /api/trunked-talkgroups/:
+    get:
+      operationId: trunked_talkgroups_list
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - trunked-talkgroups
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedTrunkedTalkgroupList'
+          description: ''
+  /api/trunked-talkgroups/{id}/:
+    get:
+      operationId: trunked_talkgroups_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this trunked talkgroup.
+        required: true
+      tags:
+      - trunked-talkgroups
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TrunkedTalkgroup'
+          description: ''
 components:
   schemas:
     AuthToken:
@@ -348,6 +753,266 @@ components:
       - password
       - token
       - username
+    ChannelImport:
+      type: object
+      properties:
+        dry_run:
+          type: boolean
+          default: true
+        source:
+          $ref: '#/components/schemas/ImportSource'
+        release:
+          $ref: '#/components/schemas/ImportRelease'
+        conventional_channels:
+          type: array
+          items:
+            $ref: '#/components/schemas/ImportConventionalChannel'
+        trunked_talkgroups:
+          type: array
+          items:
+            $ref: '#/components/schemas/ImportTrunkedTalkgroup'
+      required:
+      - release
+      - source
+    ChannelImportResponse:
+      type: object
+      properties:
+        valid:
+          type: boolean
+        dry_run:
+          type: boolean
+        approval_required:
+          type: boolean
+        would_create:
+          type: object
+          additionalProperties:
+            type: integer
+        created:
+          type: object
+          additionalProperties:
+            type: integer
+        import_id:
+          type: string
+          format: uuid
+        release_id:
+          type: string
+          format: uuid
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/StructuredImportError'
+      required:
+      - dry_run
+      - errors
+      - valid
+    ConventionalChannel:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        release:
+          allOf:
+          - $ref: '#/components/schemas/ResourceRelease'
+          readOnly: true
+        identifier:
+          type: string
+          maxLength: 80
+        name:
+          type: string
+          maxLength: 160
+        band:
+          type: string
+          maxLength: 40
+        rx_frequency_hz:
+          type: integer
+          maximum: 10000000000
+          minimum: 1
+          format: int64
+        tx_frequency_hz:
+          type: integer
+          maximum: 10000000000
+          minimum: 1
+          format: int64
+          nullable: true
+        bandwidth_hz:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          nullable: true
+        mode:
+          $ref: '#/components/schemas/ModeEnum'
+        rx_squelch:
+          type: string
+          maxLength: 40
+        tx_squelch:
+          type: string
+          maxLength: 40
+        restrictions:
+          type: string
+        notes:
+          type: string
+        is_active:
+          type: boolean
+      required:
+      - id
+      - identifier
+      - mode
+      - name
+      - release
+      - rx_frequency_hz
+    CurrentUser:
+      type: object
+      properties:
+        username:
+          type: string
+          readOnly: true
+        display_name:
+          type: string
+          readOnly: true
+        role:
+          type: string
+          readOnly: true
+        permissions:
+          type: array
+          items:
+            type: string
+          readOnly: true
+      required:
+      - display_name
+      - permissions
+      - role
+      - username
+    EffectiveStatusEnum:
+      enum:
+      - draft
+      - effective
+      - superseded
+      type: string
+      description: |-
+        * `draft` - Draft
+        * `effective` - Effective
+        * `superseded` - Superseded
+    ImportConventionalChannel:
+      type: object
+      properties:
+        identifier:
+          type: string
+          maxLength: 80
+        name:
+          type: string
+          maxLength: 160
+        band:
+          type: string
+          maxLength: 40
+        rx_frequency_hz:
+          type: integer
+          maximum: 10000000000
+          minimum: 1
+          format: int64
+        tx_frequency_hz:
+          type: integer
+          maximum: 10000000000
+          minimum: 1
+          format: int64
+          nullable: true
+        bandwidth_hz:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          nullable: true
+        mode:
+          $ref: '#/components/schemas/ModeEnum'
+        rx_squelch:
+          type: string
+          maxLength: 40
+        tx_squelch:
+          type: string
+          maxLength: 40
+        restrictions:
+          type: string
+        notes:
+          type: string
+        is_active:
+          type: boolean
+      required:
+      - identifier
+      - mode
+      - name
+      - rx_frequency_hz
+    ImportRelease:
+      type: object
+      properties:
+        version:
+          type: string
+          maxLength: 80
+        released_on:
+          type: string
+          format: date
+          nullable: true
+        effective_status:
+          $ref: '#/components/schemas/EffectiveStatusEnum'
+        content_sha256:
+          type: string
+          pattern: ^[0-9a-f]{64}$
+      required:
+      - content_sha256
+      - effective_status
+      - version
+    ImportSource:
+      type: object
+      properties:
+        slug:
+          type: string
+          maxLength: 80
+          pattern: ^[-a-zA-Z0-9_]+$
+        name:
+          type: string
+          maxLength: 200
+        source_type:
+          $ref: '#/components/schemas/SourceTypeEnum'
+        authoritative_url:
+          oneOf:
+          - type: string
+            format: uri
+            maxLength: 500
+          - type: string
+            maxLength: 0
+      required:
+      - name
+      - slug
+      - source_type
+    ImportTrunkedTalkgroup:
+      type: object
+      properties:
+        identifier:
+          type: string
+          maxLength: 80
+        name:
+          type: string
+          maxLength: 160
+        system_name:
+          type: string
+          maxLength: 160
+        talkgroup_id:
+          type: integer
+          maximum: 16777215
+          minimum: 0
+        mode:
+          type: string
+          maxLength: 40
+        restrictions:
+          type: string
+        notes:
+          type: string
+        is_active:
+          type: boolean
+      required:
+      - identifier
+      - name
+      - system_name
+      - talkgroup_id
     Incident:
       type: object
       properties:
@@ -376,12 +1041,73 @@ components:
           type: string
           format: date-time
           readOnly: true
+        archived_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        permissions:
+          type: array
+          items:
+            type: string
+          readOnly: true
       required:
+      - archived_at
       - created_at
       - id
       - name
       - operational_periods
+      - permissions
       - updated_at
+    IncidentMembership:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        incident:
+          type: string
+          format: uuid
+        user:
+          type: integer
+        username:
+          type: string
+          readOnly: true
+        role:
+          $ref: '#/components/schemas/RoleEnum'
+        is_active:
+          type: boolean
+        assigned_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - assigned_at
+      - id
+      - incident
+      - role
+      - updated_at
+      - user
+      - username
+    ModeEnum:
+      enum:
+      - analog_fm
+      - p25
+      - dmr
+      - nxdn
+      - other
+      type: string
+      description: |-
+        * `analog_fm` - Analog FM
+        * `p25` - P25
+        * `dmr` - DMR
+        * `nxdn` - NXDN
+        * `other` - Other
     OperationalPeriod:
       type: object
       properties:
@@ -405,13 +1131,47 @@ components:
           type: string
           format: date-time
           readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+        archived_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
       required:
+      - archived_at
       - created_at
       - ends_at
       - id
       - incident
       - name
       - starts_at
+      - updated_at
+    PaginatedConventionalChannelList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/ConventionalChannel'
     PaginatedIncidentList:
       type: object
       required:
@@ -435,6 +1195,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Incident'
+    PaginatedIncidentMembershipList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/IncidentMembership'
     PaginatedOperationalPeriodList:
       type: object
       required:
@@ -458,6 +1241,52 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/OperationalPeriod'
+    PaginatedResourceReleaseList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/ResourceRelease'
+    PaginatedTrunkedTalkgroupList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/TrunkedTalkgroup'
     PatchedIncident:
       type: object
       properties:
@@ -479,6 +1308,43 @@ components:
             $ref: '#/components/schemas/OperationalPeriod'
           readOnly: true
         created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+        archived_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        permissions:
+          type: array
+          items:
+            type: string
+          readOnly: true
+    PatchedIncidentMembership:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        incident:
+          type: string
+          format: uuid
+        user:
+          type: integer
+        username:
+          type: string
+          readOnly: true
+        role:
+          $ref: '#/components/schemas/RoleEnum'
+        is_active:
+          type: boolean
+        assigned_at:
           type: string
           format: date-time
           readOnly: true
@@ -509,6 +1375,112 @@ components:
           type: string
           format: date-time
           readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+        archived_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+    ResourceRelease:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        source:
+          allOf:
+          - $ref: '#/components/schemas/ResourceSource'
+          readOnly: true
+        version:
+          type: string
+          maxLength: 80
+        released_on:
+          type: string
+          format: date
+          nullable: true
+        effective_status:
+          $ref: '#/components/schemas/EffectiveStatusEnum'
+        content_sha256:
+          type: string
+          pattern: ^[0-9a-f]{64}$
+          maxLength: 64
+        imported_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - content_sha256
+      - effective_status
+      - id
+      - imported_at
+      - source
+      - version
+    ResourceSource:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        slug:
+          type: string
+          maxLength: 80
+          pattern: ^[-a-zA-Z0-9_]+$
+        name:
+          type: string
+          maxLength: 200
+        source_type:
+          $ref: '#/components/schemas/SourceTypeEnum'
+        authoritative_url:
+          oneOf:
+          - type: string
+            format: uri
+            maxLength: 500
+          - type: string
+            maxLength: 0
+      required:
+      - id
+      - name
+      - slug
+      - source_type
+    RoleEnum:
+      enum:
+      - administrator
+      - coml
+      - comc
+      - comt
+      - contributor
+      - read_only
+      type: string
+      description: |-
+        * `administrator` - Administrator
+        * `coml` - COML
+        * `comc` - COMC
+        * `comt` - COMT
+        * `contributor` - Contributor
+        * `read_only` - Read-only
+    SourceTypeEnum:
+      enum:
+      - synthetic
+      - cisa_nifog
+      - cisa_auxfog
+      - cisa_state_fog
+      - local
+      - incident
+      - other
+      type: string
+      description: |-
+        * `synthetic` - Synthetic fixture
+        * `cisa_nifog` - CISA NIFOG
+        * `cisa_auxfog` - CISA AUXFOG
+        * `cisa_state_fog` - CISA state or regional FOG
+        * `local` - Local controlled source
+        * `incident` - Incident-created source
+        * `other` - Other approved source
     StatusEnum:
       enum:
       - planning
@@ -519,6 +1491,59 @@ components:
         * `planning` - Planning
         * `active` - Active
         * `closed` - Closed
+    StructuredImportError:
+      type: object
+      properties:
+        path:
+          type: string
+        code:
+          type: string
+        message:
+          type: string
+      required:
+      - code
+      - message
+      - path
+    TrunkedTalkgroup:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        release:
+          allOf:
+          - $ref: '#/components/schemas/ResourceRelease'
+          readOnly: true
+        identifier:
+          type: string
+          maxLength: 80
+        name:
+          type: string
+          maxLength: 160
+        system_name:
+          type: string
+          maxLength: 160
+        talkgroup_id:
+          type: integer
+          maximum: 16777215
+          minimum: 0
+        mode:
+          type: string
+          maxLength: 40
+        restrictions:
+          type: string
+        notes:
+          type: string
+        is_active:
+          type: boolean
+      required:
+      - id
+      - identifier
+      - name
+      - release
+      - system_name
+      - talkgroup_id
   securitySchemes:
     tokenAuth:
       type: apiKey

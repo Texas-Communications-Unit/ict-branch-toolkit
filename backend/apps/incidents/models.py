@@ -3,6 +3,8 @@ import uuid
 from django.conf import settings
 from django.db import models
 
+from apps.accounts.models import Role
+
 
 class Incident(models.Model):
     class Status(models.TextChoices):
@@ -36,6 +38,7 @@ class OperationalPeriod(models.Model):
     ends_at = models.DateTimeField()
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
     archived_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
@@ -49,3 +52,31 @@ class OperationalPeriod(models.Model):
 
     def __str__(self) -> str:
         return f"{self.incident}: {self.name}"
+
+
+class IncidentMembership(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    incident = models.ForeignKey(Incident, related_name="memberships", on_delete=models.PROTECT)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, related_name="incident_memberships", on_delete=models.PROTECT
+    )
+    role = models.CharField(max_length=24, choices=Role.choices)
+    is_active = models.BooleanField(default=True)
+    assigned_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        related_name="assigned_incident_memberships",
+        on_delete=models.PROTECT,
+    )
+    assigned_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["incident", "user__username"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["incident", "user"], name="unique_incident_user_membership"
+            )
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.incident}: {self.user} ({self.get_role_display()})"

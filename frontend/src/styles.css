@@ -21,7 +21,8 @@ body {
 }
 button,
 input,
-select {
+select,
+textarea {
   font: inherit;
 }
 button {
@@ -38,12 +39,18 @@ button:disabled {
   opacity: 0.5;
 }
 input,
-select {
+select,
+textarea {
   width: 100%;
   border: 1px solid #b6c3c9;
   border-radius: 5px;
   padding: 0.65rem 0.7rem;
   background: white;
+}
+textarea {
+  resize: vertical;
+  font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+  font-size: 0.78rem;
 }
 label {
   display: grid;
@@ -131,6 +138,12 @@ header h1 {
   background: #d76545;
   color: white;
 }
+.identity-summary {
+  display: grid;
+  justify-items: end;
+  gap: 0.35rem;
+  font-size: 0.78rem;
+}
 .banner {
   margin: 1rem 2rem 0;
 }
@@ -141,12 +154,16 @@ header h1 {
   padding: 1.25rem 2rem;
 }
 .planning-panel,
-.map-panel {
+.map-panel,
+.library-panel {
   border: 1px solid #d4dee2;
   border-radius: 8px;
   background: white;
   padding: 1.2rem;
   box-shadow: 0 4px 14px #294d5b12;
+}
+.library-panel {
+  grid-column: 1 / -1;
 }
 .section-heading {
   display: flex;
@@ -196,6 +213,13 @@ header h1 {
   font-size: 0.73rem;
   text-transform: uppercase;
 }
+.text-button {
+  align-self: start;
+  background: transparent;
+  color: #8b2f1f;
+  padding: 0.15rem 0;
+  font-size: 0.75rem;
+}
 .incident .period {
   grid-column: 1 / -1;
   margin-top: 0.5rem;
@@ -224,6 +248,51 @@ header h1 {
   color: #65767d;
   font-size: 0.8rem;
 }
+.resource-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+}
+.resource-card {
+  display: grid;
+  gap: 0.25rem;
+  border: 1px solid #d4dee2;
+  border-radius: 6px;
+  margin-bottom: 0.55rem;
+  padding: 0.7rem;
+}
+.resource-card span,
+.resource-card small {
+  color: #62757e;
+}
+.import-panel {
+  display: grid;
+  gap: 0.8rem;
+  border-top: 1px solid #e2e8eb;
+  margin-top: 1.2rem;
+  padding-top: 1.2rem;
+}
+.import-panel p {
+  margin-bottom: 0;
+  color: #62757e;
+  font-size: 0.86rem;
+}
+.button-row {
+  display: flex;
+  gap: 0.7rem;
+}
+.secondary-button {
+  background: #315b6b;
+}
+.import-result {
+  border-left: 4px solid #bd2f2f;
+  background: #fff0f0;
+  padding: 0.75rem;
+}
+.import-result.valid {
+  border-color: #2b7351;
+  background: #eef9f3;
+}
 footer {
   display: flex;
   justify-content: space-between;
@@ -250,6 +319,9 @@ footer a {
   }
   .map {
     min-height: 420px;
+  }
+  .resource-grid {
+    grid-template-columns: 1fr;
   }
   footer {
     flex-direction: column;

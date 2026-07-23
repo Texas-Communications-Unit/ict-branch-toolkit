@@ -1,11 +1,19 @@
 # Phase 1 Data Model
 
-## P1.0 implemented records
+## Implemented records
 
 - **Incident:** UUID, name, external incident number, lifecycle status, creator, timestamps, and archival marker.
 - **OperationalPeriod:** UUID, parent incident, name, start/end timestamps, creator, and archival marker. End must be after start.
+- **UserRoleAssignment:** one configurable installation role per user using the Administrator, COML, COMC, COMT, Contributor, and Read-only defaults.
+- **IncidentMembership:** one active or inactive incident-scoped role assignment per user and incident.
+- **AuditEvent:** append-only actor, action, target, timestamp, and non-sensitive structured details.
+- **ResourceSource:** source type, stable slug, name, and authoritative URL.
+- **ResourceRelease:** immutable source/version, release date, effective status, content digest, importer, and import timestamp.
+- **ConventionalChannel:** release-scoped channel with integer-hertz RX/TX values, bandwidth, mode, squelch display values, restrictions, and status.
+- **TrunkedTalkgroup:** release-scoped system/talkgroup identifier, mode, restrictions, and status; never stored as a conventional channel.
+- **ResourceImport:** importer, payload digest, counts, release, and timestamp for an applied atomic import.
 
-Operational deletion is not exposed in the P1.0 user interface. Foreign keys use protective behavior where removal would damage history.
+Operational deletion is not exposed. Incidents and periods are archived, memberships are deactivated, source releases remain immutable, audit records are append-only, and foreign keys use protective behavior where removal would damage history.
 
 ## Planned aggregate boundaries
 
