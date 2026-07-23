@@ -11,11 +11,14 @@ beforeEach(() => {
 test("presents the approved TX-COMU identity and required attribution", () => {
   render(<App />);
 
-  expect(
-    screen.getByRole("img", {
-      name: "Texas Communications Unit (TX-COMU) logo",
-    }),
-  ).toBeInTheDocument();
+  const loginLogo = screen.getByRole("img", {
+    name: "Texas Communications Unit (TX-COMU) logo",
+  });
+  expect(loginLogo).toBeInTheDocument();
+  expect(loginLogo.closest("picture")?.querySelector("source")).toHaveAttribute(
+    "srcset",
+    "/brand/tx-comu-logo-transparent.svg",
+  );
   expect(
     screen.getByRole("heading", { name: "ICT Branch Toolkit" }),
   ).toBeInTheDocument();
@@ -99,11 +102,13 @@ test("signs in and lists incidents from the API", async () => {
     screen.getByRole("heading", { name: "Channel library" }),
   ).toBeInTheDocument();
   expect(screen.getByText("Synthetic Administrator")).toBeInTheDocument();
+  const workspaceLogo = screen.getByRole("img", {
+    name: "Texas Communications Unit (TX-COMU) logo",
+  });
+  expect(workspaceLogo).toBeInTheDocument();
   expect(
-    screen.getByRole("img", {
-      name: "Texas Communications Unit (TX-COMU) logo",
-    }),
-  ).toBeInTheDocument();
+    workspaceLogo.closest("picture")?.querySelector("source"),
+  ).toHaveAttribute("srcset", "/brand/tx-comu-logo-transparent.svg");
   expect(screen.getByText("ICT Toolkit")).toBeInTheDocument();
   expect(
     screen.getByText(/TX-COMU names, logos, and identifying marks/),

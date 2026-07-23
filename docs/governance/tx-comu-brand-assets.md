@@ -16,11 +16,11 @@ recolored, cropped, stretched, rotated, outlined, or given effects.
 
 ## Vendored inventory
 
-| Local path | Upstream path | Purpose | SHA-256 |
-| --- | --- | --- | --- |
-| `frontend/public/brand/tx-comu-logo.svg` | `brand/assets/logos/originals/TX-COMU.svg` | Scalable general application identity | `c5ea041ab01b375b6ce6f83cfb1096d007adfb292310499adac94cb0f82a5bae` |
-| `frontend/public/brand/tx-comu-logo.png` | `brand/assets/logos/tx-comu-logo.png` | Preferred general-use fallback artwork | `5fd6b8afa4654c75525a96cf850efdf49d967bcadd03b41814367ed989c9d778` |
-| `frontend/public/brand/tx-comu-app-icon.png` | `brand/assets/logos/tx-comu-github-avatar.png` | Square favicon and application icon | `8ac4166e05b58c689a53b41544138f8e5faba2b64fe5ca801eb11d847dcdc853` |
+| Local path                                           | Upstream path                                            | Purpose                                 | SHA-256                                                            |
+| ---------------------------------------------------- | -------------------------------------------------------- | --------------------------------------- | ------------------------------------------------------------------ |
+| `frontend/public/brand/tx-comu-logo-transparent.svg` | `brand/assets/logos/originals/TX-COMU (transparent).svg` | Preferred scalable application identity | `153a194fdfe0bdbd2a791f5d598048e95af2d66dbe6dc5a71790ac930f666fa1` |
+| `frontend/public/brand/tx-comu-logo.png`             | `brand/assets/logos/tx-comu-logo.png`                    | PNG fallback artwork                    | `5fd6b8afa4654c75525a96cf850efdf49d967bcadd03b41814367ed989c9d778` |
+| `frontend/public/brand/tx-comu-app-icon.png`         | `brand/assets/logos/tx-comu-github-avatar.png`           | Square favicon and application icon     | `8ac4166e05b58c689a53b41544138f8e5faba2b64fe5ca801eb11d847dcdc853` |
 
 Only these three assets are vendored. Expanded incident-symbol and Tactical
 Chicken variants remain at the authoritative source because routine application
