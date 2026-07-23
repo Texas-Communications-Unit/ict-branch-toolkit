@@ -28,6 +28,7 @@ export function PlanWorkspace({ incident }: { incident?: Incident }) {
   const refresh = useCallback(async () => {
     const items = await listPlans();
     setPlans(items.filter((item) => item.incident === incident?.id));
+    window.dispatchEvent(new Event("ict-plans-updated"));
   }, [incident?.id]);
 
   useEffect(() => {

@@ -1,6 +1,8 @@
 import type {
   ConventionalChannel,
+  CoordinateParseResult,
   CurrentUser,
+  GeocoderSearchResult,
   ImportResult,
   Incident,
   ICS205Plan,
@@ -9,6 +11,8 @@ import type {
   PlanRelationship,
   PlanRevision,
   RevisionComparison,
+  RadioSite,
+  SiteAssignment,
   TrunkedTalkgroup,
 } from "./types";
 
@@ -185,6 +189,95 @@ export async function downloadPlanPdf(id: string): Promise<void> {
   const anchor = document.createElement("a");
   anchor.href = url;
   anchor.download = "ics-205.pdf";
+  anchor.click();
+  URL.revokeObjectURL(url);
+}
+
+export async function listRadioSites(incident: string): Promise<RadioSite[]> {
+  const result = await request<Paginated<RadioSite>>(
+    `/api/radio-sites/?incident=${encodeURIComponent(incident)}`,
+  );
+  return result.results;
+}
+
+export function parseCoordinate(
+  coordinate: string,
+): Promise<CoordinateParseResult> {
+  return request<CoordinateParseResult>("/api/coordinates/parse/", {
+    method: "POST",
+    body: JSON.stringify({ coordinate }),
+  });
+}
+
+export function createRadioSite(
+  payload: Record<string, unknown>,
+): Promise<RadioSite> {
+  return request<RadioSite>("/api/radio-sites/", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function updateRadioSite(
+  id: string,
+  payload: Record<string, unknown>,
+): Promise<RadioSite> {
+  return request<RadioSite>(`/api/radio-sites/${id}/`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function createManualRing(
+  payload: Record<string, unknown>,
+): Promise<void> {
+  return request("/api/manual-rings/", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function listSiteAssignments(
+  revision: string,
+): Promise<SiteAssignment[]> {
+  const result = await request<Paginated<SiteAssignment>>(
+    `/api/site-assignments/?revision=${encodeURIComponent(revision)}`,
+  );
+  return result.results;
+}
+
+export function createSiteAssignment(
+  site: string,
+  assignment: string,
+): Promise<SiteAssignment> {
+  return request<SiteAssignment>("/api/site-assignments/", {
+    method: "POST",
+    body: JSON.stringify({ site, assignment }),
+  });
+}
+
+export function searchAddress(address: string): Promise<GeocoderSearchResult> {
+  return request<GeocoderSearchResult>("/api/geocoder/search/", {
+    method: "POST",
+    body: JSON.stringify({ address }),
+  });
+}
+
+export async function downloadSpatialExport(
+  revision: string,
+  format: "map" | "kml" | "geojson" | "csv",
+): Promise<void> {
+  const token = sessionStorage.getItem("ict-toolkit-token");
+  const response = await fetch(
+    `${API_BASE}/api/spatial-exports/${revision}/${format}/`,
+    { headers: token ? { Authorization: `Token ${token}` } : {} },
+  );
+  if (!response.ok) throw new Error(await response.text());
+  const url = URL.createObjectURL(await response.blob());
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download =
+    format === "map" ? "approved-site-map.svg" : `approved-sites.${format}`;
   anchor.click();
   URL.revokeObjectURL(url);
 }
