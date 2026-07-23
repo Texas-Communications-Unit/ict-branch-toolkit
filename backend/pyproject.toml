@@ -16,6 +16,8 @@ dependencies = [
   "dj-database-url==3.0.1",
   "gunicorn==23.0.0",
   "psycopg[binary]==3.3.4",
+  "reportlab==4.4.9",
+  "pillow==12.3.0",
 ]
 
 [project.optional-dependencies]
@@ -24,6 +26,8 @@ dev = [
   "pytest==9.0.3",
   "pytest-django==4.12.0",
   "pytest-cov==7.0.0",
+  "pypdf==6.14.2",
+  "lxml==6.1.1",
   "ruff==0.13.2",
 ]
 

@@ -19,6 +19,10 @@ LIBRARY_VIEW = "library.view"
 LIBRARY_IMPORT = "library.import"
 ACCOUNT_MANAGE = "account.manage"
 AUDIT_VIEW = "audit.view"
+PLAN_VIEW = "plan.view"
+PLAN_EDIT = "plan.edit"
+PLAN_APPROVE = "plan.approve"
+PLAN_EXPORT = "plan.export"
 
 DEFAULT_ROLE_POLICY = {
     Role.ADMINISTRATOR: {
@@ -34,6 +38,10 @@ DEFAULT_ROLE_POLICY = {
         LIBRARY_IMPORT,
         ACCOUNT_MANAGE,
         AUDIT_VIEW,
+        PLAN_VIEW,
+        PLAN_EDIT,
+        PLAN_APPROVE,
+        PLAN_EXPORT,
     },
     Role.COML: {
         INCIDENT_VIEW,
@@ -45,6 +53,10 @@ DEFAULT_ROLE_POLICY = {
         PERIOD_CHANGE,
         PERIOD_ARCHIVE,
         LIBRARY_VIEW,
+        PLAN_VIEW,
+        PLAN_EDIT,
+        PLAN_APPROVE,
+        PLAN_EXPORT,
     },
     Role.COMC: {
         INCIDENT_VIEW,
@@ -56,6 +68,10 @@ DEFAULT_ROLE_POLICY = {
         PERIOD_CHANGE,
         PERIOD_ARCHIVE,
         LIBRARY_VIEW,
+        PLAN_VIEW,
+        PLAN_EDIT,
+        PLAN_APPROVE,
+        PLAN_EXPORT,
     },
     Role.COMT: {
         INCIDENT_VIEW,
@@ -64,6 +80,8 @@ DEFAULT_ROLE_POLICY = {
         PERIOD_CHANGE,
         PERIOD_ARCHIVE,
         LIBRARY_VIEW,
+        PLAN_VIEW,
+        PLAN_EDIT,
     },
     Role.CONTRIBUTOR: {
         INCIDENT_VIEW,
@@ -71,8 +89,10 @@ DEFAULT_ROLE_POLICY = {
         PERIOD_CREATE,
         PERIOD_CHANGE,
         LIBRARY_VIEW,
+        PLAN_VIEW,
+        PLAN_EDIT,
     },
-    Role.READ_ONLY: {INCIDENT_VIEW, LIBRARY_VIEW},
+    Role.READ_ONLY: {INCIDENT_VIEW, LIBRARY_VIEW, PLAN_VIEW},
 }
 
 
@@ -108,7 +128,7 @@ def permissions_for_user(user, incident=None) -> set[str]:
         permissions = {
             permission
             for permission in permissions
-            if not permission.startswith(("incident.", "period."))
+            if not permission.startswith(("incident.", "period.", "plan."))
         }
     return permissions
 
