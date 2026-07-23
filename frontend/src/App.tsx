@@ -261,7 +261,10 @@ export default function App() {
           )}
           <p className="legal">
             Originally developed by the Texas Communications Unit (TX-COMU).
-            Licensed under GNU AGPL v3.
+            Licensed under GNU AGPL v3.{" "}
+            <a href="/third-party/maplibre-gl-LICENSE.txt">
+              MapLibre and third-party notices
+            </a>
           </p>
         </section>
       </main>
@@ -520,12 +523,17 @@ export default function App() {
             assets and are not relicensed under the software license.
           </p>
         </div>
-        <a
-          href="https://github.com/Texas-Communications-Unit/ict-branch-toolkit"
-          aria-label="View ICT Branch Toolkit source code on GitHub"
-        >
-          View source code
-        </a>
+        <div className="footer-links">
+          <a
+            href="https://github.com/Texas-Communications-Unit/ict-branch-toolkit"
+            aria-label="View ICT Branch Toolkit source code on GitHub"
+          >
+            View source code
+          </a>
+          <a href="/third-party/maplibre-gl-LICENSE.txt">
+            MapLibre and third-party notices
+          </a>
+        </div>
       </footer>
     </div>
   );

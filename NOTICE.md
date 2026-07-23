@@ -8,3 +8,7 @@ The ICT Branch Toolkit name identifies this open-source software project. The TX
 
 References to FEMA, CISA, NIFOG, ICS forms, or TAK do not imply endorsement by those organizations or programs. Third-party dependency notices are available from the corresponding package metadata and licenses.
 
+Production frontend builds reproduce the complete MapLibre GL JS license and
+bundled third-party notices at
+`/third-party/maplibre-gl-LICENSE.txt`.
+

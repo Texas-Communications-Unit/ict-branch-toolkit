@@ -170,6 +170,12 @@ The toolkit now stores incident-scoped WGS 84 radio sites, accepts decimal-degre
 
 Plan approval freezes each associated site's coordinate provenance, source identity, and rings. Approved-only SVG map, KML, GeoJSON, and CSV exports read those snapshots, so later canonical site edits cannot silently rewrite an official output. The neutral map and coordinate workflow remain usable without a network connection, paid provider, or API key. The replaceable address-provider hook is disabled by default.
 
+External basemaps are disabled by default and fail closed unless their endpoint,
+provider identity, attribution, license, terms, privacy, issue-reporting, and
+support metadata are complete. See
+[Open mapping compliance](docs/governance/open-mapping-compliance.md) and the
+[map-provider deployment checklist](docs/operations/map-provider-deployment-checklist.md).
+
 See [ADR-0004](docs/adr/0004-spatial-sites-snapshots-and-exports.md) and [spatial input and reference-source controls](docs/operations/spatial-inputs-and-reference-sources.md).
 
 The prototype does not yet implement deconfliction, completed official export records/digests, or production authentication hardening.

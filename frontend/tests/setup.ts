@@ -17,6 +17,7 @@ class MockMap {
     callback();
   }
   remove() {}
+  setStyle() {}
 }
 
 class MockMarker {

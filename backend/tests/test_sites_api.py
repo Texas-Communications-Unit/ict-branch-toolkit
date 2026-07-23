@@ -143,6 +143,7 @@ def test_site_ring_link_approval_snapshot_and_official_exports(client):
         assert response.status_code == 200, response.content
         assert response["Content-Type"].startswith(content_type)
         assert b"Planning decision support only" in response.content
+        assert b"No external basemap data is included" in response.content
         assert b"33.214500" in response.content
         assert b"33.500000" not in response.content
 

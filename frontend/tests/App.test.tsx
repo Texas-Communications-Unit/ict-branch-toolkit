@@ -5,6 +5,7 @@ import App from "../src/App";
 
 beforeEach(() => {
   sessionStorage.clear();
+  vi.unstubAllEnvs();
   vi.restoreAllMocks();
 });
 
@@ -26,6 +27,11 @@ test("presents the approved TX-COMU identity and required attribution", () => {
   expect(
     screen.getByText(/Originally developed by the Texas Communications Unit/),
   ).toHaveTextContent("Licensed under GNU AGPL v3");
+  expect(
+    screen.getByRole("link", {
+      name: "MapLibre and third-party notices",
+    }),
+  ).toHaveAttribute("href", "/third-party/maplibre-gl-LICENSE.txt");
 });
 
 test("signs in and lists incidents from the API", async () => {
@@ -98,6 +104,9 @@ test("signs in and lists incidents from the API", async () => {
   );
   expect(sessionStorage.getItem("ict-toolkit-token")).toBe("test-token");
   expect(screen.getByTestId("map")).toBeInTheDocument();
+  expect(screen.getByTestId("map-provider")).toHaveTextContent(
+    "Neutral offline map active",
+  );
   expect(
     screen.getByRole("heading", { name: "Channel library" }),
   ).toBeInTheDocument();
@@ -113,6 +122,11 @@ test("signs in and lists incidents from the API", async () => {
   expect(
     screen.getByText(/TX-COMU names, logos, and identifying marks/),
   ).toHaveTextContent("not relicensed under the software license");
+  expect(
+    screen.getByRole("link", {
+      name: "MapLibre and third-party notices",
+    }),
+  ).toHaveAttribute("href", "/third-party/maplibre-gl-LICENSE.txt");
   await userEvent.click(
     screen.getByRole("button", { name: "Validate dry run" }),
   );
