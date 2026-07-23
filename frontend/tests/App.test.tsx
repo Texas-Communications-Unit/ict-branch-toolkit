@@ -15,7 +15,10 @@ test("presents the approved TX-COMU identity and required attribution", () => {
     name: "Texas Communications Unit (TX-COMU) logo",
   });
   expect(loginLogo).toBeInTheDocument();
-  expect(loginLogo).toHaveAttribute("src", "/brand/tx-comu-logo.png");
+  expect(loginLogo.closest("picture")?.querySelector("source")).toHaveAttribute(
+    "srcset",
+    "/brand/tx-comu-logo-transparent.svg",
+  );
   expect(
     screen.getByRole("heading", { name: "ICT Branch Toolkit" }),
   ).toBeInTheDocument();
@@ -103,7 +106,9 @@ test("signs in and lists incidents from the API", async () => {
     name: "Texas Communications Unit (TX-COMU) logo",
   });
   expect(workspaceLogo).toBeInTheDocument();
-  expect(workspaceLogo).toHaveAttribute("src", "/brand/tx-comu-logo.png");
+  expect(
+    workspaceLogo.closest("picture")?.querySelector("source"),
+  ).toHaveAttribute("srcset", "/brand/tx-comu-logo-transparent.svg");
   expect(screen.getByText("ICT Toolkit")).toBeInTheDocument();
   expect(
     screen.getByText(/TX-COMU names, logos, and identifying marks/),

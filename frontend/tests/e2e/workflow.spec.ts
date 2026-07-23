@@ -216,7 +216,10 @@ test("administrator signs in and sees the incident planning workspace", async ({
     name: "Texas Communications Unit (TX-COMU) logo",
   });
   await expect(workspaceLogo).toBeVisible();
-  await expect(workspaceLogo).toHaveAttribute("src", "/brand/tx-comu-logo.png");
+  await expect(page.locator("picture.brand-mark source")).toHaveAttribute(
+    "srcset",
+    "/brand/tx-comu-logo-transparent.svg",
+  );
   await expect(page.getByText("ICT Toolkit")).toBeVisible();
   await expect(page.getByLabel("Radio site planning map")).toBeVisible();
   await expect(page.getByText(/P1.3 Prototype/)).toBeVisible();
