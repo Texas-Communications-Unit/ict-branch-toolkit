@@ -85,3 +85,64 @@ export interface Paginated<T> {
   previous: string | null;
   results: T[];
 }
+
+export interface PlanAssignment {
+  id: string;
+  revision: string;
+  position: number;
+  function: string;
+  channel_name: string;
+  assignment: string;
+  rx_frequency_hz: number | null;
+  rx_squelch: string;
+  tx_frequency_hz: number | null;
+  tx_squelch: string;
+  mode: string;
+  remarks: string;
+  structured_note: "" | "remote_base" | "link" | "patch" | "other";
+  contact_name: string;
+  site_address: string;
+  phone_numbers: string;
+  contact_24_hour: string;
+  resource_snapshot: Record<string, unknown>;
+}
+
+export interface PlanRelationship {
+  id: string;
+  revision: string;
+  relationship_type: "remote_base" | "link" | "patch";
+  label: string;
+  assignments: string[];
+}
+
+export interface PlanRevision {
+  id: string;
+  plan: string;
+  number: number;
+  status: "draft" | "approved";
+  is_locked: boolean;
+  prepared_by_name: string;
+  prepared_by_position: string;
+  approved_at: string | null;
+  assignments: PlanAssignment[];
+  relationships: PlanRelationship[];
+}
+
+export interface ICS205Plan {
+  id: string;
+  incident: string;
+  operational_period: string;
+  title: string;
+  revisions: PlanRevision[];
+}
+
+export interface RevisionComparison {
+  revision: number;
+  other_revision: number;
+  changes: {
+    key: string;
+    before: string | null;
+    after: string | null;
+    changed_fields: string[];
+  }[];
+}

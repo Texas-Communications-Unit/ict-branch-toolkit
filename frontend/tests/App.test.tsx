@@ -60,6 +60,12 @@ test("signs in and lists incidents from the API", async () => {
     )
     .mockResolvedValueOnce(
       new Response(
+        JSON.stringify({ count: 0, next: null, previous: null, results: [] }),
+        { status: 200 },
+      ),
+    )
+    .mockResolvedValueOnce(
+      new Response(
         JSON.stringify({
           valid: true,
           dry_run: true,

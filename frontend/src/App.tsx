@@ -12,6 +12,7 @@ import {
   login,
 } from "./api";
 import { MapShell } from "./MapShell";
+import { PlanWorkspace } from "./PlanWorkspace";
 import type {
   ConventionalChannel,
   CurrentUser,
@@ -270,7 +271,7 @@ export default function App() {
         <div className="identity-summary">
           <span>{currentUser?.display_name}</span>
           <div className="prototype-badge">
-            P1.1 Prototype · {currentUser?.role}
+            P1.2 Prototype · {currentUser?.role}
           </div>
         </div>
       </header>
@@ -387,6 +388,7 @@ export default function App() {
             </form>
           )}
         </section>
+        <PlanWorkspace incident={selected} />
         <MapShell />
         <section className="library-panel" aria-labelledby="library-heading">
           <div className="section-heading">
