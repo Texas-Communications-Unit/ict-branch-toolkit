@@ -111,5 +111,8 @@ describe("MapShell provider disclosure", () => {
     expect(
       screen.getByRole("link", { name: "Report a map issue" }),
     ).toHaveAttribute("href", "https://www.openstreetmap.org/fixthemap");
+    expect(
+      screen.getByRole("button", { name: "View all Texas" }),
+    ).toBeInTheDocument();
   });
 });

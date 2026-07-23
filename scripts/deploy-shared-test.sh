@@ -10,7 +10,38 @@ expected_sha="$1"
 app_dir="$HOME/apps/ict-branch-toolkit"
 env_file="$HOME/.config/ict-branch-toolkit/deployment.env"
 backup_dir="$HOME/backups/ict-branch-toolkit"
-compose=(docker compose --env-file "$env_file" -f compose.production.yaml)
+
+if [[ ! -f "$env_file" ]]; then
+  echo "Refusing deployment because the protected environment file is missing." >&2
+  exit 1
+fi
+
+resolved_env="$(mktemp)"
+cleanup() {
+  rm -f "$resolved_env"
+}
+trap cleanup EXIT
+chmod 600 "$resolved_env"
+
+# Preserve protected server settings while applying the approved public
+# basemap configuration for this synthetic-data-only shared test.
+grep -v '^VITE_MAP_' "$env_file" > "$resolved_env"
+cat >> "$resolved_env" <<'EOF'
+VITE_MAP_STYLE_URL=
+VITE_MAP_TILE_URL=https://tile.openstreetmap.org/{z}/{x}/{y}.png
+VITE_MAP_PROVIDER_ID=osm-standard
+VITE_MAP_PROVIDER_NAME=OpenStreetMap standard tiles
+VITE_MAP_ATTRIBUTION_TEXT=© OpenStreetMap contributors
+VITE_MAP_ATTRIBUTION_URL=https://www.openstreetmap.org/copyright
+VITE_MAP_LICENSE_NAME=Open Database License 1.0
+VITE_MAP_LICENSE_URL=https://opendatacommons.org/licenses/odbl/1-0/
+VITE_MAP_TERMS_URL=https://operations.osmfoundation.org/policies/tiles/
+VITE_MAP_PRIVACY_URL=https://osmfoundation.org/wiki/Privacy_Policy
+VITE_MAP_REPORT_ISSUE_URL=https://www.openstreetmap.org/fixthemap
+VITE_MAP_CONTACT_URL=https://github.com/Texas-Communications-Unit/ict-branch-toolkit/issues
+EOF
+
+compose=(docker compose --env-file "$resolved_env" -f compose.production.yaml)
 
 cd "$app_dir"
 

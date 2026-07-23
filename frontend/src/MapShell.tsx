@@ -1,6 +1,7 @@
 import * as maplibregl from "maplibre-gl";
 import type {
   GeoJSONSource,
+  LngLatBoundsLike,
   MapMouseEvent,
   StyleSpecification,
 } from "maplibre-gl";
@@ -33,6 +34,13 @@ import type {
   RadioSite,
   SiteAssignment,
 } from "./types";
+
+const TEXAS_BOUNDS: LngLatBoundsLike = [
+  [-106.65, 25.84],
+  [-93.51, 36.5],
+];
+
+const TEXAS_FIT_OPTIONS = { padding: 36 };
 
 function brandColor(token: string, fallback: string) {
   if (typeof document === "undefined") return fallback;
@@ -88,6 +96,7 @@ export function MapShell({ incident }: { incident?: Incident }) {
   const container = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const markersRef = useRef<maplibregl.Marker[]>([]);
+  const previewMarkerRef = useRef<maplibregl.Marker | null>(null);
   const configuredMap = useMemo(() => resolveMapProvider(import.meta.env), []);
   const [sites, setSites] = useState<RadioSite[]>([]);
   const [plans, setPlans] = useState<ICS205Plan[]>([]);
@@ -113,6 +122,30 @@ export function MapShell({ incident }: { incident?: Incident }) {
   const canExport =
     (incident?.permissions.includes("site.export") ?? false) &&
     revision?.status === "approved";
+
+  const previewCoordinate = useCallback(
+    (latitude: number, longitude: number, moveMap = true) => {
+      const map = mapRef.current;
+      if (!map) return;
+      const colors = getBrandMapColors();
+      if (previewMarkerRef.current) {
+        previewMarkerRef.current.setLngLat([longitude, latitude]);
+      } else {
+        previewMarkerRef.current = new maplibregl.Marker({
+          color: colors.red,
+        })
+          .setLngLat([longitude, latitude])
+          .addTo(map);
+      }
+      if (moveMap) {
+        map.flyTo({
+          center: [longitude, latitude],
+          zoom: 11,
+        });
+      }
+    },
+    [],
+  );
 
   const refresh = useCallback(async () => {
     if (!incident) {
@@ -182,8 +215,8 @@ export function MapShell({ incident }: { incident?: Incident }) {
         configuredMap.mode === "external"
           ? configuredMap.style
           : getOfflineStyle(),
-      center: [-99.4, 31.0],
-      zoom: 4.6,
+      bounds: TEXAS_BOUNDS,
+      fitBoundsOptions: TEXAS_FIT_OPTIONS,
       attributionControl: false,
     });
     map.addControl(
@@ -219,17 +252,22 @@ export function MapShell({ incident }: { incident?: Incident }) {
           mgrs: "",
         },
       });
-      setMessage("Map position selected. Name the site and save it.");
+      previewCoordinate(event.lngLat.lat, event.lngLat.lng, false);
+      setMessage(
+        "Map position selected and marked in red. Name the site and save it.",
+      );
     };
     map.on("click", handleClick);
     mapRef.current = map;
     return () => {
       markersRef.current.forEach((marker) => marker.remove());
       markersRef.current = [];
+      previewMarkerRef.current?.remove();
+      previewMarkerRef.current = null;
       mapRef.current = null;
       map.remove();
     };
-  }, [configuredMap]);
+  }, [configuredMap, previewCoordinate]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -328,11 +366,10 @@ export function MapShell({ incident }: { incident?: Incident }) {
     try {
       const result = await parseCoordinate(coordinateText);
       setParsed(result);
-      setMessage(`Parsed as ${result.input_format.toUpperCase()}.`);
-      mapRef.current?.flyTo({
-        center: [result.longitude, result.latitude],
-        zoom: 11,
-      });
+      setMessage(
+        `Parsed as ${result.input_format.toUpperCase()} and marked in red.`,
+      );
+      previewCoordinate(result.latitude, result.longitude);
     } catch (error) {
       setMessage(
         error instanceof Error ? error.message : "Unable to parse coordinate.",
@@ -363,6 +400,8 @@ export function MapShell({ incident }: { incident?: Incident }) {
       setCoordinateText("");
       setParsed(undefined);
       setAddressSelection(undefined);
+      previewMarkerRef.current?.remove();
+      previewMarkerRef.current = null;
       setMessage("Radio site saved.");
       await refresh();
     } catch (error) {
@@ -475,6 +514,15 @@ export function MapShell({ incident }: { incident?: Incident }) {
         data-testid="map"
         aria-label="Radio site planning map"
       />
+      <button
+        type="button"
+        className="secondary-button"
+        onClick={() =>
+          mapRef.current?.fitBounds(TEXAS_BOUNDS, TEXAS_FIT_OPTIONS)
+        }
+      >
+        View all Texas
+      </button>
       {configuredMap.mode === "external" ? (
         <div className="map-provider" data-testid="map-provider">
           <p>
@@ -518,8 +566,9 @@ export function MapShell({ incident }: { incident?: Incident }) {
       )}
       <p className="map-note">
         Click the map or enter decimal degrees, DDM, DMS, or USNG/MGRS. Site
-        coordinates and manual rings remain available when an external basemap
-        is disabled or unavailable.
+        coordinates are previewed with a red marker. Coordinates and manual
+        rings remain available when an external basemap is disabled or
+        unavailable.
       </p>
       {!incident ? (
         <p className="empty">Select an incident to manage its radio sites.</p>
@@ -708,10 +757,8 @@ export function MapShell({ incident }: { incident?: Incident }) {
                           mgrs: "",
                         },
                       });
-                      mapRef.current?.flyTo({
-                        center: [result.longitude, result.latitude],
-                        zoom: 11,
-                      });
+                      previewCoordinate(result.latitude, result.longitude);
+                      setMessage("Address result selected and marked in red.");
                     }}
                   >
                     {result.label}
