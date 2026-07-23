@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "reviewed_on": "2026-07-23",
+  "providers": [
+    {
+      "id": "neutral-offline",
+      "status": "default",
+      "endpoint": null,
+      "data_source": "None",
+      "style_source": "ICT Branch Toolkit inline neutral style",
+      "license": "GNU AGPL v3 project source",
+      "attribution": "No external attribution required",
+      "credentials": "None",
+      "network_disclosure": "None",
+      "offline_use": "Supported"
+    },
+    {
+      "id": "osm-standard",
+      "status": "conditionally-approved-for-limited-synthetic-testing",
+      "endpoint_template": "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+      "data_source": "OpenStreetMap contributors",
+      "style_source": "OpenStreetMap Carto standard raster tiles",
+      "license": "Open Data Commons Open Database License 1.0",
+      "attribution": "© OpenStreetMap contributors",
+      "attribution_url": "https://www.openstreetmap.org/copyright",
+      "terms_url": "https://operations.osmfoundation.org/policies/tiles/",
+      "privacy_url": "https://osmfoundation.org/wiki/Privacy_Policy",
+      "report_issue_url": "https://www.openstreetmap.org/fixthemap",
+      "credentials": "None",
+      "network_disclosure": "Viewed area, browser network metadata, and referring site",
+      "offline_use": "Prohibited",
+      "limitations": [
+        "Normal human-driven interactive viewing only",
+        "No bulk download, prefetch, scraping, or offline packaging",
+        "Best-effort service with no SLA",
+        "Synthetic test data only"
+      ]
+    }
+  ]
+}

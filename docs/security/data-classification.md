@@ -19,6 +19,10 @@ The browser is untrusted. The backend enforces authentication, authorization, va
 - Token authentication for the local prototype; tokens are held in browser session storage and cleared when the session ends.
 - Configuration through environment variables; `.env` is ignored.
 - No required external map request or credential.
+- Optional external basemaps fail closed unless endpoint, attribution, license,
+  terms, privacy, issue-reporting, and support metadata are complete. Enabling
+  one discloses the viewed geographic area to that provider and remains
+  synthetic-test-only until a separate operational privacy determination.
 - Dependency, secret, static, test, and container checks in CI.
 - Protective foreign keys and archival fields for operational records.
 

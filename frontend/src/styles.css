@@ -365,6 +365,24 @@ p {
   color: var(--tx-comu-slate);
   font-size: 0.8rem;
 }
+.map-provider {
+  margin: 0.7rem 0 0;
+  border-left: 4px solid var(--tx-comu-blue);
+  padding: 0.65rem 0.8rem;
+  background: var(--tx-comu-light);
+  color: var(--tx-comu-slate);
+  font-size: 0.8rem;
+}
+.map-provider p {
+  margin: 0;
+}
+.map-provider p + p {
+  margin-top: 0.4rem;
+}
+.map-provider a {
+  color: var(--tx-comu-navy);
+  font-weight: 700;
+}
 .resource-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -617,6 +635,12 @@ footer p {
 footer a {
   color: var(--tx-comu-white);
   font-weight: 700;
+}
+.footer-links {
+  display: grid;
+  align-content: start;
+  gap: 0.45rem;
+  min-width: max-content;
 }
 @media (max-width: 900px) {
   .workspace {

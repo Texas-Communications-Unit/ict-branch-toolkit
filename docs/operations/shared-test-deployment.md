@@ -30,7 +30,43 @@ DJANGO_SUPERUSER_PASSWORD=<random initial administrator password>
 APP_BIND_ADDRESS=<application-host address reachable by the reverse proxy>
 APP_PORT=8088
 VITE_MAP_STYLE_URL=
+VITE_MAP_TILE_URL=
+VITE_MAP_PROVIDER_ID=
+VITE_MAP_PROVIDER_NAME=
+VITE_MAP_ATTRIBUTION_TEXT=
+VITE_MAP_ATTRIBUTION_URL=
+VITE_MAP_LICENSE_NAME=
+VITE_MAP_LICENSE_URL=
+VITE_MAP_TERMS_URL=
+VITE_MAP_PRIVACY_URL=
+VITE_MAP_REPORT_ISSUE_URL=
+VITE_MAP_CONTACT_URL=
 ```
+
+The blank map-provider values are the secure default and render the neutral,
+network-free map. After completing the
+[map-provider deployment checklist](map-provider-deployment-checklist.md), a
+maintainer may approve this limited synthetic-test configuration for the public
+OSM standard raster service:
+
+```dotenv
+VITE_MAP_STYLE_URL=
+VITE_MAP_TILE_URL=https://tile.openstreetmap.org/{z}/{x}/{y}.png
+VITE_MAP_PROVIDER_ID=osm-standard
+VITE_MAP_PROVIDER_NAME=OpenStreetMap standard tiles
+VITE_MAP_ATTRIBUTION_TEXT=© OpenStreetMap contributors
+VITE_MAP_ATTRIBUTION_URL=https://www.openstreetmap.org/copyright
+VITE_MAP_LICENSE_NAME=Open Database License 1.0
+VITE_MAP_LICENSE_URL=https://opendatacommons.org/licenses/odbl/1-0/
+VITE_MAP_TERMS_URL=https://operations.osmfoundation.org/policies/tiles/
+VITE_MAP_PRIVACY_URL=https://osmfoundation.org/wiki/Privacy_Policy
+VITE_MAP_REPORT_ISSUE_URL=https://www.openstreetmap.org/fixthemap
+VITE_MAP_CONTACT_URL=https://github.com/Texas-Communications-Unit/ict-branch-toolkit/issues
+```
+
+This test configuration is not approved for protected, confidential, personal,
+or operational location data. It does not permit bulk downloads, prefetching,
+automated map browsing, offline packages, or public Nominatim geocoding.
 
 Start and verify the isolated stack:
 

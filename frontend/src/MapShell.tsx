@@ -8,6 +8,7 @@ import {
   type FormEvent,
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
@@ -24,6 +25,7 @@ import {
   searchAddress,
   updateRadioSite,
 } from "./api";
+import { resolveMapProvider } from "./mapProvider";
 import type {
   CoordinateParseResult,
   ICS205Plan,
@@ -86,12 +88,14 @@ export function MapShell({ incident }: { incident?: Incident }) {
   const container = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const markersRef = useRef<maplibregl.Marker[]>([]);
+  const configuredMap = useMemo(() => resolveMapProvider(import.meta.env), []);
   const [sites, setSites] = useState<RadioSite[]>([]);
   const [plans, setPlans] = useState<ICS205Plan[]>([]);
   const [links, setLinks] = useState<SiteAssignment[]>([]);
   const [coordinateText, setCoordinateText] = useState("");
   const [parsed, setParsed] = useState<CoordinateParseResult>();
   const [message, setMessage] = useState("");
+  const [mapStatus, setMapStatus] = useState("");
   const [addressResults, setAddressResults] = useState<
     { label: string; latitude: number; longitude: number; provider: string }[]
   >([]);
@@ -172,11 +176,12 @@ export function MapShell({ incident }: { incident?: Incident }) {
 
   useEffect(() => {
     if (!container.current) return;
-    const configuredStyle = import.meta.env.VITE_MAP_STYLE_URL as
-      string | undefined;
     const map = new maplibregl.Map({
       container: container.current,
-      style: configuredStyle || getOfflineStyle(),
+      style:
+        configuredMap.mode === "external"
+          ? configuredMap.style
+          : getOfflineStyle(),
       center: [-99.4, 31.0],
       zoom: 4.6,
       attributionControl: false,
@@ -185,6 +190,20 @@ export function MapShell({ incident }: { incident?: Incident }) {
       new maplibregl.NavigationControl({ showCompass: false }),
       "top-right",
     );
+    if (configuredMap.mode === "external") {
+      let waitingForExternalStyle = true;
+      map.once("load", () => {
+        waitingForExternalStyle = false;
+      });
+      map.once("error", () => {
+        if (!waitingForExternalStyle) return;
+        waitingForExternalStyle = false;
+        map.setStyle(getOfflineStyle());
+        setMapStatus(
+          "The external basemap could not be loaded. The neutral map remains available.",
+        );
+      });
+    }
     const handleClick = (event: MapMouseEvent) => {
       const value = `${event.lngLat.lat.toFixed(6)}, ${event.lngLat.lng.toFixed(6)}`;
       setCoordinateText(value);
@@ -210,7 +229,7 @@ export function MapShell({ incident }: { incident?: Incident }) {
       mapRef.current = null;
       map.remove();
     };
-  }, []);
+  }, [configuredMap]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -456,9 +475,51 @@ export function MapShell({ incident }: { incident?: Incident }) {
         data-testid="map"
         aria-label="Radio site planning map"
       />
+      {configuredMap.mode === "external" ? (
+        <div className="map-provider" data-testid="map-provider">
+          <p>
+            Map data:{" "}
+            <a href={configuredMap.metadata.attributionUrl}>
+              {configuredMap.metadata.attributionText}
+            </a>
+            . Licensed under{" "}
+            <a href={configuredMap.metadata.licenseUrl}>
+              {configuredMap.metadata.licenseName}
+            </a>
+            . <a href={configuredMap.metadata.termsUrl}>Provider terms</a>
+            {" · "}
+            <a href={configuredMap.metadata.privacyUrl}>Provider privacy</a>
+            {" · "}
+            <a href={configuredMap.metadata.reportIssueUrl}>
+              Report a map issue
+            </a>
+            {" · "}
+            <a href={configuredMap.metadata.contactUrl}>Toolkit map support</a>
+          </p>
+          <p>
+            Viewing this basemap sends the viewed geographic area to{" "}
+            {configuredMap.metadata.name}. Do not display protected or
+            confidential locations without an approved privacy and operational
+            security determination.
+          </p>
+        </div>
+      ) : (
+        <p className="map-provider" data-testid="map-provider">
+          Neutral offline map active. No map area or operational location is
+          sent to an external map provider.
+          {configuredMap.validationErrors.length > 0 &&
+            " External basemap configuration is incomplete and was rejected."}
+        </p>
+      )}
+      {mapStatus && (
+        <p role="alert" className="site-message">
+          {mapStatus}
+        </p>
+      )}
       <p className="map-note">
-        Click the map or enter decimal degrees, DDM, DMS, or USNG/MGRS. The
-        neutral style works without a paid provider or network base map.
+        Click the map or enter decimal degrees, DDM, DMS, or USNG/MGRS. Site
+        coordinates and manual rings remain available when an external basemap
+        is disabled or unavailable.
       </p>
       {!incident ? (
         <p className="empty">Select an incident to manage its radio sites.</p>

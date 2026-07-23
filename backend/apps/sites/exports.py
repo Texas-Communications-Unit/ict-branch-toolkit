@@ -11,6 +11,10 @@ DISCLAIMER = (
     "Planning decision support only; not frequency coordination approval, "
     "spectrum authorization, or a guarantee of coverage."
 )
+BASEMAP_PROVENANCE = (
+    "No external basemap data is included; this export contains only approved "
+    "site, assignment, coordinate, and manual-ring records."
+)
 RING_COLORS = {
     "operational": "#2d7d46",
     "fringe": "#c17b16",
@@ -37,6 +41,7 @@ def geojson_export(revision) -> bytes:
     payload = {
         "type": "FeatureCollection",
         "name": f"ICS-205 revision {revision.number} approved sites",
+        "basemap_provenance": BASEMAP_PROVENANCE,
         "features": features,
     }
     return json.dumps(payload, indent=2, sort_keys=True, ensure_ascii=False).encode()
@@ -57,6 +62,7 @@ def csv_export(revision) -> bytes:
             "source_identity",
             "source_retrieved_at",
             "planning_limitation",
+            "basemap_provenance",
         ]
     )
     for record in approved_site_records(revision):
@@ -74,6 +80,7 @@ def csv_export(revision) -> bytes:
                     record["source_identity"],
                     record["source_retrieved_at"] or "",
                     DISCLAIMER,
+                    BASEMAP_PROVENANCE,
                 ]
             )
     return output.getvalue().encode("utf-8")
@@ -87,7 +94,9 @@ def kml_export(revision) -> bytes:
     ElementTree.SubElement(
         document, f"{{{namespace}}}name"
     ).text = f"ICS-205 revision {revision.number} approved sites"
-    ElementTree.SubElement(document, f"{{{namespace}}}description").text = DISCLAIMER
+    ElementTree.SubElement(
+        document, f"{{{namespace}}}description"
+    ).text = f"{DISCLAIMER}\n{BASEMAP_PROVENANCE}"
     for record in approved_site_records(revision):
         placemark = ElementTree.SubElement(document, f"{{{namespace}}}Placemark")
         ElementTree.SubElement(placemark, f"{{{namespace}}}name").text = record["name"]
@@ -152,7 +161,7 @@ def svg_export(revision) -> bytes:
         f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" '
         f'viewBox="0 0 {width} {height}" role="img" aria-labelledby="title desc">',
         f'<title id="title">ICS-205 revision {revision.number} approved site map</title>',
-        f'<desc id="desc">{html.escape(DISCLAIMER)}</desc>',
+        f'<desc id="desc">{html.escape(DISCLAIMER)} {html.escape(BASEMAP_PROVENANCE)}</desc>',
         '<rect width="100%" height="100%" fill="#f7fafb"/>',
         '<text x="40" y="38" font-family="sans-serif" font-size="22" font-weight="700" '
         'fill="#173743">ICT Branch Toolkit — Approved Radio Sites</text>',
@@ -185,6 +194,8 @@ def svg_export(revision) -> bytes:
         [
             f'<text x="40" y="{height - 24}" font-family="sans-serif" font-size="11" '
             f'fill="#5c6d75">{html.escape(DISCLAIMER)}</text>',
+            f'<text x="40" y="{height - 8}" font-family="sans-serif" font-size="10" '
+            f'fill="#5c6d75">{html.escape(BASEMAP_PROVENANCE)}</text>',
             "</svg>",
         ]
     )
