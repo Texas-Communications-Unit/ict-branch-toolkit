@@ -27,8 +27,15 @@
 - Each controlled resource row stores an immutable source/release/digest snapshot so a later library update cannot rewrite an approved plan.
 - Remote Base, Link, and Patch relationships are typed records. A Patch requires two or more rows from the same revision.
 - Contact name, address, phone, and 24-hour contact fields are optional, incident-scoped, audited by changed field name, and excluded from the P1.2 PDF.
-- P1.3 must associate assignments with canonical site records; P1.2 does not duplicate site coordinates in contact fields.
+- P1.3 associates assignments with canonical incident site records; P1.2 contact fields do not duplicate those coordinates.
 - Only approved revisions can produce the current official PDF endpoint. PDF exports create audit events.
+
+## P1.3 spatial controls
+
+- `site.view`, `site.edit`, and `site.export` remain centralized backend capabilities and inherit incident membership scoping.
+- Approval freezes each assignment link's site coordinates, entered-coordinate representation, source identity, retrieval time, and manual rings.
+- Approved SVG, KML, GeoJSON, and CSV exports read frozen snapshots rather than mutable canonical sites.
+- The default address provider is disabled. Enabling a live geocoder or third-party overlay requires a separate privacy, terms, attribution, reliability, and provenance review.
 
 ## Remaining prototype limitations
 
