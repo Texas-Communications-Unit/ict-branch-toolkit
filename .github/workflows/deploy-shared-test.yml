@@ -52,12 +52,13 @@ jobs:
           chmod 600 "$HOME/.ssh/deploy_key"
           chmod 644 "$HOME/.ssh/known_hosts"
 
-      - name: Deploy exact main commit
+      - name: Upload deployment script
         env:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
           DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
           DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
         run: |
+          remote_script=".cache/ict-branch-toolkit/deploy-${GITHUB_RUN_ID}.sh"
           ssh \
             -i "$HOME/.ssh/deploy_key" \
             -p "$DEPLOY_PORT" \
@@ -66,8 +67,43 @@ jobs:
             -o IdentitiesOnly=yes \
             -o StrictHostKeyChecking=yes \
             "$DEPLOY_USER@$DEPLOY_HOST" \
-            "bash -s -- '$GITHUB_SHA'" \
+            "install -d -m 700 .cache/ict-branch-toolkit && cat > '$remote_script' && chmod 700 '$remote_script'" \
             < scripts/deploy-shared-test.sh
+
+      - name: Deploy exact main commit
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+        run: |
+          remote_script=".cache/ict-branch-toolkit/deploy-${GITHUB_RUN_ID}.sh"
+          ssh \
+            -i "$HOME/.ssh/deploy_key" \
+            -p "$DEPLOY_PORT" \
+            -o BatchMode=yes \
+            -o ConnectTimeout=15 \
+            -o IdentitiesOnly=yes \
+            -o StrictHostKeyChecking=yes \
+            "$DEPLOY_USER@$DEPLOY_HOST" \
+            "bash '$remote_script' '$GITHUB_SHA'"
+
+      - name: Remove remote deployment script
+        if: always()
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+        run: |
+          remote_script=".cache/ict-branch-toolkit/deploy-${GITHUB_RUN_ID}.sh"
+          ssh \
+            -i "$HOME/.ssh/deploy_key" \
+            -p "$DEPLOY_PORT" \
+            -o BatchMode=yes \
+            -o ConnectTimeout=15 \
+            -o IdentitiesOnly=yes \
+            -o StrictHostKeyChecking=yes \
+            "$DEPLOY_USER@$DEPLOY_HOST" \
+            "rm -f '$remote_script'"
 
       - name: Remove temporary key
         if: always()
