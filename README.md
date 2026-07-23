@@ -158,7 +158,13 @@ The current slice provides token-based local authentication; centralized Adminis
 
 The browser workspace consumes backend capabilities, displays library provenance, and provides an administrator-only validation/import panel using a clearly synthetic example. See [reference import operations](docs/operations/reference-library-imports.md), [account and audit controls](docs/security/accounts-and-audit.md), and [ADR-0002](docs/adr/0002-identity-authorization-and-audit.md).
 
-The prototype does not yet implement ICS-205 revision control, site data, deconfliction, official exports, or production authentication hardening.
+## P1.2 ICS-205 vertical slice
+
+The current branch adds incident/operational-period plans, numbered drafts, ordered assignment rows, controlled resource snapshots, Remote Base/Link/Patch relationships, optional protected contact details, revision comparison, approval locking, copy-forward, and a deterministic approved-only PDF. Backend permissions and audit records control every material action.
+
+The PDF is an initial FEMA-style planning output. Qualified practitioners must validate ICS-205 semantics, and maintainers must visually approve final form fidelity. Contact fields are not exported. Canonical site coordinates arrive in P1.3 rather than being duplicated on a row.
+
+The prototype does not yet implement site data, deconfliction, completed official export records/digests, or production authentication hardening.
 
 ## Important limitations
 
