@@ -8,6 +8,9 @@ on:
 
 permissions: {}
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 concurrency:
   group: >-
     issue-lifecycle-${{ github.repository }}-${{
@@ -31,7 +34,7 @@ jobs:
     steps:
       - name: Record task input
         id: intake
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const issue = context.payload.issue;
@@ -159,7 +162,7 @@ jobs:
 
       - name: Post assessment and update lifecycle
         if: steps.key.outputs.configured == 'true' && always()
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         env:
           CODEX_RESULT: ${{ steps.codex.outputs.final-message }}
           CODEX_OUTCOME: ${{ steps.codex.outcome }}
@@ -221,7 +224,7 @@ jobs:
 
       - name: Explain missing credential
         if: steps.key.outputs.configured != 'true'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const issueNumber = Number('${{ needs.intake.outputs.issue_number }}');
@@ -267,7 +270,7 @@ jobs:
 
       - name: Mark implementation active
         if: steps.key.outputs.configured == 'true'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const number = Number('${{ needs.intake.outputs.issue_number }}');
@@ -342,7 +345,7 @@ jobs:
 
       - name: Open draft pull request
         if: steps.branch.outputs.changed == 'true'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         env:
           BRANCH_NAME: ${{ steps.branch.outputs.name }}
           CODEX_RESULT: ${{ steps.codex.outputs.final-message }}
@@ -401,7 +404,7 @@ jobs:
 
       - name: Report no-change completion
         if: steps.key.outputs.configured == 'true' && steps.codex.outcome == 'success' && steps.branch.outputs.changed != 'true'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         env:
           CODEX_RESULT: ${{ steps.codex.outputs.final-message }}
         with:
@@ -438,7 +441,7 @@ jobs:
 
       - name: Explain missing credential
         if: steps.key.outputs.configured != 'true'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             await github.rest.issues.createComment({
@@ -449,7 +452,7 @@ jobs:
 
       - name: Mark failed implementation
         if: steps.key.outputs.configured == 'true' && failure()
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const number = Number('${{ needs.intake.outputs.issue_number }}');
