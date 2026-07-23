@@ -4,14 +4,13 @@ type BrandMarkProps = {
 
 export function BrandMark({ className = "" }: BrandMarkProps) {
   return (
-    <picture className={`brand-mark ${className}`.trim()}>
-      <source srcSet="/brand/tx-comu-logo.svg" type="image/svg+xml" />
+    <span className={`brand-mark ${className}`.trim()}>
       <img
         src="/brand/tx-comu-logo.png"
         alt="Texas Communications Unit (TX-COMU) logo"
         width="1563"
         height="1563"
       />
-    </picture>
+    </span>
   );
 }

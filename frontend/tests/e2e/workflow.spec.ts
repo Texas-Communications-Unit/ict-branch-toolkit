@@ -212,11 +212,11 @@ test("administrator signs in and sees the incident planning workspace", async ({
   await expect(
     page.getByRole("button", { name: /^Synthetic Flood Exercise/ }),
   ).toBeVisible();
-  await expect(
-    page.getByRole("img", {
-      name: "Texas Communications Unit (TX-COMU) logo",
-    }),
-  ).toBeVisible();
+  const workspaceLogo = page.getByRole("img", {
+    name: "Texas Communications Unit (TX-COMU) logo",
+  });
+  await expect(workspaceLogo).toBeVisible();
+  await expect(workspaceLogo).toHaveAttribute("src", "/brand/tx-comu-logo.png");
   await expect(page.getByText("ICT Toolkit")).toBeVisible();
   await expect(page.getByLabel("Radio site planning map")).toBeVisible();
   await expect(page.getByText(/P1.3 Prototype/)).toBeVisible();
