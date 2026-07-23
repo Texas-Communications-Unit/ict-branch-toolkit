@@ -8,6 +8,23 @@ beforeEach(() => {
   vi.restoreAllMocks();
 });
 
+test("presents the approved TX-COMU identity and required attribution", () => {
+  render(<App />);
+
+  expect(
+    screen.getByRole("img", {
+      name: "Texas Communications Unit (TX-COMU) logo",
+    }),
+  ).toBeInTheDocument();
+  expect(
+    screen.getByRole("heading", { name: "ICT Branch Toolkit" }),
+  ).toBeInTheDocument();
+  expect(screen.getByText("ICT Toolkit")).toBeInTheDocument();
+  expect(
+    screen.getByText(/Originally developed by the Texas Communications Unit/),
+  ).toHaveTextContent("Licensed under GNU AGPL v3");
+});
+
 test("signs in and lists incidents from the API", async () => {
   vi.spyOn(globalThis, "fetch").mockImplementation(async (input, options) => {
     const url = String(input);
@@ -73,7 +90,7 @@ test("signs in and lists incidents from the API", async () => {
 
   await waitFor(() =>
     expect(
-      screen.getByRole("heading", { name: "Synthetic Exercise" }),
+      screen.getByRole("button", { name: /^Synthetic Exercise/ }),
     ).toBeInTheDocument(),
   );
   expect(sessionStorage.getItem("ict-toolkit-token")).toBe("test-token");
@@ -82,6 +99,15 @@ test("signs in and lists incidents from the API", async () => {
     screen.getByRole("heading", { name: "Channel library" }),
   ).toBeInTheDocument();
   expect(screen.getByText("Synthetic Administrator")).toBeInTheDocument();
+  expect(
+    screen.getByRole("img", {
+      name: "Texas Communications Unit (TX-COMU) logo",
+    }),
+  ).toBeInTheDocument();
+  expect(screen.getByText("ICT Toolkit")).toBeInTheDocument();
+  expect(
+    screen.getByText(/TX-COMU names, logos, and identifying marks/),
+  ).toHaveTextContent("not relicensed under the software license");
   await userEvent.click(
     screen.getByRole("button", { name: "Validate dry run" }),
   );

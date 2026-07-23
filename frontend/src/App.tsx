@@ -11,6 +11,7 @@ import {
   listTrunkedTalkgroups,
   login,
 } from "./api";
+import { BrandMark } from "./BrandMark";
 import { MapShell } from "./MapShell";
 import { PlanWorkspace } from "./PlanWorkspace";
 import type {
@@ -225,8 +226,14 @@ export default function App() {
     return (
       <main className="login-layout">
         <section className="login-card">
-          <p className="eyebrow">Operational planning prototype</p>
-          <h1>ICT Branch Toolkit</h1>
+          <div className="login-identity">
+            <BrandMark className="login-logo" />
+            <div>
+              <p className="eyebrow">Texas Communications Unit (TX-COMU)</p>
+              <h1>ICT Branch Toolkit</h1>
+              <p className="short-name">ICT Toolkit</p>
+            </div>
+          </div>
           <p>
             Sign in with the local development administrator configured for this
             installation.
@@ -263,10 +270,17 @@ export default function App() {
 
   return (
     <div className="app-shell">
-      <header>
-        <div>
-          <p className="eyebrow">Texas Communications Unit</p>
-          <h1>ICT Branch Toolkit</h1>
+      <a className="skip-link" href="#main-content">
+        Skip to planning workspace
+      </a>
+      <header className="app-header">
+        <div className="app-identity">
+          <BrandMark className="header-logo" />
+          <div>
+            <p className="eyebrow">Texas Communications Unit (TX-COMU)</p>
+            <h1>ICT Branch Toolkit</h1>
+            <p className="short-name">ICT Toolkit</p>
+          </div>
         </div>
         <div className="identity-summary">
           <span>{currentUser?.display_name}</span>
@@ -280,7 +294,7 @@ export default function App() {
           {error}
         </p>
       )}
-      <main className="workspace">
+      <main className="workspace" id="main-content">
         <section className="planning-panel" aria-labelledby="incidents-heading">
           <div className="section-heading">
             <div>
@@ -311,30 +325,32 @@ export default function App() {
           ) : (
             <div className="incident-list">
               {incidents.map((incident) => (
-                <article
-                  key={incident.id}
-                  className={
-                    selectedIncident === incident.id
-                      ? "incident selected"
-                      : "incident"
-                  }
-                  onClick={() => setSelectedIncident(incident.id)}
-                >
-                  <div>
-                    <h3>{incident.name}</h3>
-                    <p>{incident.incident_number || "No incident number"}</p>
-                  </div>
-                  <span>{incident.status}</span>
+                <article key={incident.id} className="incident">
+                  <button
+                    className={
+                      selectedIncident === incident.id
+                        ? "incident-select selected"
+                        : "incident-select"
+                    }
+                    type="button"
+                    aria-pressed={selectedIncident === incident.id}
+                    onClick={() => setSelectedIncident(incident.id)}
+                  >
+                    <span>
+                      <strong>{incident.name}</strong>
+                      <small>
+                        {incident.incident_number || "No incident number"}
+                      </small>
+                    </span>
+                    <span className="incident-status">{incident.status}</span>
+                  </button>
                   {incident.permissions.includes("incident.archive") && (
                     <button
                       className="text-button"
                       type="button"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        void handleArchive(incident);
-                      }}
+                      onClick={() => void handleArchive(incident)}
                     >
-                      Archive
+                      Archive {incident.name}
                     </button>
                   )}
                   {incident.operational_periods.map((period) => (
@@ -492,12 +508,23 @@ export default function App() {
         </section>
       </main>
       <footer>
-        <p>
-          Planning outputs are not frequency coordination approvals, spectrum
-          authorizations, propagation studies, or guarantees of coverage.
-        </p>
-        <a href="https://github.com/Texas-Communications-Unit/ict-branch-toolkit">
-          Source code
+        <div>
+          <p>
+            Planning outputs are not frequency coordination approvals, spectrum
+            authorizations, propagation studies, or guarantees of coverage.
+          </p>
+          <p className="footer-attribution">
+            Originally developed by the Texas Communications Unit (TX-COMU). ICT
+            Branch Toolkit software is licensed under GNU AGPL v3. TX-COMU
+            names, logos, and identifying marks remain organizational brand
+            assets and are not relicensed under the software license.
+          </p>
+        </div>
+        <a
+          href="https://github.com/Texas-Communications-Unit/ict-branch-toolkit"
+          aria-label="View ICT Branch Toolkit source code on GitHub"
+        >
+          View source code
         </a>
       </footer>
     </div>

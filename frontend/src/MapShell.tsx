@@ -32,23 +32,38 @@ import type {
   SiteAssignment,
 } from "./types";
 
-const offlineStyle: StyleSpecification = {
-  version: 8,
-  sources: {},
-  layers: [
-    {
-      id: "background",
-      type: "background",
-      paint: { "background-color": "#e9f0f3" },
-    },
-  ],
-};
+function brandColor(token: string, fallback: string) {
+  if (typeof document === "undefined") return fallback;
+  return (
+    getComputedStyle(document.documentElement).getPropertyValue(token).trim() ||
+    fallback
+  );
+}
 
-const ringColors = {
-  operational: "#2d7d46",
-  fringe: "#c17b16",
-  coordination: "#8d3b72",
-};
+function getBrandMapColors() {
+  return {
+    navy: brandColor("--tx-comu-navy", "#10233f"),
+    blue: brandColor("--tx-comu-blue", "#1f5f99"),
+    slate: brandColor("--tx-comu-slate", "#465466"),
+    light: brandColor("--tx-comu-light", "#f4f7fb"),
+    red: brandColor("--tx-comu-red", "#d72638"),
+  };
+}
+
+function getOfflineStyle(): StyleSpecification {
+  const colors = getBrandMapColors();
+  return {
+    version: 8,
+    sources: {},
+    layers: [
+      {
+        id: "background",
+        type: "background",
+        paint: { "background-color": colors.light },
+      },
+    ],
+  };
+}
 
 function ringPolygon(site: RadioSite, radiusM: number) {
   const latitude = Number(site.latitude);
@@ -161,7 +176,7 @@ export function MapShell({ incident }: { incident?: Incident }) {
       string | undefined;
     const map = new maplibregl.Map({
       container: container.current,
-      style: configuredStyle || offlineStyle,
+      style: configuredStyle || getOfflineStyle(),
       center: [-99.4, 31.0],
       zoom: 4.6,
       attributionControl: false,
@@ -201,10 +216,16 @@ export function MapShell({ incident }: { incident?: Incident }) {
     const map = mapRef.current;
     if (!map) return;
     const render = () => {
+      const colors = getBrandMapColors();
+      const ringColors = {
+        operational: colors.blue,
+        fringe: colors.slate,
+        coordination: colors.red,
+      };
       markersRef.current.forEach((marker) => marker.remove());
       markersRef.current = sites.map((site) => {
         const marker = new maplibregl.Marker({
-          color: "#b5452b",
+          color: colors.blue,
           draggable: canEdit,
         })
           .setLngLat([Number(site.longitude), Number(site.latitude)])

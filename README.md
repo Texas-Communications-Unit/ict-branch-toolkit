@@ -174,6 +174,16 @@ See [ADR-0004](docs/adr/0004-spatial-sites-snapshots-and-exports.md) and [spatia
 
 The prototype does not yet implement deconfliction, completed official export records/digests, or production authentication hardening.
 
+## TX-COMU brand system
+
+The interface uses the approved TX-COMU digital colors and exact locally
+vendored organization logo assets. It does not depend on GitHub, WordPress, a
+content delivery network, or a remotely hosted font for its identity.
+
+See the [brand asset provenance record](docs/governance/tx-comu-brand-assets.md)
+for upstream paths, the exact source commit, file digests, usage boundaries, and
+the required human approval gate.
+
 ## Important limitations
 
 Coverage displays and conflict warnings produced by ICT Branch Toolkit are planning estimates only. They are not propagation studies, frequency coordination approvals, spectrum authorizations, or guarantees of radio coverage. Terrain, buildings, interference, equipment condition, antenna systems, subscriber performance, and other factors can materially affect actual operation.

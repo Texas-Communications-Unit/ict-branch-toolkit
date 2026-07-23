@@ -210,8 +210,14 @@ test("administrator signs in and sees the incident planning workspace", async ({
   await page.getByLabel("Password").fill("synthetic-password");
   await page.getByRole("button", { name: "Sign in" }).click();
   await expect(
-    page.getByRole("heading", { name: "Synthetic Flood Exercise" }),
+    page.getByRole("button", { name: /^Synthetic Flood Exercise/ }),
   ).toBeVisible();
+  await expect(
+    page.getByRole("img", {
+      name: "Texas Communications Unit (TX-COMU) logo",
+    }),
+  ).toBeVisible();
+  await expect(page.getByText("ICT Toolkit")).toBeVisible();
   await expect(page.getByLabel("Radio site planning map")).toBeVisible();
   await expect(page.getByText(/P1.3 Prototype/)).toBeVisible();
   await expect(page.getByRole("heading", { name: "ICS-205" })).toBeVisible();
@@ -240,8 +246,35 @@ test("administrator signs in and sees the incident planning workspace", async ({
   await expect(
     page.getByRole("status").filter({ hasText: "Validation passed" }),
   ).toContainText("Validation passed");
-  await testInfo.attach("p1-3-workspace", {
-    body: await page.screenshot({ fullPage: true }),
+  await expect(
+    page.getByText(/Originally developed by the Texas Communications Unit/),
+  ).toBeVisible();
+  await expect(
+    page.getByText(/TX-COMU names, logos, and identifying marks/),
+  ).toBeVisible();
+  const desktopScreenshot = testInfo.outputPath(
+    "branded-workspace-desktop.png",
+  );
+  await page.screenshot({ path: desktopScreenshot, fullPage: true });
+  await testInfo.attach("branded-workspace-desktop", {
+    path: desktopScreenshot,
+    contentType: "image/png",
+  });
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(
+    page.getByRole("heading", { name: "ICT Branch Toolkit" }),
+  ).toBeVisible();
+  await expect(page.getByText(/P1.3 Prototype/)).toBeVisible();
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth,
+    ),
+  ).toBe(true);
+  const mobileScreenshot = testInfo.outputPath("branded-workspace-mobile.png");
+  await page.screenshot({ path: mobileScreenshot, fullPage: true });
+  await testInfo.attach("branded-workspace-mobile", {
+    path: mobileScreenshot,
     contentType: "image/png",
   });
 });
