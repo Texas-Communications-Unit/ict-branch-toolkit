@@ -12,6 +12,9 @@ concurrency:
 permissions:
   contents: read
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 # Dependency and secret scanning are owned by security.yml.
 jobs:
   backend:
@@ -65,7 +68,7 @@ jobs:
         working-directory: frontend
     steps:
       - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
         with:
           version: 11.9.0
       - uses: actions/setup-node@v7
@@ -87,7 +90,7 @@ jobs:
         working-directory: frontend
     steps:
       - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
         with:
           version: 11.9.0
       - uses: actions/setup-node@v7
@@ -117,6 +120,8 @@ jobs:
       DJANGO_SUPERUSER_PASSWORD: synthetic-ci-admin-password
     steps:
       - uses: actions/checkout@v7
+      - name: Enforce Node.js 24 for GitHub Actions
+        run: bash scripts/check-github-actions-node24.sh
       - run: docker compose config --quiet
       - run: docker compose build
       - run: docker compose -f compose.production.yaml config --quiet

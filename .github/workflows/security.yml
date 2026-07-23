@@ -15,6 +15,9 @@ permissions:
   contents: read
   security-events: write
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 jobs:
   secrets:
     runs-on: ubuntu-latest
@@ -39,7 +42,7 @@ jobs:
       - run: python -m pip install --upgrade pip pip-audit
       - run: pip install -e ".[dev]" && pip-audit
         working-directory: backend
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
         with:
           version: 11.9.0
       - uses: actions/setup-node@v7
