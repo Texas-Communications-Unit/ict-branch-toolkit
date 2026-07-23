@@ -31,6 +31,7 @@ INSTALLED_APPS = [
     "apps.audit",
     "apps.incidents",
     "apps.resources",
+    "apps.plans",
 ]
 if ENABLE_GIS:
     INSTALLED_APPS.append("django.contrib.gis")

@@ -28,6 +28,10 @@ class PolicyPermission(BasePermission):
         if required is None:
             return True
         incident = obj if obj.__class__.__name__ == "Incident" else getattr(obj, "incident", None)
+        if incident is None and hasattr(obj, "plan"):
+            incident = obj.plan.incident
+        if incident is None and hasattr(obj, "revision"):
+            incident = obj.revision.plan.incident
         return user_has_permission(request.user, required, incident)
 
 

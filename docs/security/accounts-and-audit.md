@@ -20,6 +20,16 @@
 - Back up before imports and upgrades, test restoration, and retain backups according to adopted policy.
 - Review audit events regularly for unexpected role, incident, membership, archival, or import activity.
 
+## P1.2 plan controls
+
+- `plan.view`, `plan.edit`, `plan.approve`, and `plan.export` remain centralized backend capabilities.
+- Approval locks a complete revision and its assignment and relationship children. Later work begins by copying to a new numbered draft.
+- Each controlled resource row stores an immutable source/release/digest snapshot so a later library update cannot rewrite an approved plan.
+- Remote Base, Link, and Patch relationships are typed records. A Patch requires two or more rows from the same revision.
+- Contact name, address, phone, and 24-hour contact fields are optional, incident-scoped, audited by changed field name, and excluded from the P1.2 PDF.
+- P1.3 must associate assignments with canonical site records; P1.2 does not duplicate site coordinates in contact fields.
+- Only approved revisions can produce the current official PDF endpoint. PDF exports create audit events.
+
 ## Remaining prototype limitations
 
 P1.1 tokens do not expire automatically and the prototype does not yet provide multifactor authentication, password recovery workflows, external federation, automated deprovisioning, tamper-evident remote audit export, or incident-data retention schedules. Do not treat this milestone as production authorization. P1.6 must resolve or formally accept these risks before a release candidate.

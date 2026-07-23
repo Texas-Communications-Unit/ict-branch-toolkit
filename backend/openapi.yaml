@@ -117,6 +117,156 @@ paths:
               schema:
                 $ref: '#/components/schemas/ConventionalChannel'
           description: ''
+  /api/ics205-plans/:
+    get:
+      operationId: ics205_plans_list
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - ics205-plans
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedPlanList'
+          description: ''
+    post:
+      operationId: ics205_plans_create
+      tags:
+      - ics205-plans
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Plan'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Plan'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Plan'
+        required: true
+      security:
+      - tokenAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Plan'
+          description: ''
+  /api/ics205-plans/{id}/:
+    get:
+      operationId: ics205_plans_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this ic s205 plan.
+        required: true
+      tags:
+      - ics205-plans
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Plan'
+          description: ''
+    put:
+      operationId: ics205_plans_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this ic s205 plan.
+        required: true
+      tags:
+      - ics205-plans
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Plan'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Plan'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Plan'
+        required: true
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Plan'
+          description: ''
+    patch:
+      operationId: ics205_plans_partial_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this ic s205 plan.
+        required: true
+      tags:
+      - ics205-plans
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedPlan'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedPlan'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedPlan'
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Plan'
+          description: ''
+    delete:
+      operationId: ics205_plans_destroy
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this ic s205 plan.
+        required: true
+      tags:
+      - ics205-plans
+      security:
+      - tokenAuth: []
+      responses:
+        '204':
+          description: No response body
   /api/incident-memberships/:
     get:
       operationId: incident_memberships_list
@@ -649,6 +799,594 @@ paths:
               schema:
                 $ref: '#/components/schemas/OperationalPeriod'
           description: ''
+  /api/plan-assignments/:
+    get:
+      operationId: plan_assignments_list
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - plan-assignments
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedAssignmentList'
+          description: ''
+    post:
+      operationId: plan_assignments_create
+      tags:
+      - plan-assignments
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Assignment'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Assignment'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Assignment'
+        required: true
+      security:
+      - tokenAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Assignment'
+          description: ''
+  /api/plan-assignments/{id}/:
+    get:
+      operationId: plan_assignments_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this assignment.
+        required: true
+      tags:
+      - plan-assignments
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Assignment'
+          description: ''
+    put:
+      operationId: plan_assignments_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this assignment.
+        required: true
+      tags:
+      - plan-assignments
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Assignment'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Assignment'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Assignment'
+        required: true
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Assignment'
+          description: ''
+    patch:
+      operationId: plan_assignments_partial_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this assignment.
+        required: true
+      tags:
+      - plan-assignments
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedAssignment'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedAssignment'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedAssignment'
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Assignment'
+          description: ''
+    delete:
+      operationId: plan_assignments_destroy
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this assignment.
+        required: true
+      tags:
+      - plan-assignments
+      security:
+      - tokenAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/plan-assignments/reorder/:
+    post:
+      operationId: plan_assignments_reorder_create
+      tags:
+      - plan-assignments
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Assignment'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Assignment'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Assignment'
+        required: true
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Assignment'
+          description: ''
+  /api/plan-relationships/:
+    get:
+      operationId: plan_relationships_list
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - plan-relationships
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedRelationshipList'
+          description: ''
+    post:
+      operationId: plan_relationships_create
+      tags:
+      - plan-relationships
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Relationship'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Relationship'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Relationship'
+        required: true
+      security:
+      - tokenAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Relationship'
+          description: ''
+  /api/plan-relationships/{id}/:
+    get:
+      operationId: plan_relationships_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this assignment relationship.
+        required: true
+      tags:
+      - plan-relationships
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Relationship'
+          description: ''
+    put:
+      operationId: plan_relationships_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this assignment relationship.
+        required: true
+      tags:
+      - plan-relationships
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Relationship'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Relationship'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Relationship'
+        required: true
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Relationship'
+          description: ''
+    patch:
+      operationId: plan_relationships_partial_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this assignment relationship.
+        required: true
+      tags:
+      - plan-relationships
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedRelationship'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedRelationship'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedRelationship'
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Relationship'
+          description: ''
+    delete:
+      operationId: plan_relationships_destroy
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this assignment relationship.
+        required: true
+      tags:
+      - plan-relationships
+      security:
+      - tokenAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/plan-revisions/:
+    get:
+      operationId: plan_revisions_list
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - plan-revisions
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedPlanRevisionList'
+          description: ''
+    post:
+      operationId: plan_revisions_create
+      tags:
+      - plan-revisions
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PlanRevision'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PlanRevision'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PlanRevision'
+        required: true
+      security:
+      - tokenAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlanRevision'
+          description: ''
+  /api/plan-revisions/{id}/:
+    get:
+      operationId: plan_revisions_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this plan revision.
+        required: true
+      tags:
+      - plan-revisions
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlanRevision'
+          description: ''
+    put:
+      operationId: plan_revisions_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this plan revision.
+        required: true
+      tags:
+      - plan-revisions
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PlanRevision'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PlanRevision'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PlanRevision'
+        required: true
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlanRevision'
+          description: ''
+    patch:
+      operationId: plan_revisions_partial_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this plan revision.
+        required: true
+      tags:
+      - plan-revisions
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedPlanRevision'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedPlanRevision'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedPlanRevision'
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlanRevision'
+          description: ''
+    delete:
+      operationId: plan_revisions_destroy
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this plan revision.
+        required: true
+      tags:
+      - plan-revisions
+      security:
+      - tokenAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/plan-revisions/{id}/approve/:
+    post:
+      operationId: plan_revisions_approve_create
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this plan revision.
+        required: true
+      tags:
+      - plan-revisions
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PlanRevision'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PlanRevision'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PlanRevision'
+        required: true
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlanRevision'
+          description: ''
+  /api/plan-revisions/{id}/compare/:
+    get:
+      operationId: plan_revisions_compare_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this plan revision.
+        required: true
+      tags:
+      - plan-revisions
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlanRevision'
+          description: ''
+  /api/plan-revisions/{id}/copy/:
+    post:
+      operationId: plan_revisions_copy_create
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this plan revision.
+        required: true
+      tags:
+      - plan-revisions
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PlanRevision'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PlanRevision'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PlanRevision'
+        required: true
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlanRevision'
+          description: ''
+  /api/plan-revisions/{id}/pdf/:
+    get:
+      operationId: plan_revisions_pdf_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this plan revision.
+        required: true
+      tags:
+      - plan-revisions
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlanRevision'
+          description: ''
   /api/resource-releases/:
     get:
       operationId: resource_releases_list
@@ -737,6 +1475,94 @@ paths:
           description: ''
 components:
   schemas:
+    Assignment:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        position:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        function:
+          type: string
+          maxLength: 160
+        channel_name:
+          type: string
+          maxLength: 160
+        assignment:
+          type: string
+          maxLength: 200
+        resource_snapshot:
+          readOnly: true
+        rx_frequency_hz:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: -9223372036854775808
+          format: int64
+          nullable: true
+        rx_squelch:
+          type: string
+          maxLength: 40
+        tx_frequency_hz:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: -9223372036854775808
+          format: int64
+          nullable: true
+        tx_squelch:
+          type: string
+          maxLength: 40
+        mode:
+          type: string
+          maxLength: 40
+        remarks:
+          type: string
+        structured_note:
+          oneOf:
+          - $ref: '#/components/schemas/StructuredNoteEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+        contact_name:
+          type: string
+          maxLength: 160
+        site_address:
+          type: string
+        phone_numbers:
+          type: string
+          maxLength: 240
+        contact_24_hour:
+          type: string
+          maxLength: 240
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+        revision:
+          type: string
+          format: uuid
+        conventional_channel:
+          type: string
+          format: uuid
+          nullable: true
+        trunked_talkgroup:
+          type: string
+          format: uuid
+          nullable: true
+      required:
+      - channel_name
+      - created_at
+      - function
+      - id
+      - position
+      - resource_snapshot
+      - revision
+      - updated_at
     AuthToken:
       type: object
       properties:
@@ -753,6 +1579,9 @@ components:
       - password
       - token
       - username
+    BlankEnum:
+      enum:
+      - ''
     ChannelImport:
       type: object
       properties:
@@ -1027,7 +1856,7 @@ components:
           type: string
           maxLength: 80
         status:
-          $ref: '#/components/schemas/StatusEnum'
+          $ref: '#/components/schemas/IncidentStatusEnum'
         operational_periods:
           type: array
           items:
@@ -1094,6 +1923,16 @@ components:
       - updated_at
       - user
       - username
+    IncidentStatusEnum:
+      enum:
+      - planning
+      - active
+      - closed
+      type: string
+      description: |-
+        * `planning` - Planning
+        * `active` - Active
+        * `closed` - Closed
     ModeEnum:
       enum:
       - analog_fm
@@ -1149,6 +1988,29 @@ components:
       - name
       - starts_at
       - updated_at
+    PaginatedAssignmentList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Assignment'
     PaginatedConventionalChannelList:
       type: object
       required:
@@ -1241,6 +2103,75 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/OperationalPeriod'
+    PaginatedPlanList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Plan'
+    PaginatedPlanRevisionList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/PlanRevision'
+    PaginatedRelationshipList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Relationship'
     PaginatedResourceReleaseList:
       type: object
       required:
@@ -1287,6 +2218,85 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/TrunkedTalkgroup'
+    PatchedAssignment:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        position:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        function:
+          type: string
+          maxLength: 160
+        channel_name:
+          type: string
+          maxLength: 160
+        assignment:
+          type: string
+          maxLength: 200
+        resource_snapshot:
+          readOnly: true
+        rx_frequency_hz:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: -9223372036854775808
+          format: int64
+          nullable: true
+        rx_squelch:
+          type: string
+          maxLength: 40
+        tx_frequency_hz:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: -9223372036854775808
+          format: int64
+          nullable: true
+        tx_squelch:
+          type: string
+          maxLength: 40
+        mode:
+          type: string
+          maxLength: 40
+        remarks:
+          type: string
+        structured_note:
+          oneOf:
+          - $ref: '#/components/schemas/StructuredNoteEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+        contact_name:
+          type: string
+          maxLength: 160
+        site_address:
+          type: string
+        phone_numbers:
+          type: string
+          maxLength: 240
+        contact_24_hour:
+          type: string
+          maxLength: 240
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+        revision:
+          type: string
+          format: uuid
+        conventional_channel:
+          type: string
+          format: uuid
+          nullable: true
+        trunked_talkgroup:
+          type: string
+          format: uuid
+          nullable: true
     PatchedIncident:
       type: object
       properties:
@@ -1301,7 +2311,7 @@ components:
           type: string
           maxLength: 80
         status:
-          $ref: '#/components/schemas/StatusEnum'
+          $ref: '#/components/schemas/IncidentStatusEnum'
         operational_periods:
           type: array
           items:
@@ -1384,6 +2394,296 @@ components:
           format: date-time
           readOnly: true
           nullable: true
+    PatchedPlan:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        incident:
+          type: string
+          format: uuid
+        operational_period:
+          type: string
+          format: uuid
+        title:
+          type: string
+          maxLength: 200
+        created_by:
+          type: integer
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        archived_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        revisions:
+          type: array
+          items:
+            $ref: '#/components/schemas/PlanRevision'
+          readOnly: true
+    PatchedPlanRevision:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        plan:
+          type: string
+          format: uuid
+        number:
+          type: integer
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/PlanRevisionStatusEnum'
+          readOnly: true
+        is_locked:
+          type: boolean
+          readOnly: true
+        prepared_by_name:
+          type: string
+          maxLength: 160
+        prepared_by_position:
+          type: string
+          maxLength: 160
+        prepared_at:
+          type: string
+          format: date-time
+          nullable: true
+        copied_from:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
+        created_by:
+          type: integer
+          readOnly: true
+        approved_by:
+          type: integer
+          readOnly: true
+          nullable: true
+        approved_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+        assignments:
+          type: array
+          items:
+            $ref: '#/components/schemas/Assignment'
+          readOnly: true
+        relationships:
+          type: array
+          items:
+            $ref: '#/components/schemas/Relationship'
+          readOnly: true
+    PatchedRelationship:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        revision:
+          type: string
+          format: uuid
+        relationship_type:
+          $ref: '#/components/schemas/RelationshipTypeEnum'
+        label:
+          type: string
+          maxLength: 160
+        assignments:
+          type: array
+          items:
+            type: string
+            format: uuid
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+    Plan:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        incident:
+          type: string
+          format: uuid
+        operational_period:
+          type: string
+          format: uuid
+        title:
+          type: string
+          maxLength: 200
+        created_by:
+          type: integer
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        archived_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        revisions:
+          type: array
+          items:
+            $ref: '#/components/schemas/PlanRevision'
+          readOnly: true
+      required:
+      - archived_at
+      - created_at
+      - created_by
+      - id
+      - incident
+      - operational_period
+      - revisions
+    PlanRevision:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        plan:
+          type: string
+          format: uuid
+        number:
+          type: integer
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/PlanRevisionStatusEnum'
+          readOnly: true
+        is_locked:
+          type: boolean
+          readOnly: true
+        prepared_by_name:
+          type: string
+          maxLength: 160
+        prepared_by_position:
+          type: string
+          maxLength: 160
+        prepared_at:
+          type: string
+          format: date-time
+          nullable: true
+        copied_from:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
+        created_by:
+          type: integer
+          readOnly: true
+        approved_by:
+          type: integer
+          readOnly: true
+          nullable: true
+        approved_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+        assignments:
+          type: array
+          items:
+            $ref: '#/components/schemas/Assignment'
+          readOnly: true
+        relationships:
+          type: array
+          items:
+            $ref: '#/components/schemas/Relationship'
+          readOnly: true
+      required:
+      - approved_at
+      - approved_by
+      - assignments
+      - copied_from
+      - created_at
+      - created_by
+      - id
+      - is_locked
+      - number
+      - plan
+      - relationships
+      - status
+      - updated_at
+    PlanRevisionStatusEnum:
+      enum:
+      - draft
+      - approved
+      type: string
+      description: |-
+        * `draft` - Draft
+        * `approved` - Approved
+    Relationship:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        revision:
+          type: string
+          format: uuid
+        relationship_type:
+          $ref: '#/components/schemas/RelationshipTypeEnum'
+        label:
+          type: string
+          maxLength: 160
+        assignments:
+          type: array
+          items:
+            type: string
+            format: uuid
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - assignments
+      - created_at
+      - id
+      - relationship_type
+      - revision
+    RelationshipTypeEnum:
+      enum:
+      - remote_base
+      - link
+      - patch
+      type: string
+      description: |-
+        * `remote_base` - Remote Base
+        * `link` - Link
+        * `patch` - Patch
     ResourceRelease:
       type: object
       properties:
@@ -1481,16 +2781,6 @@ components:
         * `local` - Local controlled source
         * `incident` - Incident-created source
         * `other` - Other approved source
-    StatusEnum:
-      enum:
-      - planning
-      - active
-      - closed
-      type: string
-      description: |-
-        * `planning` - Planning
-        * `active` - Active
-        * `closed` - Closed
     StructuredImportError:
       type: object
       properties:
@@ -1504,6 +2794,19 @@ components:
       - code
       - message
       - path
+    StructuredNoteEnum:
+      enum:
+      - remote_base
+      - link
+      - patch
+      - other
+      type: string
+      description: |-
+        * `` - None
+        * `remote_base` - Remote Base
+        * `link` - Link
+        * `patch` - Patch
+        * `other` - Other
     TrunkedTalkgroup:
       type: object
       properties:
