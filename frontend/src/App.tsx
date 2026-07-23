@@ -271,7 +271,7 @@ export default function App() {
         <div className="identity-summary">
           <span>{currentUser?.display_name}</span>
           <div className="prototype-badge">
-            P1.2 Prototype · {currentUser?.role}
+            P1.3 Prototype · {currentUser?.role}
           </div>
         </div>
       </header>
@@ -389,7 +389,7 @@ export default function App() {
           )}
         </section>
         <PlanWorkspace incident={selected} />
-        <MapShell />
+        <MapShell incident={selected} />
         <section className="library-panel" aria-labelledby="library-heading">
           <div className="section-heading">
             <div>

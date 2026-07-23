@@ -14,6 +14,7 @@ Selected on 2026-07-22 from the official PyPI and npm package registries, then i
 | TypeScript | 6.0.3 | Current stable version compatible with the selected type-aware tooling |
 | Vite | 8.1.5 | Current stable build and development server |
 | MapLibre GL JS | 5.24.0 | Mature stable release selected instead of the same-day 6.0 major |
+| mgrs | 1.5.4 | Current PyPI release for deterministic USNG/MGRS and WGS 84 conversion; BSD-licensed, Python 3.12 wheel available |
 | pnpm | 11.9.0 | Pinned package manager for reproducible installs |
 
 ## Verification policy

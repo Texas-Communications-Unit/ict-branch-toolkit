@@ -36,6 +36,9 @@ test("administrator signs in and sees the incident planning workspace", async ({
               "plan.edit",
               "plan.approve",
               "plan.export",
+              "site.view",
+              "site.edit",
+              "site.export",
             ],
           },
         ],
@@ -114,6 +117,79 @@ test("administrator signs in and sees the incident planning workspace", async ({
       },
     }),
   );
+  await page.route("**/api/radio-sites/?*", (route) =>
+    route.fulfill({
+      json: {
+        count: 1,
+        next: null,
+        previous: null,
+        results: [
+          {
+            id: "site-1",
+            incident: "syn-1",
+            name: "Synthetic Command Site",
+            description: "Synthetic fixture",
+            latitude: "33.214500",
+            longitude: "-97.133100",
+            entered_coordinate: "33.214500, -97.133100",
+            coordinate_format: "decimal",
+            coordinate_formats: {
+              decimal: "33.214500, -97.133100",
+              ddm: "33° 12.8700′ N, 97° 07.9860′ W",
+              dms: "33° 12′ 52.20″ N, 97° 07′ 59.16″ W",
+              mgrs: "14SQB7401876781",
+            },
+            address: "",
+            source_identity: "",
+            source_retrieved_at: null,
+            rings: [
+              {
+                id: "ring-1",
+                site: "site-1",
+                ring_type: "operational",
+                radius_m: 8000,
+                label: "Synthetic operational ring",
+              },
+            ],
+          },
+        ],
+      },
+    }),
+  );
+  await page.route("**/api/site-assignments/?*", (route) =>
+    route.fulfill({
+      json: {
+        count: 1,
+        next: null,
+        previous: null,
+        results: [
+          {
+            id: "link-1",
+            site: "site-1",
+            site_name: "Synthetic Command Site",
+            assignment: "row-1",
+            assignment_label: "1. Command — SYN CALL",
+            site_snapshot: {},
+          },
+        ],
+      },
+    }),
+  );
+  await page.route("**/api/coordinates/parse/", (route) =>
+    route.fulfill({
+      json: {
+        latitude: 33.2145,
+        longitude: -97.1331,
+        input_format: "dms",
+        formats: {
+          decimal: "33.214500, -97.133100",
+          ddm: "33° 12.8700′ N, 97° 07.9860′ W",
+          dms: "33° 12′ 52.20″ N, 97° 07′ 59.16″ W",
+          mgrs: "14SQB7401876781",
+        },
+      },
+    }),
+  );
   await page.route("**/api/plan-revisions/rev-1/approve/", (route) => {
     approved = true;
     return route.fulfill({ json: {} });
@@ -137,19 +213,34 @@ test("administrator signs in and sees the incident planning workspace", async ({
     page.getByRole("heading", { name: "Synthetic Flood Exercise" }),
   ).toBeVisible();
   await expect(page.getByLabel("Radio site planning map")).toBeVisible();
-  await expect(page.getByText(/P1.2 Prototype/)).toBeVisible();
+  await expect(page.getByText(/P1.3 Prototype/)).toBeVisible();
   await expect(page.getByRole("heading", { name: "ICS-205" })).toBeVisible();
-  await expect(page.getByText("SYN CALL")).toBeVisible();
+  await expect(
+    page.getByText("SYN CALL", { exact: true }).first(),
+  ).toBeVisible();
+  await expect(
+    page.getByText("Synthetic Command Site", { exact: true }).first(),
+  ).toBeVisible();
+  await page
+    .getByLabel("Coordinate", { exact: true })
+    .fill("33° 12′ 52.20″ N, 97° 07′ 59.16″ W");
+  await page.getByRole("button", { name: "Parse and preview" }).click();
+  await expect(
+    page.getByText("14SQB7401876781", { exact: true }).first(),
+  ).toBeVisible();
   await page.getByRole("button", { name: "Approve and lock revision" }).click();
   await expect(
     page.getByRole("button", { name: "Download official PDF" }),
   ).toBeVisible();
+  await expect(page.getByRole("button", { name: "SVG map" })).toBeVisible();
   await expect(
     page.getByRole("heading", { name: "Channel library" }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Validate dry run" }).click();
-  await expect(page.getByRole("status")).toContainText("Validation passed");
-  await testInfo.attach("p1-2-workspace", {
+  await expect(
+    page.getByRole("status").filter({ hasText: "Validation passed" }),
+  ).toContainText("Validation passed");
+  await testInfo.attach("p1-3-workspace", {
     body: await page.screenshot({ fullPage: true }),
     contentType: "image/png",
   });

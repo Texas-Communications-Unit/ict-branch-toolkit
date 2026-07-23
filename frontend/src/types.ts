@@ -146,3 +146,54 @@ export interface RevisionComparison {
     changed_fields: string[];
   }[];
 }
+
+export interface CoordinateParseResult {
+  latitude: number;
+  longitude: number;
+  input_format: "decimal" | "ddm" | "dms" | "mgrs";
+  formats: Record<"decimal" | "ddm" | "dms" | "mgrs", string>;
+}
+
+export interface ManualRing {
+  id: string;
+  site: string;
+  ring_type: "operational" | "fringe" | "coordination";
+  radius_m: number;
+  label: string;
+}
+
+export interface RadioSite {
+  id: string;
+  incident: string;
+  name: string;
+  description: string;
+  latitude: string;
+  longitude: string;
+  entered_coordinate: string;
+  coordinate_format: "map" | "decimal" | "ddm" | "dms" | "mgrs" | "address";
+  coordinate_formats: Record<"decimal" | "ddm" | "dms" | "mgrs", string>;
+  address: string;
+  source_identity: string;
+  source_retrieved_at: string | null;
+  rings: ManualRing[];
+}
+
+export interface SiteAssignment {
+  id: string;
+  site: string;
+  site_name: string;
+  assignment: string;
+  assignment_label: string;
+  site_snapshot: Record<string, unknown>;
+}
+
+export interface GeocoderSearchResult {
+  provider: string;
+  configured: boolean;
+  results: {
+    label: string;
+    latitude: number;
+    longitude: number;
+    provider: string;
+  }[];
+}

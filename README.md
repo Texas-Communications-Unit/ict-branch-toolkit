@@ -164,7 +164,15 @@ The current branch adds incident/operational-period plans, numbered drafts, orde
 
 The PDF is an initial FEMA-style planning output. Qualified practitioners must validate ICS-205 semantics, and maintainers must visually approve final form fidelity. Contact fields are not exported. Canonical site coordinates arrive in P1.3 rather than being duplicated on a row.
 
-The prototype does not yet implement site data, deconfliction, completed official export records/digests, or production authentication hardening.
+## P1.3 spatial planning vertical slice
+
+The toolkit now stores incident-scoped WGS 84 radio sites, accepts decimal-degree, DDM, DMS, and USNG/MGRS coordinates, supports map clicks and draggable MapLibre pins, and renders operator-entered operational, fringe/uncertain, and coordination rings stored canonically in meters. Sites associate many-to-many with ICS-205 assignments.
+
+Plan approval freezes each associated site's coordinate provenance, source identity, and rings. Approved-only SVG map, KML, GeoJSON, and CSV exports read those snapshots, so later canonical site edits cannot silently rewrite an official output. The neutral map and coordinate workflow remain usable without a network connection, paid provider, or API key. The replaceable address-provider hook is disabled by default.
+
+See [ADR-0004](docs/adr/0004-spatial-sites-snapshots-and-exports.md) and [spatial input and reference-source controls](docs/operations/spatial-inputs-and-reference-sources.md).
+
+The prototype does not yet implement deconfliction, completed official export records/digests, or production authentication hardening.
 
 ## Important limitations
 

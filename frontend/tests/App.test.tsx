@@ -9,13 +9,15 @@ beforeEach(() => {
 });
 
 test("signs in and lists incidents from the API", async () => {
-  const fetchMock = vi.spyOn(globalThis, "fetch");
-  fetchMock
-    .mockResolvedValueOnce(
-      new Response(JSON.stringify({ token: "test-token" }), { status: 200 }),
-    )
-    .mockResolvedValueOnce(
-      new Response(
+  vi.spyOn(globalThis, "fetch").mockImplementation(async (input, options) => {
+    const url = String(input);
+    if (url.endsWith("/api/auth/token/")) {
+      return new Response(JSON.stringify({ token: "test-token" }), {
+        status: 200,
+      });
+    }
+    if (url.endsWith("/api/me/")) {
+      return new Response(
         JSON.stringify({
           username: "admin",
           display_name: "Synthetic Administrator",
@@ -23,10 +25,10 @@ test("signs in and lists incidents from the API", async () => {
           permissions: ["incident.create", "library.import"],
         }),
         { status: 200 },
-      ),
-    )
-    .mockResolvedValueOnce(
-      new Response(
+      );
+    }
+    if (url.endsWith("/api/incidents/")) {
+      return new Response(
         JSON.stringify({
           count: 1,
           next: null,
@@ -39,33 +41,15 @@ test("signs in and lists incidents from the API", async () => {
               status: "planning",
               operational_periods: [],
               archived_at: null,
-              permissions: ["incident.view", "period.create"],
+              permissions: ["incident.view", "period.create", "site.view"],
             },
           ],
         }),
         { status: 200 },
-      ),
-    )
-    .mockResolvedValueOnce(
-      new Response(
-        JSON.stringify({ count: 0, next: null, previous: null, results: [] }),
-        { status: 200 },
-      ),
-    )
-    .mockResolvedValueOnce(
-      new Response(
-        JSON.stringify({ count: 0, next: null, previous: null, results: [] }),
-        { status: 200 },
-      ),
-    )
-    .mockResolvedValueOnce(
-      new Response(
-        JSON.stringify({ count: 0, next: null, previous: null, results: [] }),
-        { status: 200 },
-      ),
-    )
-    .mockResolvedValueOnce(
-      new Response(
+      );
+    }
+    if (url.endsWith("/api/channel-imports/") && options?.method === "POST") {
+      return new Response(
         JSON.stringify({
           valid: true,
           dry_run: true,
@@ -74,8 +58,13 @@ test("signs in and lists incidents from the API", async () => {
           errors: [],
         }),
         { status: 200 },
-      ),
+      );
+    }
+    return new Response(
+      JSON.stringify({ count: 0, next: null, previous: null, results: [] }),
+      { status: 200 },
     );
+  });
 
   render(<App />);
   await userEvent.type(screen.getByLabelText("Username"), "admin");

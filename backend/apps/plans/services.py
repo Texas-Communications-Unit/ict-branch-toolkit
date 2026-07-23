@@ -74,6 +74,9 @@ def copy_revision(revision, actor):
             label=relationship.label,
         )
         new_relationship.assignments.set(assignment_map[item.id] for item in members)
+    from apps.sites.services import copy_revision_sites
+
+    copy_revision_sites(revision, assignment_map)
     record_event(
         actor=actor,
         action="plan_revision.copied",
@@ -94,6 +97,9 @@ def approve_revision(revision, actor):
             raise ValidationError("Relationship assignments must belong to this revision.")
         if relationship.relationship_type == AssignmentRelationship.Type.PATCH and len(members) < 2:
             raise ValidationError("A Patch relationship requires at least two assignments.")
+    from apps.sites.services import freeze_revision_sites
+
+    freeze_revision_sites(revision)
     revision.status = PlanRevision.Status.APPROVED
     revision.approved_by = actor
     revision.approved_at = timezone.now()

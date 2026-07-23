@@ -117,6 +117,60 @@ paths:
               schema:
                 $ref: '#/components/schemas/ConventionalChannel'
           description: ''
+  /api/coordinates/parse/:
+    post:
+      operationId: coordinates_parse_create
+      tags:
+      - coordinates
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CoordinateParse'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CoordinateParse'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CoordinateParse'
+        required: true
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/geocoder/search/:
+    post:
+      operationId: geocoder_search_create
+      tags:
+      - geocoder
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GeocoderQuery'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/GeocoderQuery'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/GeocoderQuery'
+        required: true
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
   /api/ics205-plans/:
     get:
       operationId: ics205_plans_list
@@ -601,6 +655,156 @@ paths:
               schema:
                 $ref: '#/components/schemas/Incident'
           description: ''
+  /api/manual-rings/:
+    get:
+      operationId: manual_rings_list
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - manual-rings
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedManualRingList'
+          description: ''
+    post:
+      operationId: manual_rings_create
+      tags:
+      - manual-rings
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ManualRing'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ManualRing'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ManualRing'
+        required: true
+      security:
+      - tokenAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ManualRing'
+          description: ''
+  /api/manual-rings/{id}/:
+    get:
+      operationId: manual_rings_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this manual ring.
+        required: true
+      tags:
+      - manual-rings
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ManualRing'
+          description: ''
+    put:
+      operationId: manual_rings_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this manual ring.
+        required: true
+      tags:
+      - manual-rings
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ManualRing'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ManualRing'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ManualRing'
+        required: true
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ManualRing'
+          description: ''
+    patch:
+      operationId: manual_rings_partial_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this manual ring.
+        required: true
+      tags:
+      - manual-rings
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedManualRing'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedManualRing'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedManualRing'
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ManualRing'
+          description: ''
+    delete:
+      operationId: manual_rings_destroy
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this manual ring.
+        required: true
+      tags:
+      - manual-rings
+      security:
+      - tokenAuth: []
+      responses:
+        '204':
+          description: No response body
   /api/me/:
     get:
       operationId: me_retrieve
@@ -1387,6 +1591,156 @@ paths:
               schema:
                 $ref: '#/components/schemas/PlanRevision'
           description: ''
+  /api/radio-sites/:
+    get:
+      operationId: radio_sites_list
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - radio-sites
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedRadioSiteList'
+          description: ''
+    post:
+      operationId: radio_sites_create
+      tags:
+      - radio-sites
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RadioSite'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/RadioSite'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/RadioSite'
+        required: true
+      security:
+      - tokenAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RadioSite'
+          description: ''
+  /api/radio-sites/{id}/:
+    get:
+      operationId: radio_sites_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this radio site.
+        required: true
+      tags:
+      - radio-sites
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RadioSite'
+          description: ''
+    put:
+      operationId: radio_sites_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this radio site.
+        required: true
+      tags:
+      - radio-sites
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RadioSite'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/RadioSite'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/RadioSite'
+        required: true
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RadioSite'
+          description: ''
+    patch:
+      operationId: radio_sites_partial_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this radio site.
+        required: true
+      tags:
+      - radio-sites
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedRadioSite'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedRadioSite'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedRadioSite'
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RadioSite'
+          description: ''
+    delete:
+      operationId: radio_sites_destroy
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this radio site.
+        required: true
+      tags:
+      - radio-sites
+      security:
+      - tokenAuth: []
+      responses:
+        '204':
+          description: No response body
   /api/resource-releases/:
     get:
       operationId: resource_releases_list
@@ -1429,6 +1783,183 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ResourceRelease'
+          description: ''
+  /api/site-assignments/:
+    get:
+      operationId: site_assignments_list
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - site-assignments
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedSiteAssignmentList'
+          description: ''
+    post:
+      operationId: site_assignments_create
+      tags:
+      - site-assignments
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SiteAssignment'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SiteAssignment'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SiteAssignment'
+        required: true
+      security:
+      - tokenAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SiteAssignment'
+          description: ''
+  /api/site-assignments/{id}/:
+    get:
+      operationId: site_assignments_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this site assignment.
+        required: true
+      tags:
+      - site-assignments
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SiteAssignment'
+          description: ''
+    put:
+      operationId: site_assignments_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this site assignment.
+        required: true
+      tags:
+      - site-assignments
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SiteAssignment'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SiteAssignment'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SiteAssignment'
+        required: true
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SiteAssignment'
+          description: ''
+    patch:
+      operationId: site_assignments_partial_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this site assignment.
+        required: true
+      tags:
+      - site-assignments
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedSiteAssignment'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedSiteAssignment'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedSiteAssignment'
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SiteAssignment'
+          description: ''
+    delete:
+      operationId: site_assignments_destroy
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this site assignment.
+        required: true
+      tags:
+      - site-assignments
+      security:
+      - tokenAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/spatial-exports/{revision_id}/{export_format}/:
+    get:
+      operationId: spatial_exports_retrieve
+      parameters:
+      - in: path
+        name: export_format
+        schema:
+          type: string
+        required: true
+      - in: path
+        name: revision_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - spatial-exports
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: string
+                format: binary
           description: ''
   /api/trunked-talkgroups/:
     get:
@@ -1691,6 +2222,30 @@ components:
       - name
       - release
       - rx_frequency_hz
+    CoordinateFormatEnum:
+      enum:
+      - map
+      - decimal
+      - ddm
+      - dms
+      - mgrs
+      - address
+      type: string
+      description: |-
+        * `map` - Map placement
+        * `decimal` - Decimal degrees
+        * `ddm` - Degrees decimal minutes
+        * `dms` - Degrees minutes seconds
+        * `mgrs` - USNG/MGRS
+        * `address` - Address provider
+    CoordinateParse:
+      type: object
+      properties:
+        coordinate:
+          type: string
+          maxLength: 240
+      required:
+      - coordinate
     CurrentUser:
       type: object
       properties:
@@ -1723,6 +2278,14 @@ components:
         * `draft` - Draft
         * `effective` - Effective
         * `superseded` - Superseded
+    GeocoderQuery:
+      type: object
+      properties:
+        address:
+          type: string
+          maxLength: 500
+      required:
+      - address
     ImportConventionalChannel:
       type: object
       properties:
@@ -1933,6 +2496,40 @@ components:
         * `planning` - Planning
         * `active` - Active
         * `closed` - Closed
+    ManualRing:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        site:
+          type: string
+          format: uuid
+        ring_type:
+          $ref: '#/components/schemas/RingTypeEnum'
+        radius_m:
+          type: integer
+          maximum: 2147483647
+          minimum: 1
+        label:
+          type: string
+          maxLength: 160
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - id
+      - radius_m
+      - ring_type
+      - site
+      - updated_at
     ModeEnum:
       enum:
       - analog_fm
@@ -2080,6 +2677,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/IncidentMembership'
+    PaginatedManualRingList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/ManualRing'
     PaginatedOperationalPeriodList:
       type: object
       required:
@@ -2149,6 +2769,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/PlanRevision'
+    PaginatedRadioSiteList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/RadioSite'
     PaginatedRelationshipList:
       type: object
       required:
@@ -2195,6 +2838,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ResourceRelease'
+    PaginatedSiteAssignmentList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/SiteAssignment'
     PaginatedTrunkedTalkgroupList:
       type: object
       required:
@@ -2362,6 +3028,33 @@ components:
           type: string
           format: date-time
           readOnly: true
+    PatchedManualRing:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        site:
+          type: string
+          format: uuid
+        ring_type:
+          $ref: '#/components/schemas/RingTypeEnum'
+        radius_m:
+          type: integer
+          maximum: 2147483647
+          minimum: 1
+        label:
+          type: string
+          maxLength: 160
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
     PatchedOperationalPeriod:
       type: object
       properties:
@@ -2492,6 +3185,73 @@ components:
           items:
             $ref: '#/components/schemas/Relationship'
           readOnly: true
+    PatchedRadioSite:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        incident:
+          type: string
+          format: uuid
+        name:
+          type: string
+          maxLength: 160
+        description:
+          type: string
+        latitude:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,6})?$
+        longitude:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,6})?$
+        entered_coordinate:
+          type: string
+          maxLength: 240
+        coordinate_format:
+          $ref: '#/components/schemas/CoordinateFormatEnum'
+        coordinate_text:
+          type: string
+          writeOnly: true
+        coordinate_formats:
+          type: object
+          additionalProperties:
+            type: string
+          readOnly: true
+        address:
+          type: string
+        source_identity:
+          type: string
+          maxLength: 240
+        source_retrieved_at:
+          type: string
+          format: date-time
+          nullable: true
+        rings:
+          type: array
+          items:
+            type: object
+            additionalProperties: {}
+          readOnly: true
+        created_by:
+          type: integer
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+        archived_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
     PatchedRelationship:
       type: object
       properties:
@@ -2512,6 +3272,31 @@ components:
           items:
             type: string
             format: uuid
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+    PatchedSiteAssignment:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        site:
+          type: string
+          format: uuid
+        site_name:
+          type: string
+          readOnly: true
+        assignment:
+          type: string
+          format: uuid
+        assignment_label:
+          type: string
+          readOnly: true
+        site_snapshot:
+          readOnly: true
         created_at:
           type: string
           format: date-time
@@ -2644,6 +3429,83 @@ components:
       description: |-
         * `draft` - Draft
         * `approved` - Approved
+    RadioSite:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        incident:
+          type: string
+          format: uuid
+        name:
+          type: string
+          maxLength: 160
+        description:
+          type: string
+        latitude:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,6})?$
+        longitude:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,6})?$
+        entered_coordinate:
+          type: string
+          maxLength: 240
+        coordinate_format:
+          $ref: '#/components/schemas/CoordinateFormatEnum'
+        coordinate_text:
+          type: string
+          writeOnly: true
+        coordinate_formats:
+          type: object
+          additionalProperties:
+            type: string
+          readOnly: true
+        address:
+          type: string
+        source_identity:
+          type: string
+          maxLength: 240
+        source_retrieved_at:
+          type: string
+          format: date-time
+          nullable: true
+        rings:
+          type: array
+          items:
+            type: object
+            additionalProperties: {}
+          readOnly: true
+        created_by:
+          type: integer
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+        archived_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+      required:
+      - archived_at
+      - coordinate_formats
+      - created_at
+      - created_by
+      - id
+      - incident
+      - name
+      - rings
+      - updated_at
     Relationship:
       type: object
       properties:
@@ -2747,6 +3609,16 @@ components:
       - name
       - slug
       - source_type
+    RingTypeEnum:
+      enum:
+      - operational
+      - fringe
+      - coordination
+      type: string
+      description: |-
+        * `operational` - Operational
+        * `fringe` - Fringe / uncertain
+        * `coordination` - Coordination
     RoleEnum:
       enum:
       - administrator
@@ -2763,6 +3635,39 @@ components:
         * `comt` - COMT
         * `contributor` - Contributor
         * `read_only` - Read-only
+    SiteAssignment:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        site:
+          type: string
+          format: uuid
+        site_name:
+          type: string
+          readOnly: true
+        assignment:
+          type: string
+          format: uuid
+        assignment_label:
+          type: string
+          readOnly: true
+        site_snapshot:
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - assignment
+      - assignment_label
+      - created_at
+      - id
+      - site
+      - site_name
+      - site_snapshot
     SourceTypeEnum:
       enum:
       - synthetic

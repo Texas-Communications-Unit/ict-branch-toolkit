@@ -32,6 +32,7 @@ INSTALLED_APPS = [
     "apps.incidents",
     "apps.resources",
     "apps.plans",
+    "apps.sites",
 ]
 if ENABLE_GIS:
     INSTALLED_APPS.append("django.contrib.gis")
@@ -91,6 +92,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 ICT_ROLE_POLICY_OVERRIDES = json.loads(os.getenv("ICT_ROLE_POLICY_OVERRIDES", "{}"))
 ICT_IDENTITY_PROVIDER = os.getenv("ICT_IDENTITY_PROVIDER", "local")
 ICT_APPROVED_REFERENCE_IMPORTS = json.loads(os.getenv("ICT_APPROVED_REFERENCE_IMPORTS", "[]"))
+ICT_GEOCODER_PROVIDER = os.getenv("ICT_GEOCODER_PROVIDER", "apps.sites.geocoders.DisabledGeocoder")
 
 CORS_ALLOWED_ORIGINS = [
     origin.strip()

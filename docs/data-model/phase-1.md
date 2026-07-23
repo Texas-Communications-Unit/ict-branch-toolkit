@@ -24,11 +24,11 @@ Operational deletion is not exposed. Incidents and periods are archived, members
 - Identity and policy: installation, organization, user, role, incident assignment, permission policy.
 - Resource library: source, release/version, conventional channel, trunked talkgroup, incident snapshot.
 - Plan: implemented ICS-205 plan, immutable revision, ordered assignment, typed relationship, approval/lock event; P1.3 adds canonical sites.
-- Mapping: radio site, site-assignment relationship, manual ring, entered-coordinate representation.
+- Mapping: implemented incident-scoped radio site, spatially indexed PostGIS WGS 84 point with portable test fallback, site-assignment relationship, manual ring, entered-coordinate representation, and approval-time site snapshot.
 - Decision support: rule-set version, warning, stable rule ID, evidence and assumptions.
 - Audit/export: append-only event, export record, source revision, file digest.
 
 ## Invariants
 
-Approved revisions are immutable; official exports reference only approved revisions; resource snapshots retain source/version; frequencies use integer hertz; coordinates use WGS 84; distances use meters; conventional and trunked resources remain distinct; squelch differences do not cancel RF conflict warnings; and audit events are append-only.
+Approved revisions are immutable; official exports reference only approved revisions; resource and site snapshots retain source/version or entered-coordinate provenance; frequencies use integer hertz; coordinates use WGS 84; distances use meters; conventional and trunked resources remain distinct; squelch differences do not cancel RF conflict warnings; and audit events are append-only.
 
