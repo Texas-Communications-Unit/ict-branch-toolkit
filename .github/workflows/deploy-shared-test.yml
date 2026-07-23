@@ -1,0 +1,74 @@
+name: Deploy shared test
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: Type deploy to confirm the shared test deployment
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: shared-test-deployment
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy approved main commit
+    if: inputs.confirmation == 'deploy'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: shared-test
+
+    steps:
+      - name: Check out approved commit
+        uses: actions/checkout@v7
+
+      - name: Validate required secrets
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+        run: |
+          test -n "$DEPLOY_HOST"
+          test -n "$DEPLOY_KNOWN_HOSTS"
+          test -n "$DEPLOY_PORT"
+          test -n "$DEPLOY_SSH_KEY"
+          test -n "$DEPLOY_USER"
+
+      - name: Configure SSH
+        env:
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        run: |
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$DEPLOY_SSH_KEY" > "$HOME/.ssh/deploy_key"
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/deploy_key"
+          chmod 644 "$HOME/.ssh/known_hosts"
+
+      - name: Deploy exact main commit
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+        run: |
+          ssh \
+            -i "$HOME/.ssh/deploy_key" \
+            -p "$DEPLOY_PORT" \
+            -o BatchMode=yes \
+            -o ConnectTimeout=15 \
+            -o IdentitiesOnly=yes \
+            -o StrictHostKeyChecking=yes \
+            "$DEPLOY_USER@$DEPLOY_HOST" \
+            "bash -s -- '$GITHUB_SHA'" \
+            < scripts/deploy-shared-test.sh
+
+      - name: Remove temporary key
+        if: always()
+        run: rm -f "$HOME/.ssh/deploy_key"

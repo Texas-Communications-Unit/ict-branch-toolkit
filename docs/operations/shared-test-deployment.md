@@ -40,6 +40,26 @@ docker compose --env-file /path/to/deployment.env -f compose.production.yaml up 
 curl --fail http://<application-host>:8088/api/health/
 ```
 
+## Controlled GitHub deployment
+
+The `Deploy shared test` GitHub Actions workflow provides a manually dispatched
+deployment path for the shared synthetic-data test host. Configure a protected
+`shared-test` environment and require human review before the job can access its
+repository secrets.
+
+Required repository or environment secrets:
+
+* `DEPLOY_HOST`
+* `DEPLOY_PORT`
+* `DEPLOY_USER`
+* `DEPLOY_SSH_KEY`
+* `DEPLOY_KNOWN_HOSTS`
+
+The workflow accepts only the exact commit on `main`, refuses a dirty server
+checkout, creates and validates a compressed PostgreSQL backup, builds new
+images before replacing containers, and waits for all production health checks.
+It must be started manually with the confirmation value `deploy`.
+
 ## Reverse proxy
 
 Create a dedicated HTTPS virtual host for the application hostname. Preserve the original host, pass the original HTTPS scheme, and proxy only to the application's dedicated address and port.
