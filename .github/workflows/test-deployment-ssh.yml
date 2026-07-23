@@ -1,0 +1,60 @@
+name: Test deployment SSH connectivity
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  connectivity:
+    name: Verify restricted deployment login
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Validate required secrets
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+        run: |
+          test -n "$DEPLOY_HOST"
+          test -n "$DEPLOY_KNOWN_HOSTS"
+          test -n "$DEPLOY_PORT"
+          test -n "$DEPLOY_SSH_KEY"
+          test -n "$DEPLOY_USER"
+
+      - name: Configure SSH
+        env:
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        run: |
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$DEPLOY_SSH_KEY" > "$HOME/.ssh/deploy_key"
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/deploy_key"
+          chmod 644 "$HOME/.ssh/known_hosts"
+
+      - name: Test SSH connection
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+        run: |
+          ssh \
+            -i "$HOME/.ssh/deploy_key" \
+            -p "$DEPLOY_PORT" \
+            -o BatchMode=yes \
+            -o ConnectTimeout=15 \
+            -o IdentitiesOnly=yes \
+            -o StrictHostKeyChecking=yes \
+            "$DEPLOY_USER@$DEPLOY_HOST" \
+            true
+          echo "SSH connectivity verified."
+
+      - name: Remove temporary key
+        if: always()
+        run: rm -f "$HOME/.ssh/deploy_key"
