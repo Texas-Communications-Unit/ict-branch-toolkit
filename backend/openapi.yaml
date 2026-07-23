@@ -1484,9 +1484,8 @@ components:
           readOnly: true
         position:
           type: integer
-          maximum: 9223372036854775807
+          maximum: 2147483647
           minimum: 0
-          format: int64
         function:
           type: string
           maxLength: 160
@@ -2228,9 +2227,8 @@ components:
           readOnly: true
         position:
           type: integer
-          maximum: 9223372036854775807
+          maximum: 2147483647
           minimum: 0
-          format: int64
         function:
           type: string
           maxLength: 160

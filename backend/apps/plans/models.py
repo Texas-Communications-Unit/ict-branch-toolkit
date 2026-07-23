@@ -2,6 +2,7 @@ import uuid
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
+from django.core.validators import MaxValueValidator
 from django.db import models
 
 from apps.incidents.models import Incident, OperationalPeriod
@@ -102,7 +103,7 @@ class Assignment(models.Model):
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     revision = models.ForeignKey(PlanRevision, related_name="assignments", on_delete=models.PROTECT)
-    position = models.PositiveIntegerField()
+    position = models.PositiveIntegerField(validators=[MaxValueValidator(2_147_483_647)])
     function = models.CharField(max_length=160)
     channel_name = models.CharField(max_length=160)
     assignment = models.CharField(max_length=200, blank=True)
