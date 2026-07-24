@@ -1,5 +1,7 @@
 from drf_spectacular.utils import extend_schema
 from rest_framework import generics, status, viewsets
+from rest_framework.filters import SearchFilter
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 
 from apps.accounts.permissions import LibraryImportPermission, PolicyPermission
@@ -21,6 +23,12 @@ class LibraryReadOnlyViewSet(viewsets.ReadOnlyModelViewSet):
     policy_actions = {"list": LIBRARY_VIEW, "retrieve": LIBRARY_VIEW}
 
 
+class ResourcePagination(PageNumberPagination):
+    page_size = 500
+    max_page_size = 1000
+    page_size_query_param = "page_size"
+
+
 class ResourceReleaseViewSet(LibraryReadOnlyViewSet):
     queryset = ResourceRelease.objects.select_related("source", "imported_by")
     serializer_class = ResourceReleaseSerializer
@@ -29,11 +37,39 @@ class ResourceReleaseViewSet(LibraryReadOnlyViewSet):
 class ConventionalChannelViewSet(LibraryReadOnlyViewSet):
     queryset = ConventionalChannel.objects.select_related("release__source")
     serializer_class = ConventionalChannelSerializer
+    pagination_class = ResourcePagination
+    filter_backends = [SearchFilter]
+    search_fields = [
+        "identifier",
+        "name",
+        "channel_use",
+        "band",
+        "jurisdiction",
+        "eligibility",
+        "authorization",
+        "restrictions",
+        "notes",
+        "release__source__name",
+        "release__version",
+    ]
 
 
 class TrunkedTalkgroupViewSet(LibraryReadOnlyViewSet):
     queryset = TrunkedTalkgroup.objects.select_related("release__source")
     serializer_class = TrunkedTalkgroupSerializer
+    pagination_class = ResourcePagination
+    filter_backends = [SearchFilter]
+    search_fields = [
+        "identifier",
+        "name",
+        "system_name",
+        "eligibility",
+        "authorization",
+        "restrictions",
+        "notes",
+        "release__source__name",
+        "release__version",
+    ]
 
 
 def structured_errors(errors, prefix=""):

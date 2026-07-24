@@ -4,9 +4,9 @@ Only administrators may validate or apply channel-library imports. Imports are J
 
 ## CISA release selection
 
-At import time, an administrator must visit the official [CISA Field Operations Guides page](https://www.cisa.gov/resources-tools/resources/field-operations-guides), identify the latest applicable release, download it from a `cisa.gov` source, retain the source URL and release/version, calculate its SHA-256 digest, and document permitted use. Do not infer the current version from an older plan or previously imported release.
+At import time, an administrator must visit the official [CISA emergency communications guidance page](https://www.cisa.gov/emergency-communications-guidance-documents-and-publications), identify the latest applicable release, download it from a `cisa.gov` source, retain the source URL and release/version, calculate its SHA-256 digest, and document permitted use. Do not infer the current version from an older plan or previously imported release.
 
-As of July 22, 2026, the latest official CISA material located during P1.1 review identifies **NIFOG version 2.02**. That observation is not a permanent application default; recheck CISA before every proposed import. Historical releases remain available because approved or published plans must retain the release they referenced.
+As verified on July 23, 2026, CISA identifies **NIFOG version 2.02**, dated January 2025, as the current edition. The exact approved source and review are recorded in [the NIFOG 2.02 approval record](../governance/reference-approvals/nifog-2.02.md). This remains a version-pinned release, not a claim that 2.02 will always be current. Historical releases remain available because approved or published plans must retain the release they referenced.
 
 ## Human approval gate
 
@@ -37,6 +37,34 @@ Approval must record the reviewing maintainer, qualified communications reviewer
 8. Remove or retain the approval configuration according to local change-control policy. Removing it does not remove the imported historical release.
 
 If persistence fails, the database transaction rolls back the source, release, channels, talkgroups, import record, and audit event together. Do not delete an imported release to correct it; fix the source data and import a newly identified version.
+
+## Bundled NIFOG 2.02 procedure
+
+The repository contains a deterministic extractor and its reviewed output.
+Generate the JSON only from the exact official PDF:
+
+```sh
+python scripts/nifog/build_nifog_2_02.py NIFOG-2.02.pdf \
+  --output backend/data/reference/nifog-2.02.json
+```
+
+Validate the bundled release without writing:
+
+```sh
+cd backend
+python manage.py import_bundled_nifog
+```
+
+After the exact approval object is configured, apply it with an existing
+administrator as the recorded actor:
+
+```sh
+python manage.py import_bundled_nifog --apply --username <administrator>
+```
+
+The controlled shared-test startup uses `--if-approved`: it imports the release
+once when the checksum-pinned approval is present and reports an idempotent
+no-op on later starts. It skips the import when approval is absent.
 
 ## Other CISA guides
 

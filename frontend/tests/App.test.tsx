@@ -74,6 +74,45 @@ test("signs in and lists incidents from the API", async () => {
         { status: 200 },
       );
     }
+    if (url.endsWith("/api/conventional-channels/")) {
+      return new Response(
+        JSON.stringify({
+          count: 1,
+          next: null,
+          previous: null,
+          results: [
+            {
+              id: "channel-1",
+              identifier: "VTAC17",
+              name: "VTAC17",
+              channel_use: "Tactical",
+              rx_frequency_hz: 161850000,
+              mode: "analog_fm",
+              restrictions: "Licensing and coordination conditions apply.",
+              source_pages: "31",
+              release: {
+                version: "2.02",
+                source: {
+                  name: "National Interoperability Field Operations Guide",
+                },
+              },
+            },
+          ],
+        }),
+        { status: 200 },
+      );
+    }
+    if (url.endsWith("/api/trunked-talkgroups/")) {
+      return new Response(
+        JSON.stringify({
+          count: 0,
+          next: null,
+          previous: null,
+          results: [],
+        }),
+        { status: 200 },
+      );
+    }
     if (url.endsWith("/api/channel-imports/") && options?.method === "POST") {
       return new Response(
         JSON.stringify({
@@ -109,6 +148,17 @@ test("signs in and lists incidents from the API", async () => {
   );
   expect(
     screen.getByRole("heading", { name: "Channel library" }),
+  ).toBeInTheDocument();
+  expect(screen.getByText("161.850000 MHz · analog_fm")).toBeInTheDocument();
+  const librarySearch = screen.getByLabelText(
+    "Search channels, uses, restrictions, or source details",
+  );
+  await userEvent.type(librarySearch, "VTAC17");
+  expect(screen.getByText("161.850000 MHz · analog_fm")).toBeInTheDocument();
+  await userEvent.clear(librarySearch);
+  await userEvent.type(librarySearch, "no matching channel");
+  expect(
+    screen.getByText("No conventional channels match this search."),
   ).toBeInTheDocument();
   expect(screen.getByText("Synthetic Administrator")).toBeInTheDocument();
   const workspaceLogo = screen.getByRole("img", {

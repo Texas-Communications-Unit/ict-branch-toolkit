@@ -1,4 +1,4 @@
-import { FormEvent, useCallback, useEffect, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 
 import {
   createIncident,
@@ -77,10 +77,52 @@ export default function App() {
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [channels, setChannels] = useState<ConventionalChannel[]>([]);
   const [talkgroups, setTalkgroups] = useState<TrunkedTalkgroup[]>([]);
+  const [resourceSearch, setResourceSearch] = useState("");
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
   const [selectedIncident, setSelectedIncident] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const normalizedResourceSearch = resourceSearch.trim().toLocaleLowerCase();
+  const visibleChannels = useMemo(
+    () =>
+      channels.filter((channel) =>
+        [
+          channel.identifier,
+          channel.name,
+          channel.channel_use,
+          channel.band,
+          channel.jurisdiction,
+          channel.eligibility,
+          channel.authorization,
+          channel.restrictions,
+          channel.notes,
+          channel.source_section,
+        ]
+          .join(" ")
+          .toLocaleLowerCase()
+          .includes(normalizedResourceSearch),
+      ),
+    [channels, normalizedResourceSearch],
+  );
+  const visibleTalkgroups = useMemo(
+    () =>
+      talkgroups.filter((talkgroup) =>
+        [
+          talkgroup.identifier,
+          talkgroup.name,
+          talkgroup.system_name,
+          talkgroup.eligibility,
+          talkgroup.authorization,
+          talkgroup.restrictions,
+          talkgroup.notes,
+          talkgroup.source_section,
+        ]
+          .join(" ")
+          .toLocaleLowerCase()
+          .includes(normalizedResourceSearch),
+      ),
+    [talkgroups, normalizedResourceSearch],
+  );
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -415,23 +457,50 @@ export default function App() {
               <p className="eyebrow">Source-aware reference data</p>
               <h2 id="library-heading">Channel library</h2>
             </div>
-            <span className="count">{channels.length + talkgroups.length}</span>
+            <span className="count">
+              {visibleChannels.length + visibleTalkgroups.length}
+            </span>
           </div>
+          <label className="library-search">
+            Search channels, uses, restrictions, or source details
+            <input
+              type="search"
+              value={resourceSearch}
+              onChange={(event) => setResourceSearch(event.target.value)}
+              placeholder="Examples: VTAC33, medical, Texas, deployable"
+            />
+          </label>
           <div className="resource-grid">
             <div>
               <h3>Conventional channels</h3>
-              {channels.length === 0 ? (
-                <p className="empty">No releases imported.</p>
+              {visibleChannels.length === 0 ? (
+                <p className="empty">
+                  {channels.length === 0
+                    ? "No releases imported."
+                    : "No conventional channels match this search."}
+                </p>
               ) : (
-                channels.map((channel) => (
+                visibleChannels.map((channel) => (
                   <article className="resource-card" key={channel.id}>
-                    <strong>{channel.name}</strong>
+                    <strong>
+                      {channel.name} <small>({channel.identifier})</small>
+                    </strong>
                     <span>
                       {(channel.rx_frequency_hz / 1_000_000).toFixed(6)} MHz ·{" "}
                       {channel.mode}
                     </span>
+                    {channel.channel_use && <span>{channel.channel_use}</span>}
+                    {channel.restrictions && (
+                      <details>
+                        <summary>Restrictions and use conditions</summary>
+                        <p>{channel.restrictions}</p>
+                      </details>
+                    )}
                     <small>
                       {channel.release.source.name} · {channel.release.version}
+                      {channel.source_pages
+                        ? ` · NIFOG p. ${channel.source_pages}`
+                        : ""}
                     </small>
                   </article>
                 ))
@@ -439,18 +508,33 @@ export default function App() {
             </div>
             <div>
               <h3>Trunked talkgroups</h3>
-              {talkgroups.length === 0 ? (
-                <p className="empty">No releases imported.</p>
+              {visibleTalkgroups.length === 0 ? (
+                <p className="empty">
+                  {talkgroups.length === 0
+                    ? "No releases imported."
+                    : "No trunked talkgroups match this search."}
+                </p>
               ) : (
-                talkgroups.map((talkgroup) => (
+                visibleTalkgroups.map((talkgroup) => (
                   <article className="resource-card" key={talkgroup.id}>
-                    <strong>{talkgroup.name}</strong>
+                    <strong>
+                      {talkgroup.name} <small>({talkgroup.identifier})</small>
+                    </strong>
                     <span>
                       {talkgroup.system_name} · TG {talkgroup.talkgroup_id}
                     </span>
+                    {talkgroup.restrictions && (
+                      <details>
+                        <summary>Restrictions and use conditions</summary>
+                        <p>{talkgroup.restrictions}</p>
+                      </details>
+                    )}
                     <small>
                       {talkgroup.release.source.name} ·{" "}
                       {talkgroup.release.version}
+                      {talkgroup.source_pages
+                        ? ` · NIFOG p. ${talkgroup.source_pages}`
+                        : ""}
                     </small>
                   </article>
                 ))

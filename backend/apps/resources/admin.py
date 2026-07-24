@@ -26,15 +26,7 @@ class ResourceSourceAdmin(admin.ModelAdmin):
 class ResourceReleaseAdmin(admin.ModelAdmin):
     list_display = ("source", "version", "effective_status", "released_on", "imported_at")
     list_filter = ("effective_status", "source__source_type")
-    readonly_fields = (
-        "source",
-        "version",
-        "released_on",
-        "effective_status",
-        "content_sha256",
-        "imported_by",
-        "imported_at",
-    )
+    readonly_fields = [field.name for field in ResourceRelease._meta.fields]
 
     def has_add_permission(self, request):
         return False
@@ -47,7 +39,14 @@ class ResourceReleaseAdmin(admin.ModelAdmin):
 class ConventionalChannelAdmin(admin.ModelAdmin):
     list_display = ("name", "rx_frequency_hz", "tx_frequency_hz", "mode", "release")
     list_filter = ("mode", "release")
-    search_fields = ("identifier", "name")
+    search_fields = (
+        "identifier",
+        "name",
+        "channel_use",
+        "jurisdiction",
+        "restrictions",
+        "source_section",
+    )
     readonly_fields = [field.name for field in ConventionalChannel._meta.fields]
 
     def has_add_permission(self, request):
@@ -61,7 +60,13 @@ class ConventionalChannelAdmin(admin.ModelAdmin):
 class TrunkedTalkgroupAdmin(admin.ModelAdmin):
     list_display = ("name", "system_name", "talkgroup_id", "release")
     list_filter = ("system_name", "release")
-    search_fields = ("identifier", "name", "system_name")
+    search_fields = (
+        "identifier",
+        "name",
+        "system_name",
+        "restrictions",
+        "source_section",
+    )
     readonly_fields = [field.name for field in TrunkedTalkgroup._meta.fields]
 
     def has_add_permission(self, request):
