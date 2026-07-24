@@ -84,6 +84,18 @@ paths:
         description: A page number within the paginated result set.
         schema:
           type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
       tags:
       - conventional-channels
       security:
@@ -1971,6 +1983,18 @@ paths:
         description: A page number within the paginated result set.
         schema:
           type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
       tags:
       - trunked-talkgroups
       security:
@@ -2182,9 +2206,15 @@ components:
         name:
           type: string
           maxLength: 160
+        channel_use:
+          type: string
+          maxLength: 200
         band:
           type: string
           maxLength: 40
+        jurisdiction:
+          type: string
+          maxLength: 80
         rx_frequency_hz:
           type: integer
           maximum: 10000000000
@@ -2209,6 +2239,19 @@ components:
         tx_squelch:
           type: string
           maxLength: 40
+        emission_designator:
+          type: string
+          maxLength: 40
+        eligibility:
+          type: string
+        authorization:
+          type: string
+        source_section:
+          type: string
+          maxLength: 240
+        source_pages:
+          type: string
+          maxLength: 80
         restrictions:
           type: string
         notes:
@@ -2295,9 +2338,15 @@ components:
         name:
           type: string
           maxLength: 160
+        channel_use:
+          type: string
+          maxLength: 200
         band:
           type: string
           maxLength: 40
+        jurisdiction:
+          type: string
+          maxLength: 80
         rx_frequency_hz:
           type: integer
           maximum: 10000000000
@@ -2322,6 +2371,19 @@ components:
         tx_squelch:
           type: string
           maxLength: 40
+        emission_designator:
+          type: string
+          maxLength: 40
+        eligibility:
+          type: string
+        authorization:
+          type: string
+        source_section:
+          type: string
+          maxLength: 240
+        source_pages:
+          type: string
+          maxLength: 80
         restrictions:
           type: string
         notes:
@@ -2348,6 +2410,20 @@ components:
         content_sha256:
           type: string
           pattern: ^[0-9a-f]{64}$
+        document_title:
+          type: string
+          maxLength: 300
+        publisher:
+          type: string
+          maxLength: 200
+        retrieved_on:
+          type: string
+          format: date
+          nullable: true
+        permitted_use:
+          type: string
+        transformation_method:
+          type: string
       required:
       - content_sha256
       - effective_status
@@ -2394,6 +2470,16 @@ components:
         mode:
           type: string
           maxLength: 40
+        eligibility:
+          type: string
+        authorization:
+          type: string
+        source_section:
+          type: string
+          maxLength: 240
+        source_pages:
+          type: string
+          maxLength: 80
         restrictions:
           type: string
         notes:
@@ -3570,6 +3656,20 @@ components:
           type: string
           pattern: ^[0-9a-f]{64}$
           maxLength: 64
+        document_title:
+          type: string
+          maxLength: 300
+        publisher:
+          type: string
+          maxLength: 200
+        retrieved_on:
+          type: string
+          format: date
+          nullable: true
+        permitted_use:
+          type: string
+        transformation_method:
+          type: string
         imported_at:
           type: string
           format: date-time
@@ -3739,6 +3839,16 @@ components:
         mode:
           type: string
           maxLength: 40
+        eligibility:
+          type: string
+        authorization:
+          type: string
+        source_section:
+          type: string
+          maxLength: 240
+        source_pages:
+          type: string
+          maxLength: 80
         restrictions:
           type: string
         notes:

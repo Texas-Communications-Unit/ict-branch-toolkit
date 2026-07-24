@@ -38,6 +38,11 @@ export interface ResourceRelease {
   released_on: string | null;
   effective_status: "draft" | "effective" | "superseded";
   content_sha256: string;
+  document_title: string;
+  publisher: string;
+  retrieved_on: string | null;
+  permitted_use: string;
+  transformation_method: string;
   imported_at: string;
 }
 
@@ -46,11 +51,23 @@ export interface ConventionalChannel {
   release: ResourceRelease;
   identifier: string;
   name: string;
+  channel_use: string;
   band: string;
+  jurisdiction: string;
   rx_frequency_hz: number;
   tx_frequency_hz: number | null;
+  bandwidth_hz: number | null;
   mode: string;
+  rx_squelch: string;
+  tx_squelch: string;
+  emission_designator: string;
+  eligibility: string;
+  authorization: string;
+  source_section: string;
+  source_pages: string;
   restrictions: string;
+  notes: string;
+  is_active: boolean;
 }
 
 export interface TrunkedTalkgroup {
@@ -61,7 +78,13 @@ export interface TrunkedTalkgroup {
   system_name: string;
   talkgroup_id: number;
   mode: string;
+  eligibility: string;
+  authorization: string;
+  source_section: string;
+  source_pages: string;
   restrictions: string;
+  notes: string;
+  is_active: boolean;
 }
 
 export interface ImportError {

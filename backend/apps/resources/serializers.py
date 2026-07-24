@@ -21,6 +21,11 @@ class ResourceReleaseSerializer(serializers.ModelSerializer):
             "released_on",
             "effective_status",
             "content_sha256",
+            "document_title",
+            "publisher",
+            "retrieved_on",
+            "permitted_use",
+            "transformation_method",
             "imported_at",
         ]
 
@@ -35,13 +40,20 @@ class ConventionalChannelSerializer(serializers.ModelSerializer):
             "release",
             "identifier",
             "name",
+            "channel_use",
             "band",
+            "jurisdiction",
             "rx_frequency_hz",
             "tx_frequency_hz",
             "bandwidth_hz",
             "mode",
             "rx_squelch",
             "tx_squelch",
+            "emission_designator",
+            "eligibility",
+            "authorization",
+            "source_section",
+            "source_pages",
             "restrictions",
             "notes",
             "is_active",
@@ -61,6 +73,10 @@ class TrunkedTalkgroupSerializer(serializers.ModelSerializer):
             "system_name",
             "talkgroup_id",
             "mode",
+            "eligibility",
+            "authorization",
+            "source_section",
+            "source_pages",
             "restrictions",
             "notes",
             "is_active",
@@ -79,6 +95,11 @@ class ImportReleaseSerializer(serializers.Serializer):
     released_on = serializers.DateField(required=False, allow_null=True)
     effective_status = serializers.ChoiceField(choices=ResourceRelease.Status.choices)
     content_sha256 = serializers.RegexField(r"^[0-9a-f]{64}$")
+    document_title = serializers.CharField(max_length=300, required=False, allow_blank=True)
+    publisher = serializers.CharField(max_length=200, required=False, allow_blank=True)
+    retrieved_on = serializers.DateField(required=False, allow_null=True)
+    permitted_use = serializers.CharField(required=False, allow_blank=True)
+    transformation_method = serializers.CharField(required=False, allow_blank=True)
 
 
 class ImportConventionalChannelSerializer(serializers.ModelSerializer):

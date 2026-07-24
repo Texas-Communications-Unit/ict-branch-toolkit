@@ -388,6 +388,14 @@ p {
   grid-template-columns: 1fr 1fr;
   gap: 1.25rem;
 }
+.library-search {
+  display: grid;
+  gap: 0.35rem;
+  margin-bottom: 1rem;
+  color: var(--tx-comu-slate);
+  font-size: 0.86rem;
+  font-weight: 700;
+}
 .resource-card {
   display: grid;
   gap: 0.25rem;
@@ -399,6 +407,18 @@ p {
 .resource-card span,
 .resource-card small {
   color: var(--tx-comu-slate);
+}
+.resource-card details {
+  color: var(--tx-comu-slate);
+  font-size: 0.8rem;
+}
+.resource-card summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+.resource-card details p {
+  margin: 0.45rem 0 0;
+  white-space: pre-line;
 }
 .import-panel {
   display: grid;

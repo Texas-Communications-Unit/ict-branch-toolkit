@@ -23,10 +23,11 @@ cleanup() {
 trap cleanup EXIT
 chmod 600 "$resolved_env"
 
-# Preserve protected server settings while applying the approved public
-# basemap configuration for this synthetic-data-only shared test.
-grep -v '^VITE_MAP_' "$env_file" > "$resolved_env"
+# Preserve protected server settings while applying the approved public basemap
+# and checksum-pinned NIFOG 2.02 reference configuration.
+grep -v -e '^VITE_MAP_' -e '^ICT_APPROVED_REFERENCE_IMPORTS=' "$env_file" > "$resolved_env"
 cat >> "$resolved_env" <<'EOF'
+ICT_APPROVED_REFERENCE_IMPORTS=[{"source_type":"cisa_nifog","version":"2.02","authoritative_url":"https://www.cisa.gov/sites/default/files/2024-12/NIFOG%202.02_508%20FINAL%20VERSION%2012%2003%202024.pdf","content_sha256":"45c2f5d94861b3ed1b80f7ce5962a160fdd56092211586bdee711b68ca3d3142"}]
 VITE_MAP_STYLE_URL=
 VITE_MAP_TILE_URL=https://tile.openstreetmap.org/{z}/{x}/{y}.png
 VITE_MAP_PROVIDER_ID=osm-standard
