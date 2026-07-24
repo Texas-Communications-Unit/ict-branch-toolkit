@@ -6,7 +6,7 @@ on:
     branches: [main]
 
 concurrency:
-  group: "${{ github.workflow }}-${{ github.event.pull_request.number || github.event_name }}-${{ github.ref }}"
+  group: "${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}"
   cancel-in-progress: true
 
 permissions:
