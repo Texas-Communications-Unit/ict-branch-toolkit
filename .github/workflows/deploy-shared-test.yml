@@ -1,12 +1,7 @@
 name: Deploy shared test
 
 on:
-  workflow_dispatch:
-    inputs:
-      confirmation:
-        description: Type deploy to confirm the shared test deployment
-        required: true
-        type: string
+  workflow_dispatch: {}
 
 permissions:
   contents: read
@@ -21,7 +16,6 @@ concurrency:
 jobs:
   deploy:
     name: Deploy approved main commit
-    if: inputs.confirmation == 'deploy'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     environment: shared-test
