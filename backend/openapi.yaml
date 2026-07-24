@@ -48,6 +48,12 @@ paths:
   /api/auth/token/:
     post:
       operationId: auth_token_create
+      description: |-
+        Rate-limit token issuance separately from, and more strictly than, the general API.
+
+        Login is a credential-guessing target regardless of authentication state, so it is throttled
+        by request rate alone (``ScopedRateThrottle`` keys anonymous requests by IP) rather than by
+        the ``anon``/``user`` rates meant for ordinary API traffic.
       tags:
       - auth
       requestBody:

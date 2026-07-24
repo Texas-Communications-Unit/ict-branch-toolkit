@@ -1,13 +1,13 @@
 from django.contrib import admin
 from django.urls import include, path
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
-from rest_framework.authtoken.views import obtain_auth_token
 
+from apps.accounts.views import ThrottledObtainAuthTokenView
 from apps.incidents.views import health
 
 urlpatterns = [
     path("admin/", admin.site.urls),
-    path("api/auth/token/", obtain_auth_token, name="api-token"),
+    path("api/auth/token/", ThrottledObtainAuthTokenView.as_view(), name="api-token"),
     path("api/health/", health, name="health"),
     path("api/", include("apps.accounts.urls")),
     path("api/", include("apps.incidents.urls")),
