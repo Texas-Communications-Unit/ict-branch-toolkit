@@ -339,7 +339,7 @@ export default function App() {
           {error}
         </p>
       )}
-      <main className="workspace" id="main-content">
+      <main className="workspace" id="main-content" tabIndex={-1}>
         <section className="planning-panel" aria-labelledby="incidents-heading">
           <div className="section-heading">
             <div>
@@ -362,7 +362,9 @@ export default function App() {
             </form>
           )}
           {loading ? (
-            <p>Loading incidents…</p>
+            <p role="status" aria-live="polite">
+              Loading incidents…
+            </p>
           ) : incidents.length === 0 ? (
             <p className="empty">
               No incidents yet. Create a synthetic incident to begin.

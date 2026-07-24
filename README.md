@@ -180,6 +180,17 @@ See [ADR-0004](docs/adr/0004-spatial-sites-snapshots-and-exports.md) and [spatia
 
 The prototype does not yet implement deconfliction, completed official export records/digests, or production authentication hardening.
 
+## Accessibility
+
+The browser workflow targets WCAG 2.1 Level A and AA. GitHub Actions runs
+axe-core checks against the sign-in and authenticated planning screens, along
+with keyboard checks for sign-in order and the planning-workspace skip link.
+The coordinate form and radio site list provide a non-pointer alternative to
+map interaction.
+
+See the [accessibility review and checks](docs/operations/accessibility.md) for
+the automated scope, known boundaries, and required human acceptance testing.
+
 ## TX-COMU brand system
 
 The interface uses the approved TX-COMU digital colors and exact locally

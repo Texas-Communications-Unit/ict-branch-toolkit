@@ -1,4 +1,14 @@
+import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
+
+async function expectNoAccessibilityViolations(
+  page: import("@playwright/test").Page,
+) {
+  const results = await new AxeBuilder({ page })
+    .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
+    .analyze();
+  expect(results.violations).toEqual([]);
+}
 
 test("administrator signs in and sees the incident planning workspace", async ({
   page,
@@ -206,6 +216,13 @@ test("administrator signs in and sees the incident planning workspace", async ({
     }),
   );
   await page.goto("/");
+  await expectNoAccessibilityViolations(page);
+  await page.keyboard.press("Tab");
+  await expect(page.getByLabel("Username")).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(page.getByLabel("Password")).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(page.getByRole("button", { name: "Sign in" })).toBeFocused();
   await page.getByLabel("Username").fill("admin");
   await page.getByLabel("Password").fill("synthetic-password");
   await page.getByRole("button", { name: "Sign in" }).click();
@@ -221,7 +238,21 @@ test("administrator signs in and sees the incident planning workspace", async ({
     "/brand/tx-comu-logo-transparent.svg",
   );
   await expect(page.getByText("ICT Toolkit")).toBeVisible();
-  await expect(page.getByLabel("Radio site planning map")).toBeVisible();
+  const planningMap = page.getByRole("region", {
+    name: "Radio site planning map",
+  });
+  await expect(planningMap).toBeVisible();
+  await expect(planningMap).toHaveAccessibleDescription(
+    /Keyboard and screen-reader users can use the coordinate form/,
+  );
+  await page.evaluate(() => (document.activeElement as HTMLElement)?.blur());
+  await page.keyboard.press("Tab");
+  const skipLink = page.getByRole("link", {
+    name: "Skip to planning workspace",
+  });
+  await expect(skipLink).toBeFocused();
+  await skipLink.press("Enter");
+  await expect(page.locator("#main-content")).toBeFocused();
   await expect(page.getByText(/P1.3 Prototype/)).toBeVisible();
   await expect(page.getByRole("heading", { name: "ICS-205" })).toBeVisible();
   await expect(
@@ -255,6 +286,7 @@ test("administrator signs in and sees the incident planning workspace", async ({
   await expect(
     page.getByText(/TX-COMU names, logos, and identifying marks/),
   ).toBeVisible();
+  await expectNoAccessibilityViolations(page);
   const desktopScreenshot = testInfo.outputPath(
     "branded-workspace-desktop.png",
   );

@@ -512,7 +512,9 @@ export function MapShell({ incident }: { incident?: Incident }) {
         ref={container}
         className="map"
         data-testid="map"
+        role="region"
         aria-label="Radio site planning map"
+        aria-describedby="map-instructions"
       />
       <button
         type="button"
@@ -564,11 +566,12 @@ export function MapShell({ incident }: { incident?: Incident }) {
           {mapStatus}
         </p>
       )}
-      <p className="map-note">
-        Click the map or enter decimal degrees, DDM, DMS, or USNG/MGRS. Site
-        coordinates are previewed with a red marker. Coordinates and manual
-        rings remain available when an external basemap is disabled or
-        unavailable.
+      <p className="map-note" id="map-instructions">
+        Click the map or enter decimal degrees, DDM, DMS, or USNG/MGRS. Keyboard
+        and screen-reader users can use the coordinate form and radio site list;
+        map clicking and marker dragging are optional. Site coordinates are
+        previewed with a red marker. Coordinates and manual rings remain
+        available when an external basemap is disabled or unavailable.
       </p>
       {!incident ? (
         <p className="empty">Select an incident to manage its radio sites.</p>
