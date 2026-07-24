@@ -105,7 +105,39 @@ REST_FRAMEWORK = {
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 100,
+    "DEFAULT_THROTTLE_CLASSES": [
+        "rest_framework.throttling.AnonRateThrottle",
+        "rest_framework.throttling.UserRateThrottle",
+        "rest_framework.throttling.ScopedRateThrottle",
+    ],
+    "DEFAULT_THROTTLE_RATES": {
+        "anon": os.getenv("DJANGO_THROTTLE_ANON_RATE", "30/min"),
+        "user": os.getenv("DJANGO_THROTTLE_USER_RATE", "300/min"),
+        "auth": os.getenv("DJANGO_THROTTLE_AUTH_RATE", "10/min"),
+    },
+    "EXCEPTION_HANDLER": "config.exceptions.handle_exception",
 }
+
+# Secure headers (P1.6 hardening). These are safe in every environment, including local
+# development and CI over plain HTTP.
+SECURE_CONTENT_TYPE_NOSNIFF = True
+SECURE_REFERRER_POLICY = "same-origin"
+SECURE_CROSS_ORIGIN_OPENER_POLICY = "same-origin"
+X_FRAME_OPTIONS = "DENY"
+SESSION_COOKIE_HTTPONLY = True
+CSRF_COOKIE_HTTPONLY = True
+
+# HSTS, SSL redirect, and secure cookies are opt-in: they assume the deployment terminates TLS
+# in front of Django (directly or via a trusted reverse proxy honoring SECURE_PROXY_SSL_HEADER
+# above) and would otherwise break local development and CI, which run over plain HTTP.
+DJANGO_FORCE_HTTPS = os.getenv("DJANGO_FORCE_HTTPS", "false").lower() == "true"
+if DJANGO_FORCE_HTTPS:
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_HSTS_SECONDS = int(os.getenv("DJANGO_HSTS_SECONDS", "31536000"))
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
 
 APP_VERSION = "0.2.0"
 
