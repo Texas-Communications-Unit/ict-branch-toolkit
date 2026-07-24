@@ -50,7 +50,7 @@ pg_dump \
 
 test -s "$archive"
 sha256sum "$archive" > "$archive.sha256"
-sha256sum --check --status "$archive.sha256"
+sha256sum -c -s "$archive.sha256"
 pg_restore --list "$archive" >/dev/null
 psql \
   --username "$POSTGRES_USER" \
