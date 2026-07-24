@@ -4,6 +4,47 @@ info:
   version: 0.2.0
   description: Incident communications planning prototype API.
 paths:
+  /api/audit/revisions/{revision_id}/exports/{export_format}/verify/:
+    post:
+      operationId: audit_revisions_exports_verify_create
+      description: |-
+        Let anyone who could have produced an export confirm a file's digest against the audit log.
+
+        Verification reuses the same permission required to produce the export in the first place
+        (``plan.export`` for PDFs, ``site.export`` for spatial formats) rather than ``audit.view``, so
+        this is genuinely self-service for operators who can already export, not admin-only.
+      parameters:
+      - in: path
+        name: export_format
+        schema:
+          type: string
+        required: true
+      - in: path
+        name: revision_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - audit
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExportDigestVerificationRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ExportDigestVerificationRequest'
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
   /api/auth/token/:
     post:
       operationId: auth_token_create
@@ -2321,6 +2362,15 @@ components:
         * `draft` - Draft
         * `effective` - Effective
         * `superseded` - Superseded
+    ExportDigestVerificationRequest:
+      type: object
+      properties:
+        content_sha256:
+          type: string
+        file:
+          type: string
+          format: uri
+          nullable: true
     GeocoderQuery:
       type: object
       properties:
