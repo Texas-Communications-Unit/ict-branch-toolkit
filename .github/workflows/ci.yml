@@ -48,7 +48,9 @@ jobs:
           python-version: "3.12"
           cache: pip
           cache-dependency-path: backend/pyproject.toml
-      - run: sudo apt-get update && sudo apt-get install -y gdal-bin libgdal-dev
+      - run: >-
+          sudo apt-get update &&
+          sudo apt-get install -y gdal-bin libgdal-dev shellcheck
       - run: python -m pip install --upgrade pip
       - run: pip install -e ".[dev]"
       - run: ruff format --check .
@@ -56,6 +58,21 @@ jobs:
       - run: python manage.py check
       - run: python manage.py makemigrations --check --dry-run
       - run: python manage.py migrate --noinput
+      - name: Validate recovery scripts
+        run: >-
+          shellcheck ../scripts/database-recovery.sh
+          ../scripts/test-postgresql-recovery.sh
+      - name: Test PostgreSQL backup and isolated restore
+        run: >-
+          docker run --rm --network host
+          --volume "${{ github.workspace }}/scripts:/scripts:ro"
+          --env PGHOST=127.0.0.1
+          --env PGPORT=5432
+          --env POSTGRES_DB=ict_toolkit
+          --env POSTGRES_USER=ict_toolkit
+          --env PGPASSWORD=synthetic-ci-password
+          postgis/postgis:17-3.5-alpine
+          sh /scripts/test-postgresql-recovery.sh
       - run: python manage.py shell -c "from django.db import connection; c=connection.cursor(); c.execute('SELECT PostGIS_Version()'); print(c.fetchone()[0])"
       - run: pytest
       - run: python manage.py spectacular --file openapi.generated.yaml --validate

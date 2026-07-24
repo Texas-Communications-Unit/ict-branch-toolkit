@@ -85,11 +85,11 @@ repository secrets.
 
 Required repository or environment secrets:
 
-* `DEPLOY_HOST`
-* `DEPLOY_PORT`
-* `DEPLOY_USER`
-* `DEPLOY_SSH_KEY`
-* `DEPLOY_KNOWN_HOSTS`
+- `DEPLOY_HOST`
+- `DEPLOY_PORT`
+- `DEPLOY_USER`
+- `DEPLOY_SSH_KEY`
+- `DEPLOY_KNOWN_HOSTS`
 
 The workflow accepts only the exact commit on `main`, refuses a dirty server
 checkout, creates and validates a compressed PostgreSQL backup, builds new
@@ -101,6 +101,12 @@ synthetic-data-only shared test, the deployment script overlays the approved
 public OSM configuration shown above into a restricted temporary environment
 file. It does not rewrite the protected server environment file or expose its
 secrets.
+
+Before approving an upgrade, follow the
+[backup, restore, upgrade, and rollback runbook](backup-restore-and-rollback.md)
+to run an isolated restore drill. The controlled deployment writes a SHA-256
+sidecar for its pre-deployment backup, but the backup and checksum must still be
+copied to approved encrypted storage outside the application host.
 
 The `shared-test` environment requires human review before the job can run.
 The job re-resolves `origin/main` immediately after that approval gate and
@@ -139,7 +145,10 @@ Validate before reloading the reverse proxy. Confirm the health endpoint through
 
 ## Rollback
 
-Disable only the application's virtual host and reload the reverse proxy. Then stop the Compose project without deleting its database volume:
+For an application or database migration rollback, use the guarded procedure in
+the [recovery runbook](backup-restore-and-rollback.md). Disable only the
+application's virtual host and reload the reverse proxy before recovery. To stop
+the Compose project without deleting its database volume:
 
 ```sh
 docker compose --env-file /path/to/deployment.env -f compose.production.yaml down

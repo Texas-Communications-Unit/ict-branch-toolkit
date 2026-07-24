@@ -152,6 +152,10 @@ Windows PowerShell uses `.venv\Scripts\Activate.ps1` for virtual-environment act
 
 The shared synthetic-data test deployment uses a separate production Compose definition, a single configurable frontend port, and an external reverse proxy. Follow [the shared test deployment runbook](docs/operations/shared-test-deployment.md). It intentionally does not modify or share another application's database or document root.
 
+Database backups, isolated restore drills, controlled restoration, upgrades,
+and application or migration rollback follow the
+[recovery runbook](docs/operations/backup-restore-and-rollback.md).
+
 ## P1.1 vertical slice
 
 The current slice provides token-based local authentication; centralized Administrator, COML, COMC, COMT, Contributor, and Read-only policy defaults; incident memberships; audit-preserving archival; append-only API audit events; and separate source-versioned conventional-channel and trunked-talkgroup libraries. Administrators can validate an import without writing data and apply an atomic approved import. CISA reference releases remain blocked from application until their exact type, version, authoritative URL, and digest pass the configured human gate.
