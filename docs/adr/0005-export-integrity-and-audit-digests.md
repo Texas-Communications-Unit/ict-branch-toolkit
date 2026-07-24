@@ -52,7 +52,8 @@ call `record_export()` instead of a bare `record_event()`.
 - Audit events remain append-only and are not themselves cryptographically chained; a database
   administrator with direct write access to the audit table could still alter a recorded digest.
   This is an accepted limitation for the prototype; a tamper-evident log (e.g. hash chaining) is
-  out of scope for this decision.
+  out of scope for this decision. ADR-0006 closes this gap with hash chaining and adds a
+  self-service verification endpoint.
 
 ## Alternatives considered
 
@@ -60,4 +61,4 @@ Embedding the wall-clock export time into the file bytes was rejected because it
 otherwise-identical exports non-deterministic, breaking the ADR-0003/ADR-0004 guarantee and the
 existing byte-equality tests. A dedicated "verify this file" upload endpoint was deferred; the
 audit log already carries the digest needed for manual verification, and an endpoint can be added
-later without changing this decision.
+later without changing this decision. ADR-0006 adds that endpoint.

@@ -12,6 +12,9 @@ class AppendOnlyQuerySet(models.QuerySet):
         raise RuntimeError("Audit events are append-only.")
 
 
+GENESIS_HASH = "0" * 64
+
+
 class AuditEvent(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     actor = models.ForeignKey(
@@ -22,11 +25,19 @@ class AuditEvent(models.Model):
     target_id = models.CharField(max_length=80)
     details = models.JSONField(default=dict)
     occurred_at = models.DateTimeField(auto_now_add=True)
+    sequence = models.BigIntegerField(unique=True, editable=False)
+    previous_hash = models.CharField(max_length=64, default=GENESIS_HASH, editable=False)
+    record_hash = models.CharField(max_length=64, editable=False)
 
     objects = AppendOnlyQuerySet.as_manager()
 
     class Meta:
         ordering = ["-occurred_at"]
+        constraints = [
+            models.CheckConstraint(
+                check=models.Q(sequence__gte=0), name="audit_event_sequence_not_negative"
+            )
+        ]
 
     def __str__(self) -> str:
         return f"{self.occurred_at}: {self.action} {self.target_type}:{self.target_id}"
