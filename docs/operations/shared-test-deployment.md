@@ -94,7 +94,9 @@ Required repository or environment secrets:
 The workflow accepts only the exact commit on `main`, refuses a dirty server
 checkout, creates and validates a compressed PostgreSQL backup, builds new
 images before replacing containers, and waits for all production health checks.
-It must be started manually with the confirmation value `deploy`. For this
+It must be started manually from the Actions tab ("Run workflow") and then
+approved once at the `shared-test` environment gate; there is no separate
+typed confirmation step. For this
 synthetic-data-only shared test, the deployment script overlays the approved
 public OSM configuration shown above into a restricted temporary environment
 file. It does not rewrite the protected server environment file or expose its
