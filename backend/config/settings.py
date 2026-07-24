@@ -107,9 +107,11 @@ REST_FRAMEWORK = {
     "PAGE_SIZE": 100,
 }
 
+APP_VERSION = "0.2.0"
+
 SPECTACULAR_SETTINGS = {
     "TITLE": "ICT Branch Toolkit API",
     "DESCRIPTION": "Incident communications planning prototype API.",
-    "VERSION": "0.2.0",
+    "VERSION": APP_VERSION,
     "SERVE_INCLUDE_SCHEMA": False,
 }

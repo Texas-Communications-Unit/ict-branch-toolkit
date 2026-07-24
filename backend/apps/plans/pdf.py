@@ -1,6 +1,7 @@
 from io import BytesIO
 from xml.sax.saxutils import escape
 
+from django.conf import settings
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import landscape, letter
 from reportlab.lib.styles import getSampleStyleSheet
@@ -134,6 +135,13 @@ def render_ics205(revision):
                 f"<b>Prepared by:</b> {escape(revision.prepared_by_name)} &nbsp;&nbsp; "
                 f"<b>Position:</b> {escape(revision.prepared_by_position)} &nbsp;&nbsp; "
                 f"<b>Approved revision:</b> {revision.number}",
+                styles["Normal"],
+            ),
+            Spacer(1, 3),
+            Paragraph(
+                f"<b>Status:</b> APPROVED &nbsp;&nbsp; <b>Approved at:</b> "
+                f"{escape(revision.approved_at.isoformat() if revision.approved_at else '')} "
+                f"&nbsp;&nbsp; <b>App version:</b> {escape(settings.APP_VERSION)}",
                 styles["Normal"],
             ),
             Spacer(1, 5),

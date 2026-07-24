@@ -5,6 +5,8 @@ import json
 import math
 from xml.etree import ElementTree
 
+from django.conf import settings
+
 from .services import approved_site_records
 
 DISCLAIMER = (
@@ -20,6 +22,21 @@ RING_COLORS = {
     "fringe": "#c17b16",
     "coordination": "#8d3b72",
 }
+
+
+def _integrity_stamp(revision) -> dict:
+    """Deterministic export stamp: revision approval state and app version.
+
+    Uses the immutable ``approved_at`` timestamp recorded at approval time rather than the
+    wall-clock export request time, so repeated exports of the same approved revision remain
+    byte-identical (see docs/adr/0003) while still recording when the underlying revision was
+    approved and which app version produced the output.
+    """
+    return {
+        "approval_status": revision.status,
+        "approved_at": revision.approved_at.isoformat() if revision.approved_at else None,
+        "app_version": settings.APP_VERSION,
+    }
 
 
 def geojson_export(revision) -> bytes:
@@ -42,12 +59,14 @@ def geojson_export(revision) -> bytes:
         "type": "FeatureCollection",
         "name": f"ICS-205 revision {revision.number} approved sites",
         "basemap_provenance": BASEMAP_PROVENANCE,
+        **_integrity_stamp(revision),
         "features": features,
     }
     return json.dumps(payload, indent=2, sort_keys=True, ensure_ascii=False).encode()
 
 
 def csv_export(revision) -> bytes:
+    stamp = _integrity_stamp(revision)
     output = io.StringIO(newline="")
     writer = csv.writer(output, lineterminator="\n")
     writer.writerow(
@@ -63,6 +82,9 @@ def csv_export(revision) -> bytes:
             "source_retrieved_at",
             "planning_limitation",
             "basemap_provenance",
+            "approval_status",
+            "approved_at",
+            "app_version",
         ]
     )
     for record in approved_site_records(revision):
@@ -81,6 +103,9 @@ def csv_export(revision) -> bytes:
                     record["source_retrieved_at"] or "",
                     DISCLAIMER,
                     BASEMAP_PROVENANCE,
+                    stamp["approval_status"],
+                    stamp["approved_at"] or "",
+                    stamp["app_version"],
                 ]
             )
     return output.getvalue().encode("utf-8")
@@ -94,9 +119,12 @@ def kml_export(revision) -> bytes:
     ElementTree.SubElement(
         document, f"{{{namespace}}}name"
     ).text = f"ICS-205 revision {revision.number} approved sites"
-    ElementTree.SubElement(
-        document, f"{{{namespace}}}description"
-    ).text = f"{DISCLAIMER}\n{BASEMAP_PROVENANCE}"
+    stamp = _integrity_stamp(revision)
+    ElementTree.SubElement(document, f"{{{namespace}}}description").text = (
+        f"{DISCLAIMER}\n{BASEMAP_PROVENANCE}\n"
+        f"Approval status: {stamp['approval_status']}; approved at: {stamp['approved_at']}; "
+        f"app version: {stamp['app_version']}"
+    )
     for record in approved_site_records(revision):
         placemark = ElementTree.SubElement(document, f"{{{namespace}}}Placemark")
         ElementTree.SubElement(placemark, f"{{{namespace}}}name").text = record["name"]
@@ -134,6 +162,7 @@ def kml_export(revision) -> bytes:
 
 
 def svg_export(revision) -> bytes:
+    stamp = _integrity_stamp(revision)
     records = approved_site_records(revision)
     width, height, padding = 960, 640, 80
     if records:
@@ -195,7 +224,10 @@ def svg_export(revision) -> bytes:
             f'<text x="40" y="{height - 24}" font-family="sans-serif" font-size="11" '
             f'fill="#5c6d75">{html.escape(DISCLAIMER)}</text>',
             f'<text x="40" y="{height - 8}" font-family="sans-serif" font-size="10" '
-            f'fill="#5c6d75">{html.escape(BASEMAP_PROVENANCE)}</text>',
+            f'fill="#5c6d75">{html.escape(BASEMAP_PROVENANCE)} · Status: '
+            f"{html.escape(stamp['approval_status'])} · Approved: "
+            f"{html.escape(stamp['approved_at'] or '')} · v{html.escape(stamp['app_version'])}"
+            "</text>",
             "</svg>",
         ]
     )

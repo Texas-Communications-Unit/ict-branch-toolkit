@@ -16,7 +16,7 @@ from apps.accounts.policy import (
     role_for_user,
     user_has_permission,
 )
-from apps.audit.services import record_event
+from apps.audit.services import record_event, record_export
 
 from .models import Assignment, AssignmentRelationship, ICS205Plan, PlanRevision
 from .pdf import render_ics205
@@ -196,7 +196,13 @@ class RevisionViewSet(viewsets.ModelViewSet):
             content = render_ics205(revision)
         except ValueError as exc:
             raise ValidationError(str(exc)) from exc
-        record_event(actor=request.user, action="plan_revision.pdf_exported", target=revision)
+        record_export(
+            actor=request.user,
+            action="plan_revision.pdf_exported",
+            revision=revision,
+            export_format="pdf",
+            content=content,
+        )
         response = HttpResponse(content, content_type="application/pdf")
         response["Content-Disposition"] = (
             f'attachment; filename="ics-205-revision-{revision.number}.pdf"'
