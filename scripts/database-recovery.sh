@@ -77,6 +77,8 @@ verify_catalog() {
     return 1
   }
 
+  # Variables in this command expand inside the database container.
+  # shellcheck disable=SC2016
   "${compose[@]}" exec -T db sh -c '
     archive="$(mktemp)"
     trap "rm -f \"$archive\"" EXIT
@@ -191,6 +193,8 @@ case "$command_name" in
       --owner "$POSTGRES_USER" \
       "$drill_database"
 
+    # Variables in this command expand inside the database container.
+    # shellcheck disable=SC2016
     "${compose[@]}" exec -T \
       -e PGPASSWORD="$POSTGRES_PASSWORD" \
       -e RECOVERY_DATABASE="$drill_database" \
@@ -251,6 +255,8 @@ case "$command_name" in
       --owner "$POSTGRES_USER" \
       "$POSTGRES_DB"
 
+    # Variables in this command expand inside the database container.
+    # shellcheck disable=SC2016
     "${compose[@]}" exec -T \
       -e PGPASSWORD="$POSTGRES_PASSWORD" \
       db sh -c '
