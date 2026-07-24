@@ -30,6 +30,12 @@ jobs:
       - name: Check out approved commit
         uses: actions/checkout@v7
 
+      - name: Resolve current main commit
+        id: resolve_main
+        run: |
+          git fetch origin main:refs/remotes/origin/main
+          echo "sha=$(git rev-parse refs/remotes/origin/main)" >> "$GITHUB_OUTPUT"
+
       - name: Validate required secrets
         env:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
@@ -78,6 +84,12 @@ jobs:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
           DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
           DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          # Use the commit resolved just before this job ran (post-approval),
+          # not github.sha, which is fixed at dispatch time. Required-reviewer
+          # approval can take a long time, during which main may advance; the
+          # remote script refuses anything other than the current origin/main,
+          # so deploying a stale dispatch-time sha would otherwise always fail.
+          MAIN_SHA: ${{ steps.resolve_main.outputs.sha }}
         run: |
           remote_script=".cache/ict-branch-toolkit/deploy-${GITHUB_RUN_ID}.sh"
           ssh \
@@ -88,7 +100,7 @@ jobs:
             -o IdentitiesOnly=yes \
             -o StrictHostKeyChecking=yes \
             "$DEPLOY_USER@$DEPLOY_HOST" \
-            "bash '$remote_script' '$GITHUB_SHA'"
+            "bash '$remote_script' '$MAIN_SHA'"
 
       - name: Remove remote deployment script
         if: always()

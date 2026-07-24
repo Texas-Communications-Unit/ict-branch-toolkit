@@ -100,6 +100,17 @@ public OSM configuration shown above into a restricted temporary environment
 file. It does not rewrite the protected server environment file or expose its
 secrets.
 
+The `shared-test` environment requires human review before the job can run.
+The job re-resolves `origin/main` immediately after that approval gate and
+deploys that commit, not the commit that was current when the run was
+dispatched, so an approval delay cannot by itself cause a mismatch. Even so,
+**approve or reject a pending run within about 15 minutes of dispatch.** If a
+run is left pending for hours, treat it as stale: reject it and re-dispatch
+before approving, so the checked-out and validated commit stays close to the
+one actually deployed. Merging to `main` while a run is awaiting approval is
+still safe to do, but do so deliberately, and prefer re-dispatching after such
+a merge rather than approving an older pending run against a moving target.
+
 ## Reverse proxy
 
 Create a dedicated HTTPS virtual host for the application hostname. Preserve the original host, pass the original HTTPS scheme, and proxy only to the application's dedicated address and port.
