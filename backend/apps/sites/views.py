@@ -21,7 +21,7 @@ from apps.accounts.policy import (
     role_for_user,
     user_has_permission,
 )
-from apps.audit.services import record_event
+from apps.audit.services import record_event, record_export
 from apps.plans.models import PlanRevision
 
 from .coordinates import CoordinateError, coordinate_formats, parse_coordinate
@@ -261,10 +261,12 @@ class SpatialExportView(APIView):
         except KeyError as exc:
             raise ValidationError({"format": "Choose map, kml, geojson, or csv."}) from exc
         payload = exporter(revision)
-        record_event(
+        record_export(
             actor=request.user,
             action=f"site_export.{export_format}",
-            target=revision,
+            revision=revision,
+            export_format=export_format,
+            content=payload,
             details={"filename": filename},
         )
         response = HttpResponse(payload, content_type=content_type, status=status.HTTP_200_OK)
