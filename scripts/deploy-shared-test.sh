@@ -78,6 +78,11 @@ set +a
 
 chmod 600 "$backup_file"
 test -s "$backup_file"
+(
+  cd "$backup_dir"
+  sha256sum "$(basename "$backup_file")" > "$(basename "$backup_file").sha256"
+)
+chmod 600 "$backup_file.sha256"
 
 "${compose[@]}" exec -T db sh -c '
   temporary_backup="$(mktemp)"
@@ -93,4 +98,5 @@ git merge --ff-only "$expected_sha"
 "${compose[@]}" build
 "${compose[@]}" up --detach --wait
 
-printf 'Deployed commit %s with backup %s\n' "$expected_sha" "$backup_file"
+printf 'Deployed commit %s with backup %s and checksum %s\n' \
+  "$expected_sha" "$backup_file" "$backup_file.sha256"

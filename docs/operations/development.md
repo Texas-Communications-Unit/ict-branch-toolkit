@@ -6,7 +6,11 @@ Copy `.env.example` to `.env`, change the local administrator password, and run 
 
 ## Backup and restore boundary
 
-P1.0 contains synthetic data only. For developer convenience, `pg_dump` and `pg_restore` may be run inside the database container, but this is not yet a production backup procedure. P1.6 must specify encryption, retention, integrity verification, restore testing, and recovery objectives.
+P1.0 contains synthetic data only. The controlled test-deployment procedure
+specifies integrity verification, isolated restore testing, encrypted-storage
+requirements, retention, and initial recovery objectives. Follow the
+[backup, restore, upgrade, and rollback runbook](backup-restore-and-rollback.md);
+do not improvise against an active database.
 
 ## Reset and rollback
 
@@ -15,4 +19,3 @@ P1.0 contains synthetic data only. For developer convenience, `pg_dump` and `pg_
 ## Logs
 
 Use `docker compose logs backend frontend db`. Do not paste logs into public issues until they have been reviewed for credentials, tokens, personal information, incident information, hostnames, and private endpoints.
-
