@@ -45,6 +45,16 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+  /api/auth/logout/:
+    post:
+      operationId: auth_logout_create
+      tags:
+      - auth
+      security:
+      - tokenAuth: []
+      responses:
+        '204':
+          description: No response body
   /api/auth/token/:
     post:
       operationId: auth_token_create
@@ -68,14 +78,12 @@ paths:
             schema:
               $ref: '#/components/schemas/AuthToken'
         required: true
-      security:
-      - tokenAuth: []
       responses:
         '200':
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AuthToken'
+                $ref: '#/components/schemas/TokenSession'
           description: ''
   /api/channel-imports/:
     post:
@@ -3869,6 +3877,19 @@ components:
         * `link` - Link
         * `patch` - Patch
         * `other` - Other
+    TokenSession:
+      type: object
+      properties:
+        token:
+          type: string
+          readOnly: true
+        expires_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - expires_at
+      - token
     TrunkedTalkgroup:
       type: object
       properties:

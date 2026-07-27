@@ -17,9 +17,54 @@ import type {
 } from "./types";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
+const TOKEN_KEY = "ict-toolkit-token";
+const TOKEN_EXPIRES_AT_KEY = "ict-toolkit-token-expires-at";
+export const AUTHENTICATION_EXPIRED_EVENT =
+  "ict-toolkit-authentication-expired";
+
+export function clearSession(): void {
+  sessionStorage.removeItem(TOKEN_KEY);
+  sessionStorage.removeItem(TOKEN_EXPIRES_AT_KEY);
+}
+
+function storedToken(): string | null {
+  const token = sessionStorage.getItem(TOKEN_KEY);
+  const expiresAt = sessionStorage.getItem(TOKEN_EXPIRES_AT_KEY);
+  if (!token) {
+    clearSession();
+    return null;
+  }
+  if (
+    !expiresAt ||
+    !Number.isFinite(Date.parse(expiresAt)) ||
+    Date.now() >= Date.parse(expiresAt)
+  ) {
+    expireSession();
+    return null;
+  }
+  return token;
+}
+
+export function hasActiveSession(): boolean {
+  return storedToken() !== null;
+}
+
+function expireSession(): void {
+  clearSession();
+  window.dispatchEvent(new Event(AUTHENTICATION_EXPIRED_EVENT));
+}
+
+function tokenForRequest(): string | null {
+  const hadStoredToken = sessionStorage.getItem(TOKEN_KEY) !== null;
+  const token = storedToken();
+  if (hadStoredToken && !token) {
+    throw new Error("Your session expired. Sign in again.");
+  }
+  return token;
+}
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const token = sessionStorage.getItem("ict-toolkit-token");
+  const token = tokenForRequest();
   const response = await fetch(`${API_BASE}${path}`, {
     ...options,
     headers: {
@@ -29,6 +74,10 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     },
   });
   if (!response.ok) {
+    if (response.status === 401 && token) {
+      expireSession();
+      throw new Error("Your session expired. Sign in again.");
+    }
     const detail = await response.text();
     throw new Error(detail || `Request failed with status ${response.status}`);
   }
@@ -37,11 +86,43 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 }
 
 export async function login(username: string, password: string): Promise<void> {
-  const result = await request<{ token: string }>("/api/auth/token/", {
+  const response = await fetch(`${API_BASE}/api/auth/token/`, {
     method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ username, password }),
   });
-  sessionStorage.setItem("ict-toolkit-token", result.token);
+  if (!response.ok) {
+    clearSession();
+    throw new Error((await response.text()) || "Sign-in failed.");
+  }
+  const result = (await response.json()) as {
+    token: string;
+    expires_at: string;
+  };
+  if (
+    !result.token ||
+    !result.expires_at ||
+    !Number.isFinite(Date.parse(result.expires_at))
+  ) {
+    clearSession();
+    throw new Error("The sign-in response was invalid.");
+  }
+  sessionStorage.setItem(TOKEN_KEY, result.token);
+  sessionStorage.setItem(TOKEN_EXPIRES_AT_KEY, result.expires_at);
+}
+
+export async function logout(): Promise<boolean> {
+  let serverRevocationConfirmed = true;
+  try {
+    if (storedToken()) {
+      await request<void>("/api/auth/logout/", { method: "POST" });
+    }
+  } catch {
+    serverRevocationConfirmed = false;
+  } finally {
+    clearSession();
+  }
+  return serverRevocationConfirmed;
 }
 
 export async function listIncidents(): Promise<Incident[]> {
@@ -180,7 +261,7 @@ export function comparePlanRevisions(
 }
 
 export async function downloadPlanPdf(id: string): Promise<void> {
-  const token = sessionStorage.getItem("ict-toolkit-token");
+  const token = tokenForRequest();
   const response = await fetch(`${API_BASE}/api/plan-revisions/${id}/pdf/`, {
     headers: token ? { Authorization: `Token ${token}` } : {},
   });
@@ -267,7 +348,7 @@ export async function downloadSpatialExport(
   revision: string,
   format: "map" | "kml" | "geojson" | "csv",
 ): Promise<void> {
-  const token = sessionStorage.getItem("ict-toolkit-token");
+  const token = tokenForRequest();
   const response = await fetch(
     `${API_BASE}/api/spatial-exports/${revision}/${format}/`,
     { headers: token ? { Authorization: `Token ${token}` } : {} },

@@ -11,6 +11,24 @@
 - Material API changes create append-only audit events. Audit details contain identifiers and changed-field names, not passwords, tokens, protected channel values, or request bodies.
 - Reference imports require administrator permission, validation, dry-run review, atomic persistence, provenance, and a payload digest.
 
+## P1.6 local-token lifecycle
+
+- Local tokens have a configurable maximum lifetime. `ICT_TOKEN_TTL_SECONDS` defaults to 28,800
+  seconds (eight hours) and must be greater than zero.
+- Every successful sign-in rotates the user's token, so the previous token stops working.
+- Sign-out revokes the current token. The browser also clears its session when the local expiration
+  is reached or the API rejects the token.
+- Disabling a Django account blocks its token on the next request. A password change alone does not
+  revoke an existing token; suspected compromise requires account disablement and controlled token
+  revocation.
+- Sign-in and sign-out events are append-only and do not include passwords, token values, cookies,
+  authorization headers, or request bodies.
+- Tokens are header-only credentials and require TLS outside local development. Do not put them in
+  URLs, logs, tickets, chat, screenshots, or browser local storage.
+
+See [ADR-0007](../adr/0007-local-token-lifecycle.md) for the decision and accepted non-production
+limits.
+
 ## Operator responsibilities
 
 - Use unique named accounts; do not share administrator credentials.
@@ -46,4 +64,9 @@ for the test matrix, operator verification procedure, explicit limitations, and 
 
 ## Remaining prototype limitations
 
-P1.1 tokens do not expire automatically and the prototype does not yet provide multifactor authentication, password recovery workflows, external federation, automated deprovisioning, tamper-evident remote audit export, or incident-data retention schedules. The local SHA-256 chain is tamper-evident but is not a cryptographic signature or an independent record. Do not treat this milestone as production authorization. P1.6 must resolve or formally accept these risks before a release candidate.
+The prototype does not yet provide multifactor authentication, password recovery workflows,
+external federation, automated CiviCRM eligibility synchronization, or incident-data retention
+schedules. Local tokens are bounded and revocable but remain bearer credentials. The local
+SHA-256 audit chain is tamper-evident but is not a cryptographic signature or an independent
+record. Do not treat this milestone as production authorization; security reviewers must accept
+these limits before any release candidate or hosted use beyond synthetic data.

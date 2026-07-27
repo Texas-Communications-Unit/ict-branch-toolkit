@@ -3,6 +3,11 @@ from rest_framework import serializers
 from .policy import permissions_for_user, role_for_user
 
 
+class TokenSessionSerializer(serializers.Serializer):
+    token = serializers.CharField(read_only=True)
+    expires_at = serializers.DateTimeField(read_only=True)
+
+
 class CurrentUserSerializer(serializers.Serializer):
     username = serializers.CharField(read_only=True)
     display_name = serializers.SerializerMethodField()

@@ -161,9 +161,20 @@ limited non-production scope are published in
 
 ## P1.1 vertical slice
 
-The current slice provides token-based local authentication; centralized Administrator, COML, COMC, COMT, Contributor, and Read-only policy defaults; incident memberships; audit-preserving archival; append-only API audit events; and separate source-versioned conventional-channel and trunked-talkgroup libraries. Administrators can validate an import without writing data and apply an atomic approved import. CISA reference releases remain blocked from application until their exact type, version, authoritative URL, and digest pass the configured human gate.
+The current slice provides bounded, rotating token-based local authentication with server-backed
+sign-out; centralized Administrator, COML, COMC, COMT, Contributor, and Read-only policy defaults;
+incident memberships; audit-preserving archival; append-only API audit events; and separate
+source-versioned conventional-channel and trunked-talkgroup libraries. Administrators can validate
+an import without writing data and apply an atomic approved import. CISA reference releases remain
+blocked from application until their exact type, version, authoritative URL, and digest pass the
+configured human gate.
 
-The browser workspace consumes backend capabilities, displays library provenance, and provides an administrator-only validation/import panel using a clearly synthetic example. See [reference import operations](docs/operations/reference-library-imports.md), [account and audit controls](docs/security/accounts-and-audit.md), and [ADR-0002](docs/adr/0002-identity-authorization-and-audit.md).
+The browser workspace consumes backend capabilities, displays library provenance, and provides an
+administrator-only validation/import panel using a clearly synthetic example. See
+[reference import operations](docs/operations/reference-library-imports.md),
+[account and audit controls](docs/security/accounts-and-audit.md),
+[ADR-0002](docs/adr/0002-identity-authorization-and-audit.md), and
+[ADR-0007](docs/adr/0007-local-token-lifecycle.md).
 
 ## P1.2 ICS-205 vertical slice
 
@@ -185,7 +196,8 @@ support metadata are complete. See
 
 See [ADR-0004](docs/adr/0004-spatial-sites-snapshots-and-exports.md) and [spatial input and reference-source controls](docs/operations/spatial-inputs-and-reference-sources.md).
 
-The prototype does not yet implement deconfliction, completed official export records/digests, or production authentication hardening.
+The prototype does not yet implement deconfliction or production identity controls such as
+multifactor authentication and approved external federation.
 
 ## Accessibility
 

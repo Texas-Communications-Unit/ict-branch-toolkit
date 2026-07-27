@@ -24,6 +24,7 @@ POSTGRES_PASSWORD=<URL-safe random database password>
 DJANGO_SECRET_KEY=<random Django secret key>
 DJANGO_ALLOWED_HOSTS=<public hostname>,backend
 DJANGO_CORS_ALLOWED_ORIGINS=https://<public hostname>
+ICT_TOKEN_TTL_SECONDS=28800
 DJANGO_SUPERUSER_USERNAME=<non-default administrator name>
 DJANGO_SUPERUSER_EMAIL=<administrator email>
 DJANGO_SUPERUSER_PASSWORD=<random initial administrator password>
@@ -42,6 +43,10 @@ VITE_MAP_PRIVACY_URL=
 VITE_MAP_REPORT_ISSUE_URL=
 VITE_MAP_CONTACT_URL=
 ```
+
+`ICT_TOKEN_TTL_SECONDS` sets the maximum local login lifetime. The eight-hour default is the
+non-production baseline. A shorter value is allowed after operator review; zero and negative values
+prevent application startup. Changing the value can immediately expire existing sessions.
 
 The blank map-provider values are the secure default and render the neutral,
 network-free map. After completing the

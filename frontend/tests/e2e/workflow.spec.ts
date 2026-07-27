@@ -15,7 +15,12 @@ test("administrator signs in and sees the incident planning workspace", async ({
 }, testInfo) => {
   let approved = false;
   await page.route("**/api/auth/token/", (route) =>
-    route.fulfill({ json: { token: "synthetic-token" } }),
+    route.fulfill({
+      json: {
+        token: "synthetic-token",
+        expires_at: "2099-07-27T20:00:00Z",
+      },
+    }),
   );
   await page.route("**/api/incidents/", (route) =>
     route.fulfill({

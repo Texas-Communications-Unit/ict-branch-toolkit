@@ -38,9 +38,16 @@ test("signs in and lists incidents from the API", async () => {
   vi.spyOn(globalThis, "fetch").mockImplementation(async (input, options) => {
     const url = String(input);
     if (url.endsWith("/api/auth/token/")) {
-      return new Response(JSON.stringify({ token: "test-token" }), {
-        status: 200,
-      });
+      return new Response(
+        JSON.stringify({
+          token: "test-token",
+          expires_at: "2099-07-27T20:00:00Z",
+        }),
+        { status: 200 },
+      );
+    }
+    if (url.endsWith("/api/auth/logout/")) {
+      return new Response(null, { status: 204 });
     }
     if (url.endsWith("/api/me/")) {
       return new Response(
@@ -142,6 +149,9 @@ test("signs in and lists incidents from the API", async () => {
     ).toBeInTheDocument(),
   );
   expect(sessionStorage.getItem("ict-toolkit-token")).toBe("test-token");
+  expect(sessionStorage.getItem("ict-toolkit-token-expires-at")).toBe(
+    "2099-07-27T20:00:00Z",
+  );
   expect(screen.getByTestId("map")).toBeInTheDocument();
   expect(screen.getByTestId("map-provider")).toHaveTextContent(
     "Neutral offline map active",
@@ -183,6 +193,11 @@ test("signs in and lists incidents from the API", async () => {
   expect(await screen.findByRole("status")).toHaveTextContent(
     "Validation passed",
   );
+  await userEvent.click(screen.getByRole("button", { name: "Sign out" }));
+  expect(
+    await screen.findByRole("button", { name: "Sign in" }),
+  ).toBeInTheDocument();
+  expect(sessionStorage.getItem("ict-toolkit-token")).toBeNull();
 });
 
 test("shows an actionable message when sign-in fails", async () => {
@@ -194,4 +209,27 @@ test("shows an actionable message when sign-in fails", async () => {
   await userEvent.type(screen.getByLabelText("Password"), "wrong");
   await userEvent.click(screen.getByRole("button", { name: "Sign in" }));
   expect(await screen.findByRole("alert")).toHaveTextContent("Sign-in failed");
+});
+
+test("returns to sign-in when the API rejects an active session", async () => {
+  sessionStorage.setItem("ict-toolkit-token", "expired-server-token");
+  sessionStorage.setItem(
+    "ict-toolkit-token-expires-at",
+    "2099-07-27T20:00:00Z",
+  );
+  vi.spyOn(globalThis, "fetch").mockResolvedValue(
+    new Response(JSON.stringify({ detail: "Token has expired." }), {
+      status: 401,
+    }),
+  );
+
+  render(<App />);
+
+  expect(
+    await screen.findByRole("button", { name: "Sign in" }),
+  ).toBeInTheDocument();
+  expect(screen.getByRole("alert")).toHaveTextContent(
+    "Your session expired. Sign in again.",
+  );
+  expect(sessionStorage.getItem("ict-toolkit-token")).toBeNull();
 });
