@@ -16,5 +16,5 @@ Future assets include approved communications plans, source/version provenance, 
 
 ## Design responses
 
-Enforce policy in the backend, keep approved revisions immutable, retain provenance, use append-only audit design, validate imports before persistence, isolate external integrations, scan dependencies/secrets/containers, and label limitations at user and export boundaries. Later milestones must add formal abuse cases and security tests as those surfaces are implemented.
+Enforce policy in the backend, keep approved revisions immutable, retain provenance, use append-only audit design, validate imports before persistence, isolate external integrations, scan dependencies/secrets/containers, and label limitations at user and export boundaries. The P1.6 [append-only audit review](audit-abuse-cases.md) records formal audit abuse cases, automated evidence, and the limits of the local hash chain. Other surfaces must add corresponding abuse cases and security tests as they are implemented.
 

@@ -24,6 +24,8 @@ sequence order, recomputing each hash and confirming `previous_hash` linkage, an
 first broken event if any. `occurred_at` is intentionally excluded from the hashed payload because
 it is assigned by the database on save and is not known before the hash must be computed;
 `sequence` (assigned by the application, before save) guarantees ordering instead.
+Verification requires that sequence values are contiguous from zero in addition to checking each
+record hash and predecessor link.
 
 A new `POST /api/audit/revisions/<revision_id>/exports/<format>/verify/` endpoint
 (`apps.audit.views.ExportDigestVerificationView`) accepts either a `content_sha256` hex digest or
@@ -48,10 +50,11 @@ so verification is available to the same operators who could export, not adminis
   itself (`verify_audit_chain()`) has no HTTP endpoint yet; it is intended for a management command
   or administrator tooling, not a self-service check, since a broken chain is a
   system-integrity concern rather than a routine operator task.
-- The chain proves no *past* record was altered after being written; it cannot prevent an attacker
-  with database write access from truncating the table and starting a new chain from the genesis
-  hash. Detecting that requires comparing sequence continuity against an independent record (e.g.
-  offline backups) and remains an operational control, not something this decision solves.
+- The chain is tamper-evident, not tamper-proof, and has no signing key. A sufficiently privileged
+  database attacker can recompute a modified chain, truncate the tail, clear the table, or start a
+  forged chain from the genesis hash. Detecting those cases requires comparing against an
+  independent protected record (for example, an offline backup or off-system checkpoint) and
+  remains an operational control, not something this decision solves.
 
 ## Alternatives considered
 

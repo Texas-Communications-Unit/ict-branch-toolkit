@@ -77,8 +77,9 @@ def verify_audit_chain() -> tuple[bool, "AuditEvent | None"]:
     recomputed from its own fields and its predecessor's stored hash.
     """
     expected_previous_hash = GENESIS_HASH
+    expected_sequence = 0
     for event in AuditEvent.objects.order_by("sequence").iterator():
-        if event.previous_hash != expected_previous_hash:
+        if event.sequence != expected_sequence or event.previous_hash != expected_previous_hash:
             return False, event
         recomputed = _chained_record_hash(
             previous_hash=event.previous_hash,
@@ -92,6 +93,7 @@ def verify_audit_chain() -> tuple[bool, "AuditEvent | None"]:
         if recomputed != event.record_hash:
             return False, event
         expected_previous_hash = event.record_hash
+        expected_sequence += 1
     return True, None
 
 
@@ -115,11 +117,11 @@ def record_export(
         action=action,
         target=revision,
         details={
+            **(details or {}),
             "format": export_format,
             "content_sha256": hashlib.sha256(content).hexdigest(),
             "byte_size": len(content),
             "revision_number": revision.number,
             "revision_status": revision.status,
-            **(details or {}),
         },
     )

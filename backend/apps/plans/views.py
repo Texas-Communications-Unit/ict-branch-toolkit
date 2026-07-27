@@ -243,7 +243,12 @@ class AssignmentViewSet(viewsets.ModelViewSet):
 
     def perform_update(self, serializer):
         assignment = serializer.save()
-        record_event(actor=self.request.user, action="plan_assignment.updated", target=assignment)
+        record_event(
+            actor=self.request.user,
+            action="plan_assignment.updated",
+            target=assignment,
+            details={"changed_fields": sorted(serializer.validated_data)},
+        )
 
     def perform_destroy(self, instance):
         ensure_draft(instance.revision)

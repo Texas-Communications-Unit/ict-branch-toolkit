@@ -37,6 +37,13 @@
 - Approved SVG, KML, GeoJSON, and CSV exports read frozen snapshots rather than mutable canonical sites.
 - The default address provider is disabled. Enabling a live geocoder or third-party overlay requires a separate privacy, terms, attribution, reliability, and provenance review.
 
+## P1.6 append-only audit review
+
+The append-only implementation, request transaction boundary, hash-chain verification, protected
+field handling, actor retention, and export-digest boundary have been reviewed against
+deterministic abuse cases. See [Append-only audit review and abuse cases](audit-abuse-cases.md)
+for the test matrix, operator verification procedure, explicit limitations, and human gates.
+
 ## Remaining prototype limitations
 
-P1.1 tokens do not expire automatically and the prototype does not yet provide multifactor authentication, password recovery workflows, external federation, automated deprovisioning, tamper-evident remote audit export, or incident-data retention schedules. Do not treat this milestone as production authorization. P1.6 must resolve or formally accept these risks before a release candidate.
+P1.1 tokens do not expire automatically and the prototype does not yet provide multifactor authentication, password recovery workflows, external federation, automated deprovisioning, tamper-evident remote audit export, or incident-data retention schedules. The local SHA-256 chain is tamper-evident but is not a cryptographic signature or an independent record. Do not treat this milestone as production authorization. P1.6 must resolve or formally accept these risks before a release candidate.

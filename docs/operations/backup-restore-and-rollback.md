@@ -128,7 +128,7 @@ After restoration:
 1. verify the active commit matches the database schema represented by the
    restored backup;
 2. verify container, internal, and public health;
-3. run the audit-chain verification endpoint or management procedure;
+3. run the [audit-chain verification procedure](../security/audit-abuse-cases.md#operational-verification);
 4. test sign-in, incident-scoped authorization, and a synthetic export;
 5. re-enable external access only after maintainer approval.
 

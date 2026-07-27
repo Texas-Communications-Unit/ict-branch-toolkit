@@ -109,6 +109,36 @@ def test_verify_audit_chain_detects_a_severed_link():
 
 
 @pytest.mark.django_db
+def test_verify_audit_chain_detects_a_rehashed_sequence_gap():
+    admin = make_admin()
+    incident = Incident.objects.create(
+        name="Synthetic Chain Exercise", incident_number="SYN-CHAIN-6", created_by=admin
+    )
+    record_event(actor=admin, action="incident.created", target=incident)
+    second = record_event(actor=admin, action="incident.updated", target=incident, details={"n": 1})
+    forged_sequence = second.sequence + 5
+    forged_hash = _chained_record_hash(
+        previous_hash=second.previous_hash,
+        sequence=forged_sequence,
+        actor=second.actor,
+        action=second.action,
+        target_type=second.target_type,
+        target_id=second.target_id,
+        details=second.details,
+    )
+
+    bypass_append_only_update(
+        second.pk,
+        sequence=forged_sequence,
+        record_hash=forged_hash,
+    )
+
+    ok, broken_at = verify_audit_chain()
+    assert ok is False
+    assert broken_at.pk == second.pk
+
+
+@pytest.mark.django_db
 def test_verify_audit_chain_passes_on_an_empty_log():
     ok, broken_at = verify_audit_chain()
     assert ok is True

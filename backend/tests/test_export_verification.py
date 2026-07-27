@@ -187,3 +187,16 @@ def test_verify_requires_a_digest_or_file(client):
         **headers,
     )
     assert response.status_code == 400
+
+
+@pytest.mark.django_db
+def test_verify_rejects_a_malformed_digest(client):
+    admin, _, revision = setup_scenario()
+    response = client.post(
+        f"/api/audit/revisions/{revision.id}/exports/pdf/verify/",
+        {"content_sha256": "not-a-sha256-digest"},
+        content_type="application/json",
+        **auth_header(admin),
+    )
+    assert response.status_code == 400
+    assert response.json()["content_sha256"] == ["Use a 64-character SHA-256 hexadecimal digest."]
