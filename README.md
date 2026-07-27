@@ -155,6 +155,9 @@ The shared synthetic-data test deployment uses a separate production Compose def
 Database backups, isolated restore drills, controlled restoration, upgrades,
 and application or migration rollback follow the
 [recovery runbook](docs/operations/backup-restore-and-rollback.md).
+The current hardware-neutral API regression envelopes and their deliberately
+limited non-production scope are published in
+[tested performance limits](docs/operations/performance-tested-limits.md).
 
 ## P1.1 vertical slice
 

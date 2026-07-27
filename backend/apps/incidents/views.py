@@ -63,7 +63,11 @@ class IncidentViewSet(viewsets.ModelViewSet):
                 "operational_periods",
                 queryset=OperationalPeriod.objects.filter(archived_at__isnull=True),
             ),
-            "memberships",
+            Prefetch(
+                "memberships",
+                queryset=IncidentMembership.objects.filter(user=self.request.user, is_active=True),
+                to_attr="active_request_memberships",
+            ),
         )
         if role_for_user(self.request.user) == Role.ADMINISTRATOR:
             return queryset

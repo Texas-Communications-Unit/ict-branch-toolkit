@@ -137,7 +137,11 @@ def permissions_for_user(user, incident=None) -> set[str]:
     permissions = permissions_for_role(role_for_user(user))
     if incident is None or role_for_user(user) == Role.ADMINISTRATOR:
         return permissions
-    membership = incident.memberships.filter(user=user, is_active=True).first()
+    active_request_memberships = getattr(incident, "active_request_memberships", None)
+    if active_request_memberships is None:
+        membership = incident.memberships.filter(user=user, is_active=True).first()
+    else:
+        membership = active_request_memberships[0] if active_request_memberships else None
     if membership:
         permissions |= permissions_for_role(membership.role)
     else:

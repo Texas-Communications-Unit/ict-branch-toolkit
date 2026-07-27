@@ -56,7 +56,10 @@ class PlanViewSet(viewsets.ModelViewSet):
         return scoped(
             ICS205Plan.objects.filter(archived_at__isnull=True)
             .select_related("incident", "operational_period")
-            .prefetch_related("revisions__assignments", "revisions__relationships"),
+            .prefetch_related(
+                "revisions__assignments",
+                "revisions__relationships__assignments",
+            ),
             self.request.user,
             "incident",
         )
