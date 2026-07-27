@@ -12,6 +12,12 @@ Thank you for helping improve ICT Branch Toolkit. The project is developed in pu
 
 GitHub Issues are the project work queue. Human comments are recorded as task input and may be assessed by Codex under the controls in [`docs/governance/issue-lifecycle.md`](docs/governance/issue-lifecycle.md). External comments require maintainer review before paid AI execution or repository writes. Only trusted maintainers may use `/codex implement`, which creates a feature branch and draft pull request rather than changing `main`.
 
+When work moves between AI environments, use the
+[`AI collaboration handoff`](docs/governance/ai-collaboration-handoff.md) for a
+self-contained starting brief, least-privilege connection requirements, and a
+result template. The handoff supplements rather than replaces the complete live
+issue thread and repository instructions.
+
 Do not submit real incident information, protected channel information, personal information, credentials, keys, certificates, database dumps, private endpoints, or operational connection details. If a security concern cannot be demonstrated safely with synthetic data, follow `SECURITY.md` instead of opening a public issue.
 
 ## Pull requests
