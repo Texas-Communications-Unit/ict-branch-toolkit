@@ -66,7 +66,10 @@ for the test matrix, operator verification procedure, explicit limitations, and 
 
 The prototype does not yet provide multifactor authentication, password recovery workflows,
 external federation, automated CiviCRM eligibility synchronization, or incident-data retention
-schedules. Local tokens are bounded and revocable but remain bearer credentials. The local
-SHA-256 audit chain is tamper-evident but is not a cryptographic signature or an independent
-record. Do not treat this milestone as production authorization; security reviewers must accept
-these limits before any release candidate or hosted use beyond synthetic data.
+schedules. Local tokens are bounded and revocable but remain bearer credentials. Audit rows are
+hash-chained inside the application database, but there is no external timestamp, signature,
+remote audit archive, or automated integrity alert. These risks require explicit security and
+operational disposition in the
+[non-production release-candidate checklist](../releases/non-production-release-candidate.md).
+Security reviewers must accept these limits before any release candidate or hosted use beyond
+synthetic data. A candidate remains synthetic-data-only and is not production authorization.

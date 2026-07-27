@@ -2,7 +2,10 @@
 
 ICT Branch Toolkit is an open-source web application for incident communications planning, radio-site mapping, coverage visualization, and frequency deconfliction. It is intended to support Communications Unit and Information and Communications Technology (ICT) Branch personnel during incidents, planned events, exercises, and pre-incident planning.
 
-> **Project status:** P1.0 non-production prototype scaffold. No production-ready release is available yet, and the application must use synthetic data only.
+> **Project status:** Phase 1 non-production prototype. No production-ready
+> release is available, and the application must use synthetic data only. Any
+> candidate must follow the
+> [non-production release-candidate process](docs/releases/non-production-release-candidate.md).
 
 ## Vision
 
@@ -159,6 +162,20 @@ The current hardware-neutral API regression envelopes and their deliberately
 limited non-production scope are published in
 [tested performance limits](docs/operations/performance-tested-limits.md).
 
+### Operations and release evaluation
+
+Use the
+[installation and configuration guide](docs/operations/installation-and-configuration.md)
+for a reviewed evaluation build and the
+[operation and monitoring runbook](docs/operations/operation-and-monitoring.md)
+for routine health, logging, backup, audit-chain, access, and escalation checks.
+The
+[release-candidate process and checklist](docs/releases/non-production-release-candidate.md)
+defines the artifacts, evidence, immutable candidate identity, and human
+approvals required before a clearly labeled non-production prototype
+prerelease. It does not authorize a tag, release, deployment, or non-synthetic
+data by itself.
+
 ## P1.1 vertical slice
 
 The current slice provides bounded, rotating token-based local authentication with server-backed
@@ -232,7 +249,9 @@ The project is currently establishing its requirements and architecture. Early p
 
 Please do not submit real incident data, protected channel information, credentials, private keys, certificates, personal information, or other sensitive material to the public repository.
 
-Contributor guidance, security reporting instructions, development setup, and coding standards will be added with the initial application scaffold.
+See [CONTRIBUTING.md](CONTRIBUTING.md), [SECURITY.md](SECURITY.md), and the
+operations guides above for the current contributor, reporting, development,
+and evaluation procedures.
 
 ## License
 
