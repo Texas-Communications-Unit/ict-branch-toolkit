@@ -165,6 +165,13 @@ sha256sum "ict-branch-toolkit-$version-source.tar.gz" \
 Use an approved, version-pinned workflow to generate an SPDX JSON or CycloneDX
 JSON SBOM from the same commit. Record the generator and version in the release
 evidence. Inspect the archive and SBOM, then calculate their final checksums.
+For pull requests and `main`, the `container-security` job in
+`.github/workflows/security.yml` builds both application images, scans
+actionable high and critical vulnerabilities, and uploads vulnerability-aware
+CycloneDX JSON SBOMs with a `SHA256SUMS` manifest. The Trivy container reference
+is pinned by version and immutable digest. Those workflow artifacts are
+candidate evidence only; a maintainer must still inspect and approve them for
+the exact candidate commit.
 
 Recommended public artifact set:
 

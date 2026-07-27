@@ -21,6 +21,7 @@ env:
 jobs:
   secrets:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
         with:
@@ -34,6 +35,7 @@ jobs:
 
   dependency-audit:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v6
@@ -54,3 +56,83 @@ jobs:
         working-directory: frontend
       - run: pnpm audit --audit-level high
         working-directory: frontend
+
+  static-analysis:
+    name: CodeQL (${{ matrix.language }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - language: javascript-typescript
+            build-mode: none
+          - language: python
+            build-mode: none
+    steps:
+      - uses: actions/checkout@v7
+      - uses: github/codeql-action/init@v4
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: ${{ matrix.build-mode }}
+      - uses: github/codeql-action/analyze@v4
+        with:
+          category: "/language:${{ matrix.language }}"
+
+  container-security:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      TRIVY_IMAGE: >-
+        aquasec/trivy:0.72.0@sha256:cffe3f5161a47a6823fbd23d985795b3ed72a4c806da4c4df16266c02accdd6f
+      BACKEND_IMAGE: ict-toolkit-backend:${{ github.sha }}
+      FRONTEND_IMAGE: ict-toolkit-frontend:${{ github.sha }}
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build candidate images
+        run: |
+          docker build --tag "$BACKEND_IMAGE" backend
+          docker build --target production --tag "$FRONTEND_IMAGE" frontend
+      - name: Generate vulnerability-aware CycloneDX SBOMs
+        run: |
+          mkdir -p security-artifacts
+          docker volume create trivy-cache
+          docker run --rm \
+            --volume /var/run/docker.sock:/var/run/docker.sock \
+            --volume trivy-cache:/root/.cache/trivy \
+            --volume "${{ github.workspace }}/security-artifacts:/artifacts" \
+            "$TRIVY_IMAGE" image --scanners vuln --format cyclonedx \
+            --output /artifacts/backend.cdx.json "$BACKEND_IMAGE"
+          docker run --rm \
+            --volume /var/run/docker.sock:/var/run/docker.sock \
+            --volume trivy-cache:/root/.cache/trivy \
+            --volume "${{ github.workspace }}/security-artifacts:/artifacts" \
+            "$TRIVY_IMAGE" image --scanners vuln --format cyclonedx \
+            --output /artifacts/frontend.cdx.json "$FRONTEND_IMAGE"
+          (
+            cd security-artifacts
+            sha256sum ./*.cdx.json > SHA256SUMS
+          )
+      - name: Reject actionable high and critical vulnerabilities
+        run: |
+          scan_status=0
+          docker run --rm \
+            --volume /var/run/docker.sock:/var/run/docker.sock \
+            --volume trivy-cache:/root/.cache/trivy \
+            "$TRIVY_IMAGE" image --scanners vuln --ignore-unfixed \
+            --severity HIGH,CRITICAL --exit-code 1 "$BACKEND_IMAGE" \
+            || scan_status=1
+          docker run --rm \
+            --volume /var/run/docker.sock:/var/run/docker.sock \
+            --volume trivy-cache:/root/.cache/trivy \
+            "$TRIVY_IMAGE" image --scanners vuln --ignore-unfixed \
+            --severity HIGH,CRITICAL --exit-code 1 "$FRONTEND_IMAGE" \
+            || scan_status=1
+          exit "$scan_status"
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: security-sboms-${{ github.sha }}
+          path: security-artifacts/
+          if-no-files-found: error
+          retention-days: 30
