@@ -14,6 +14,59 @@ test("administrator signs in and sees the incident planning workspace", async ({
   page,
 }, testInfo) => {
   let approved = false;
+  let rfProfileCreated = false;
+  let rfApproved = false;
+  let rfSnapshotCreated = false;
+  let rfInputs = {
+    tx_frequency_hz: null as number | null,
+    rx_frequency_hz: null as number | null,
+    transmitter_power_w: null as string | null,
+    effective_radiated_power_w: null as string | null,
+    erp_source: "unknown",
+    receiver_sensitivity_dbm: null as string | null,
+    antenna_model: null as string | null,
+    antenna_gain_db: null as string | null,
+    antenna_gain_reference: "unknown",
+    feed_line_type: null as string | null,
+    feed_line_length_m: null as string | null,
+    feed_line_loss_db: null as string | null,
+    additional_system_loss_db: null as string | null,
+    polarization: "unknown",
+    frequency_band: "unknown",
+    emission_designator: null as string | null,
+    emission_bandwidth_hz: null as number | null,
+    mounting_type: "unknown",
+    antenna_center_agl_m: null as string | null,
+    antenna_center_amsl_m: null as string | null,
+    haat_m: null as string | null,
+    input_basis: "unknown",
+    notes: null as string | null,
+  };
+  const rfProfile = {
+    id: "rf-profile-1",
+    incident: "syn-1",
+    name: "Synthetic Portable Assumption",
+    profile_type: "portable",
+    description: "Synthetic exercise values only",
+    archived_at: null,
+  };
+  const rfVersion = () => ({
+    id: "rf-version-1",
+    profile: "rf-profile-1",
+    number: 1,
+    status: rfApproved ? "approved" : "draft",
+    is_locked: rfApproved,
+    approved_at: rfApproved ? "2026-07-27T22:00:00Z" : null,
+    ...rfInputs,
+    erp_calculation_path: rfApproved
+      ? {
+          formula: "transmitter_power_w + antenna_gain_db - system_losses_db",
+          synthetic: true,
+        }
+      : null,
+    input_snapshot: null,
+    input_sha256: null,
+  });
   await page.route("**/api/auth/token/", (route) =>
     route.fulfill({
       json: {
@@ -54,6 +107,9 @@ test("administrator signs in and sees the incident planning workspace", async ({
               "site.view",
               "site.edit",
               "site.export",
+              "rf.view",
+              "rf.edit",
+              "rf.approve",
             ],
           },
         ],
@@ -209,6 +265,98 @@ test("administrator signs in and sees the incident planning workspace", async ({
     approved = true;
     return route.fulfill({ json: {} });
   });
+  await page.route("**/api/subscriber-profiles/?incident=*", (route) =>
+    route.fulfill({
+      json: {
+        count: rfProfileCreated ? 1 : 0,
+        next: null,
+        previous: null,
+        results: rfProfileCreated ? [rfProfile] : [],
+      },
+    }),
+  );
+  await page.route("**/api/subscriber-profiles/", async (route) => {
+    expect(route.request().method()).toBe("POST");
+    const payload = route.request().postDataJSON();
+    expect(payload).toMatchObject({
+      incident: "syn-1",
+      name: "Synthetic Portable Assumption",
+      profile_type: "portable",
+      description: "Synthetic exercise values only",
+    });
+    expect(payload.initial_version.tx_frequency_hz).toBeNull();
+    expect(payload.initial_version.erp_source).toBe("unknown");
+    expect(payload.initial_version).not.toHaveProperty("erp_calculation_path");
+    rfProfileCreated = true;
+    return route.fulfill({ json: rfProfile });
+  });
+  await page.route("**/api/subscriber-profile-versions/?profile=*", (route) =>
+    route.fulfill({
+      json: {
+        count: rfProfileCreated ? 1 : 0,
+        next: null,
+        previous: null,
+        results: rfProfileCreated ? [rfVersion()] : [],
+      },
+    }),
+  );
+  await page.route(
+    "**/api/subscriber-profile-versions/rf-version-1/",
+    async (route) => {
+      expect(route.request().method()).toBe("PATCH");
+      rfInputs = route.request().postDataJSON();
+      return route.fulfill({ json: rfVersion() });
+    },
+  );
+  await page.route(
+    "**/api/subscriber-profile-versions/rf-version-1/approve/",
+    (route) => {
+      rfApproved = true;
+      return route.fulfill({ json: rfVersion() });
+    },
+  );
+  await page.route(
+    "**/api/subscriber-profile-versions/rf-version-1/create_snapshot/",
+    async (route) => {
+      expect(route.request().postDataJSON()).toEqual({
+        label: "Synthetic RF baseline",
+      });
+      rfSnapshotCreated = true;
+      return route.fulfill({
+        json: {
+          id: "rf-snapshot-1",
+          incident: "syn-1",
+          profile_version: "rf-version-1",
+          label: "Synthetic RF baseline",
+          input_snapshot: rfVersion(),
+          input_sha256: "b".repeat(64),
+          created_at: "2026-07-27T22:05:00Z",
+        },
+      });
+    },
+  );
+  await page.route("**/api/rf-analysis-input-snapshots/?incident=*", (route) =>
+    route.fulfill({
+      json: {
+        count: rfSnapshotCreated ? 1 : 0,
+        next: null,
+        previous: null,
+        results: rfSnapshotCreated
+          ? [
+              {
+                id: "rf-snapshot-1",
+                incident: "syn-1",
+                profile_version: "rf-version-1",
+                label: "Synthetic RF baseline",
+                input_snapshot: rfVersion(),
+                input_sha256: "b".repeat(64),
+                created_at: "2026-07-27T22:05:00Z",
+              },
+            ]
+          : [],
+      },
+    }),
+  );
   await page.route("**/api/channel-imports/", (route) =>
     route.fulfill({
       json: {
@@ -258,7 +406,7 @@ test("administrator signs in and sees the incident planning workspace", async ({
   await expect(skipLink).toBeFocused();
   await skipLink.press("Enter");
   await expect(page.locator("#main-content")).toBeFocused();
-  await expect(page.getByText(/P1.3 Prototype/)).toBeVisible();
+  await expect(page.getByText(/P2.1 Prototype/)).toBeVisible();
   await expect(page.getByRole("heading", { name: "ICS-205" })).toBeVisible();
   await expect(
     page.getByText("SYN CALL", { exact: true }).first(),
@@ -266,6 +414,65 @@ test("administrator signs in and sees the incident planning workspace", async ({
   await expect(
     page.getByText("Synthetic Command Site", { exact: true }).first(),
   ).toBeVisible();
+  const rfWorkspace = page.getByRole("region", {
+    name: "Subscriber RF profiles",
+  });
+  await expect(rfWorkspace).toBeVisible();
+  await expect(
+    rfWorkspace.getByText(/synthetic or explicitly approved data only/i),
+  ).toBeVisible();
+  await rfWorkspace.getByText("Create subscriber profile").click();
+  const createProfile = rfWorkspace.locator("details.rf-create-profile");
+  await createProfile
+    .getByLabel("Profile name")
+    .fill("Synthetic Portable Assumption");
+  await createProfile.getByLabel("Profile type").selectOption("portable");
+  await createProfile
+    .getByLabel("Description")
+    .fill("Synthetic exercise values only");
+  await createProfile
+    .getByRole("button", { name: "Create profile and draft" })
+    .click();
+  await expect(
+    rfWorkspace.getByRole("option", {
+      name: "Synthetic Portable Assumption · Portable",
+    }),
+  ).toBeAttached();
+  await rfWorkspace.getByLabel("Transmit frequency (Hz)").fill("155000000");
+  await rfWorkspace.getByLabel("Transmitter power (W)").fill("5.2500");
+  await rfWorkspace
+    .getByLabel("Effective radiated power (ERP) (W)")
+    .fill("7.1000");
+  await rfWorkspace.getByLabel("ERP source").selectOption("entered");
+  await rfWorkspace.getByLabel("Antenna gain (dB)").fill("2.15");
+  await rfWorkspace.getByLabel("Feed-line loss (dB)").fill("0.30");
+  await rfWorkspace.getByLabel("Antenna center AGL (m)").fill("12.50");
+  await rfWorkspace.getByLabel("Emission bandwidth (Hz)").fill("11200");
+  await rfWorkspace
+    .getByLabel("Input basis")
+    .selectOption("modeled_assumption");
+  await rfWorkspace
+    .getByLabel("Notes")
+    .fill("Synthetic modeled assumptions for browser verification");
+  await rfWorkspace.getByRole("button", { name: "Save RF draft" }).click();
+  await expect.poll(() => rfInputs.transmitter_power_w).toBe("5.2500");
+  expect(rfInputs.tx_frequency_hz).toBe(155000000);
+  expect(rfInputs.rx_frequency_hz).toBeNull();
+  page.once("dialog", (dialog) => dialog.accept());
+  await rfWorkspace
+    .getByRole("button", { name: "Approve and lock RF version" })
+    .click();
+  await expect(
+    rfWorkspace.getByText("Server calculation path and immutable provenance"),
+  ).toBeVisible();
+  await rfWorkspace.getByLabel("Snapshot label").fill("Synthetic RF baseline");
+  await rfWorkspace
+    .getByRole("button", { name: "Create immutable snapshot" })
+    .click();
+  await expect(
+    rfWorkspace.getByText("Synthetic RF baseline", { exact: true }).last(),
+  ).toBeVisible();
+  await expect(rfWorkspace.getByText("b".repeat(64))).toBeVisible();
   await page
     .getByLabel("Coordinate", { exact: true })
     .fill("33° 12′ 52.20″ N, 97° 07′ 59.16″ W");
@@ -305,7 +512,7 @@ test("administrator signs in and sees the incident planning workspace", async ({
   await expect(
     page.getByRole("heading", { name: "ICT Branch Toolkit" }),
   ).toBeVisible();
-  await expect(page.getByText(/P1.3 Prototype/)).toBeVisible();
+  await expect(page.getByText(/P2.1 Prototype/)).toBeVisible();
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= window.innerWidth,

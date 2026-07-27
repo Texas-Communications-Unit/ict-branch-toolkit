@@ -33,6 +33,7 @@ INSTALLED_APPS = [
     "apps.resources",
     "apps.plans",
     "apps.sites",
+    "apps.rf_analysis",
 ]
 if ENABLE_GIS:
     INSTALLED_APPS.append("django.contrib.gis")
@@ -150,4 +151,7 @@ SPECTACULAR_SETTINGS = {
     "DESCRIPTION": "Incident communications planning prototype API.",
     "VERSION": APP_VERSION,
     "SERVE_INCLUDE_SCHEMA": False,
+    "ENUM_NAME_OVERRIDES": {
+        "PlanRevisionStatusEnum": "apps.plans.models.PlanRevision.Status",
+    },
 }

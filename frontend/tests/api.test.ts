@@ -1,9 +1,20 @@
 import {
   AUTHENTICATION_EXPIRED_EVENT,
+  approveSubscriberProfileVersion,
+  archiveSubscriberProfile,
+  copySubscriberProfileVersion,
+  createRFAnalysisInputSnapshot,
+  createSubscriberProfile,
   hasActiveSession,
+  listRFAnalysisInputSnapshots,
+  listSubscriberProfiles,
+  listSubscriberProfileVersions,
   login,
   logout,
+  updateSubscriberProfile,
+  updateSubscriberProfileVersion,
 } from "../src/api";
+import type { EditableRFInputFields } from "../src/types";
 
 beforeEach(() => {
   sessionStorage.clear();
@@ -50,4 +61,143 @@ test("rejects a malformed sign-in response without storing credentials", async (
     "sign-in response was invalid",
   );
   expect(sessionStorage.getItem("ict-toolkit-token")).toBeNull();
+});
+
+test("uses the incident-scoped RF profile and immutable snapshot endpoints", async () => {
+  sessionStorage.setItem("ict-toolkit-token", "synthetic-rf-token");
+  sessionStorage.setItem(
+    "ict-toolkit-token-expires-at",
+    "2099-07-27T20:00:00Z",
+  );
+  const fetchMock = vi
+    .spyOn(globalThis, "fetch")
+    .mockImplementation(async (input, options) => {
+      const url = String(input);
+      if (
+        options?.method === "POST" &&
+        url.endsWith("/api/subscriber-profiles/profile-1/archive/")
+      ) {
+        return new Response(null, { status: 204 });
+      }
+      if (
+        url.includes("/api/subscriber-profiles/?") ||
+        url.includes("/api/subscriber-profile-versions/?") ||
+        url.includes("/api/rf-analysis-input-snapshots/?")
+      ) {
+        return new Response(
+          JSON.stringify({
+            count: 0,
+            next: null,
+            previous: null,
+            results: [],
+          }),
+          { status: 200 },
+        );
+      }
+      return new Response(JSON.stringify({ id: "synthetic-result" }), {
+        status: 200,
+      });
+    });
+
+  const initialVersion: EditableRFInputFields = {
+    tx_frequency_hz: 155000000,
+    rx_frequency_hz: null,
+    transmitter_power_w: "5.2500",
+    effective_radiated_power_w: null,
+    erp_source: "entered",
+    receiver_sensitivity_dbm: "-119.50",
+    antenna_model: null,
+    antenna_gain_db: "2.15",
+    antenna_gain_reference: "dbi",
+    feed_line_type: null,
+    feed_line_length_m: null,
+    feed_line_loss_db: null,
+    additional_system_loss_db: null,
+    polarization: "vertical",
+    frequency_band: "vhf_high",
+    emission_designator: "11K2F3E",
+    emission_bandwidth_hz: 11200,
+    mounting_type: "handheld",
+    antenna_center_agl_m: "1.50",
+    antenna_center_amsl_m: null,
+    haat_m: null,
+    input_basis: "modeled_assumption",
+    notes: "Not operational data",
+  };
+
+  await listSubscriberProfiles("incident / one");
+  await createSubscriberProfile({
+    incident: "incident-1",
+    name: "Synthetic Portable",
+    profile_type: "portable",
+    description: "Synthetic only",
+    initial_version: initialVersion,
+  });
+  await updateSubscriberProfile("profile-1", {
+    description: "Revised synthetic description",
+  });
+  await archiveSubscriberProfile("profile-1");
+  await listSubscriberProfileVersions("profile / one");
+  await updateSubscriberProfileVersion("version-1", initialVersion);
+  await copySubscriberProfileVersion("version-1");
+  await approveSubscriberProfileVersion("version-1");
+  await createRFAnalysisInputSnapshot("version-1", "Synthetic baseline");
+  await listRFAnalysisInputSnapshots("incident / one");
+
+  const calls = fetchMock.mock.calls;
+  expect(String(calls[0][0])).toBe(
+    "http://localhost:8000/api/subscriber-profiles/?incident=incident%20%2F%20one",
+  );
+  expect(calls[1][1]).toEqual(
+    expect.objectContaining({
+      method: "POST",
+      body: JSON.stringify({
+        incident: "incident-1",
+        name: "Synthetic Portable",
+        profile_type: "portable",
+        description: "Synthetic only",
+        initial_version: initialVersion,
+      }),
+    }),
+  );
+  expect(calls[2][1]).toEqual(
+    expect.objectContaining({
+      method: "PATCH",
+      body: JSON.stringify({
+        description: "Revised synthetic description",
+      }),
+    }),
+  );
+  expect(String(calls[3][0])).toBe(
+    "http://localhost:8000/api/subscriber-profiles/profile-1/archive/",
+  );
+  expect(String(calls[4][0])).toBe(
+    "http://localhost:8000/api/subscriber-profile-versions/?profile=profile%20%2F%20one",
+  );
+  expect(calls[5][1]).toEqual(
+    expect.objectContaining({
+      method: "PATCH",
+      body: JSON.stringify(initialVersion),
+    }),
+  );
+  expect(String(calls[6][0])).toBe(
+    "http://localhost:8000/api/subscriber-profile-versions/version-1/copy/",
+  );
+  expect(String(calls[7][0])).toBe(
+    "http://localhost:8000/api/subscriber-profile-versions/version-1/approve/",
+  );
+  expect(calls[8][1]).toEqual(
+    expect.objectContaining({
+      method: "POST",
+      body: JSON.stringify({ label: "Synthetic baseline" }),
+    }),
+  );
+  expect(String(calls[9][0])).toBe(
+    "http://localhost:8000/api/rf-analysis-input-snapshots/?incident=incident%20%2F%20one",
+  );
+  expect(calls[0][1]?.headers).toEqual(
+    expect.objectContaining({
+      Authorization: "Token synthetic-rf-token",
+    }),
+  );
 });

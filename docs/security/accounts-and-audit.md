@@ -55,6 +55,38 @@ limits.
 - Approved SVG, KML, GeoJSON, and CSV exports read frozen snapshots rather than mutable canonical sites.
 - The default address provider is disabled. Enabling a live geocoder or third-party overlay requires a separate privacy, terms, attribution, reliability, and provenance review.
 
+## P2.1 RF input controls
+
+- Every subscriber profile, profile version, and RF input snapshot operation is incident-scoped
+  in backend policy. Browser visibility is not authorization.
+- `rf.view`, `rf.edit`, and `rf.approve` are the centralized capabilities. Administrator, COML,
+  and COMC defaults include all three; COMT includes view/edit; Contributor and Read-only include
+  view. Incident membership still limits non-administrator access.
+- Draft versions are editable; approved versions and approval snapshots are immutable. Changes
+  create a new numbered draft, and archival preserves history.
+- Profile selection is explicit and version-specific. No portable, mobile, fixed, local, band,
+  equipment, power, receiver, antenna, gain, loss, height, or calculation default is operationally
+  approved.
+- Nullable unknown values remain `null`, and controlled values use `unknown`; authorization does
+  not permit a service or browser to inject a default.
+- `input_basis` marks a whole version as `unknown`, `recorded_fact`, `modeled_assumption`, or
+  `mixed`. Nonblank `notes` are required for `mixed` to explain the boundary without adding
+  sensitive source material. Entered ERP also requires nonblank source/method notes. The
+  implemented contract does not claim per-field provenance.
+- Profile create/update/archive, version create/update/copy/approve, and snapshot create/archive
+  actions create append-only audit events with actor, incident, target, and changed field names.
+  Snapshot-related events include the digest field name where applicable; events do not duplicate
+  RF values or notes.
+- Snapshot digests detect a changed canonical payload but do not prove source accuracy,
+  confidentiality, RF performance, authorization, or coordination approval.
+- Qualified COML, COMT, COMC, and RF engineering practitioners must approve field meanings, units,
+  provisional ranges, cross-field rules, calculation conventions, and subscriber assumptions
+  before operational suitability is claimed.
+
+See the [Phase 2 RF input data model](../data-model/phase-2.md) and
+[ADR-0008](../adr/0008-versioned-rf-analysis-inputs-and-subscriber-profiles.md) for the exact
+implemented fields, provisional validators, snapshot boundary, and human gate.
+
 ## P1.6 append-only audit review
 
 The append-only implementation, request transaction boundary, hash-chain verification, protected
