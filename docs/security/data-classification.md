@@ -13,6 +13,26 @@
 
 The browser is untrusted. The backend enforces authentication, authorization, validation, and lifecycle rules. PostgreSQL/PostGIS is reachable only inside the Compose network by default. Map providers and future integrations are external systems and receive no operational data without an approved design and configuration.
 
+## Phase 2 RF input classification
+
+RF analysis inputs, subscriber profiles, RF input snapshots, notes, and digests inherit the
+highest classification of their incident and source material. A digest is an integrity identifier,
+not anonymization or encryption.
+
+Real equipment capabilities, receiver thresholds, antenna configuration, mounting, site heights,
+losses, gains, and terrain methods may reveal operational capability or infrastructure even when
+they contain no personal information. They therefore remain prohibited in the prototype unless
+the exact data is explicitly approved under a later data-classification decision. Issue #15
+documentation, fixtures, screenshots, tests, and review evidence use synthetic values only.
+
+Data minimization excludes equipment serial numbers, asset identifiers, owner contacts,
+credentials, protected channel details, private host information, and unrelated incident
+narrative. Version-level `input_basis` and minimal notes distinguish recorded facts from modeled
+assumptions without copying sensitive source records into the application. Approved snapshots
+retain minimized profile identity/description, version identity, canonical RF values, basis and
+notes, the calculation path, digest, and approval metadata needed to reproduce the later
+decision-support input selection.
+
 ## Current prototype controls
 
 - Centralized backend policy for installation and incident-scoped roles.

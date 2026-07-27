@@ -72,7 +72,9 @@ The permission model is expected to support COML, COMC, COMT, administrator, con
 
 ### Phase 2 — Calculated estimates and field calibration
 
-- ERP, antenna height, AGL, HAAT, and subscriber profiles
+- Versioned transmitter, receiver, antenna, feed-line, ERP, AGL, AMSL, HAAT,
+  and subscriber-profile inputs
+- Explicit recorded-fact, modeled-assumption, mixed, and unknown input basis
 - Explainable coverage estimates by band and operating environment
 - Talk-in and talk-out analysis
 - Automatic elevation and HAAT support
@@ -215,6 +217,37 @@ See [ADR-0004](docs/adr/0004-spatial-sites-snapshots-and-exports.md) and [spatia
 
 The prototype does not yet implement deconfliction or production identity controls such as
 multifactor authentication and approved external federation.
+
+## P2.1 versioned RF input design
+
+Issue #15 implements incident-scoped and versioned RF analysis inputs through portable, mobile,
+fixed, or configurable subscriber profiles. The workflow is:
+
+1. create an incident-scoped subscriber profile and its first numbered draft;
+2. record typed transmitter, receiver, antenna, feed-line, gain/loss, polarization, band,
+   emission, mounting, and AGL/AMSL/HAAT values;
+3. leave unavailable nullable values as `null` and controlled values as `unknown` rather than
+   substituting zero or a default;
+4. label the complete version as `recorded_fact`, `modeled_assumption`, `mixed`, or `unknown`, and
+   use non-sensitive notes to explain mixed inputs;
+5. record ERP as unknown, entered with non-sensitive source/method notes, or server-calculated,
+   preserving the versioned transmitter-power-to-antenna-input-to-ERP calculation path;
+6. approve and lock the exact profile version, canonical input snapshot, digest, actor, and time;
+   and
+7. create an immutable named `RFAnalysisInputSnapshot` from the approved version for later
+   analysis use.
+
+Approved profile versions and RF input snapshots are immutable; profile changes create new
+drafts. All numerical ranges, cross-field tolerances, calculation conventions, and subscriber
+assumptions are provisional. **No operational default is approved.** Qualified COML, COMT, COMC,
+and RF engineering practitioners must complete the human gate before the design is treated as
+operationally suitable. Only synthetic or explicitly approved data may be used.
+
+See the [Phase 2 RF input data model](docs/data-model/phase-2.md) and
+[ADR-0008](docs/adr/0008-versioned-rf-analysis-inputs-and-subscriber-profiles.md). Calculated
+propagation results and their future approval-to-snapshot linkage are outside P2.1. Any later
+output remains planning decision support, not a propagation study, frequency-coordination
+approval, spectrum authorization, or coverage guarantee.
 
 ## Accessibility
 

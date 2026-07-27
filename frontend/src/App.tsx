@@ -17,6 +17,7 @@ import {
 import { BrandMark } from "./BrandMark";
 import { MapShell } from "./MapShell";
 import { PlanWorkspace } from "./PlanWorkspace";
+import { RFProfileWorkspace } from "./RFProfileWorkspace";
 import type {
   ConventionalChannel,
   CurrentUser,
@@ -359,7 +360,7 @@ export default function App() {
         <div className="identity-summary">
           <span>{currentUser?.display_name}</span>
           <div className="prototype-badge">
-            P1.3 Prototype · {currentUser?.role}
+            P2.1 Prototype · {currentUser?.role}
           </div>
           <button
             className="sign-out-button"
@@ -488,6 +489,7 @@ export default function App() {
           )}
         </section>
         <PlanWorkspace incident={selected} />
+        <RFProfileWorkspace incident={selected} />
         <MapShell incident={selected} />
         <section className="library-panel" aria-labelledby="library-heading">
           <div className="section-heading">

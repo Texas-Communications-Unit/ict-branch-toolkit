@@ -220,3 +220,97 @@ export interface GeocoderSearchResult {
     provider: string;
   }[];
 }
+
+export type SubscriberProfileType =
+  "portable" | "mobile" | "fixed" | "configurable";
+
+export type ERPSource = "unknown" | "entered" | "calculated";
+export type AntennaGainReference = "unknown" | "dbi" | "dbd";
+export type Polarization =
+  "unknown" | "vertical" | "horizontal" | "circular" | "mixed";
+export type FrequencyBand =
+  "unknown" | "vhf_low" | "vhf_high" | "uhf" | "700" | "800" | "900" | "other";
+export type MountingType =
+  "unknown" | "handheld" | "vehicle" | "structure" | "tower" | "mast" | "other";
+export type RFInputBasis =
+  "unknown" | "recorded_fact" | "modeled_assumption" | "mixed";
+
+export interface RFInputFields {
+  tx_frequency_hz: number | null;
+  rx_frequency_hz: number | null;
+  transmitter_power_w: string | null;
+  effective_radiated_power_w: string | null;
+  erp_source: ERPSource;
+  receiver_sensitivity_dbm: string | null;
+  antenna_model: string | null;
+  antenna_gain_db: string | null;
+  antenna_gain_reference: AntennaGainReference;
+  feed_line_type: string | null;
+  feed_line_length_m: string | null;
+  feed_line_loss_db: string | null;
+  additional_system_loss_db: string | null;
+  polarization: Polarization;
+  frequency_band: FrequencyBand;
+  emission_designator: string | null;
+  emission_bandwidth_hz: number | null;
+  mounting_type: MountingType;
+  antenna_center_agl_m: string | null;
+  antenna_center_amsl_m: string | null;
+  haat_m: string | null;
+  input_basis: RFInputBasis;
+  notes: string | null;
+  erp_calculation_path: Record<string, unknown> | null;
+  input_snapshot: Record<string, unknown> | null;
+  input_sha256: string | null;
+}
+
+export type EditableRFInputFields = Omit<
+  RFInputFields,
+  "erp_calculation_path" | "input_snapshot" | "input_sha256"
+>;
+
+export interface SubscriberProfile {
+  id: string;
+  incident: string;
+  name: string;
+  profile_type: SubscriberProfileType;
+  description: string;
+  archived_at: string | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface SubscriberProfileVersion extends RFInputFields {
+  id: string;
+  profile: string;
+  number: number;
+  status: "draft" | "approved";
+  is_locked: boolean;
+  approved_at: string | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface RFAnalysisInputSnapshot {
+  id: string;
+  incident: string;
+  profile_version: string;
+  label: string;
+  input_snapshot: Record<string, unknown>;
+  input_sha256: string;
+  created_at?: string;
+}
+
+export interface CreateSubscriberProfilePayload {
+  incident: string;
+  name: string;
+  profile_type: SubscriberProfileType;
+  description: string;
+  initial_version: EditableRFInputFields;
+}
+
+export interface UpdateSubscriberProfilePayload {
+  name?: string;
+  profile_type?: SubscriberProfileType;
+  description?: string;
+}

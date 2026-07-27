@@ -14,11 +14,21 @@ class PolicyPermission(BasePermission):
             return False
         required = self._required(view)
         action = getattr(view, "action", None)
-        if action in {"retrieve", "update", "partial_update", "archive", "destroy"}:
+        if action in {
+            "retrieve",
+            "update",
+            "partial_update",
+            "archive",
+            "destroy",
+            "copy",
+            "approve",
+            "create_snapshot",
+        }:
             return True
         if action == "create" and getattr(view, "basename", None) in {
             "operational-period",
             "incident-membership",
+            "subscriber-profile",
         }:
             return True
         return required is None or user_has_permission(request.user, required)
@@ -32,6 +42,8 @@ class PolicyPermission(BasePermission):
             incident = obj.plan.incident
         if incident is None and hasattr(obj, "revision"):
             incident = obj.revision.plan.incident
+        if incident is None and hasattr(obj, "profile"):
+            incident = obj.profile.incident
         return user_has_permission(request.user, required, incident)
 
 

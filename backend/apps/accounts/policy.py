@@ -26,6 +26,9 @@ PLAN_EXPORT = "plan.export"
 SITE_VIEW = "site.view"
 SITE_EDIT = "site.edit"
 SITE_EXPORT = "site.export"
+RF_VIEW = "rf.view"
+RF_EDIT = "rf.edit"
+RF_APPROVE = "rf.approve"
 
 DEFAULT_ROLE_POLICY = {
     Role.ADMINISTRATOR: {
@@ -48,6 +51,9 @@ DEFAULT_ROLE_POLICY = {
         SITE_VIEW,
         SITE_EDIT,
         SITE_EXPORT,
+        RF_VIEW,
+        RF_EDIT,
+        RF_APPROVE,
     },
     Role.COML: {
         INCIDENT_VIEW,
@@ -66,6 +72,9 @@ DEFAULT_ROLE_POLICY = {
         SITE_VIEW,
         SITE_EDIT,
         SITE_EXPORT,
+        RF_VIEW,
+        RF_EDIT,
+        RF_APPROVE,
     },
     Role.COMC: {
         INCIDENT_VIEW,
@@ -84,6 +93,9 @@ DEFAULT_ROLE_POLICY = {
         SITE_VIEW,
         SITE_EDIT,
         SITE_EXPORT,
+        RF_VIEW,
+        RF_EDIT,
+        RF_APPROVE,
     },
     Role.COMT: {
         INCIDENT_VIEW,
@@ -96,6 +108,8 @@ DEFAULT_ROLE_POLICY = {
         PLAN_EDIT,
         SITE_VIEW,
         SITE_EDIT,
+        RF_VIEW,
+        RF_EDIT,
     },
     Role.CONTRIBUTOR: {
         INCIDENT_VIEW,
@@ -107,8 +121,9 @@ DEFAULT_ROLE_POLICY = {
         PLAN_EDIT,
         SITE_VIEW,
         SITE_EDIT,
+        RF_VIEW,
     },
-    Role.READ_ONLY: {INCIDENT_VIEW, LIBRARY_VIEW, PLAN_VIEW, SITE_VIEW},
+    Role.READ_ONLY: {INCIDENT_VIEW, LIBRARY_VIEW, PLAN_VIEW, SITE_VIEW, RF_VIEW},
 }
 
 
@@ -148,7 +163,7 @@ def permissions_for_user(user, incident=None) -> set[str]:
         permissions = {
             permission
             for permission in permissions
-            if not permission.startswith(("incident.", "period.", "plan.", "site."))
+            if not permission.startswith(("incident.", "period.", "plan.", "site.", "rf."))
         }
     return permissions
 

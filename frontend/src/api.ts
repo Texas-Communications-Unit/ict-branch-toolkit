@@ -1,7 +1,9 @@
 import type {
   ConventionalChannel,
   CoordinateParseResult,
+  CreateSubscriberProfilePayload,
   CurrentUser,
+  EditableRFInputFields,
   GeocoderSearchResult,
   ImportResult,
   Incident,
@@ -10,10 +12,14 @@ import type {
   PlanAssignment,
   PlanRelationship,
   PlanRevision,
+  RFAnalysisInputSnapshot,
   RevisionComparison,
   RadioSite,
   SiteAssignment,
+  SubscriberProfile,
+  SubscriberProfileVersion,
   TrunkedTalkgroup,
+  UpdateSubscriberProfilePayload,
 } from "./types";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
@@ -361,4 +367,100 @@ export async function downloadSpatialExport(
     format === "map" ? "approved-site-map.svg" : `approved-sites.${format}`;
   anchor.click();
   URL.revokeObjectURL(url);
+}
+
+export async function listSubscriberProfiles(
+  incident: string,
+): Promise<SubscriberProfile[]> {
+  const result = await request<Paginated<SubscriberProfile>>(
+    `/api/subscriber-profiles/?incident=${encodeURIComponent(incident)}`,
+  );
+  return result.results;
+}
+
+export function createSubscriberProfile(
+  payload: CreateSubscriberProfilePayload,
+): Promise<SubscriberProfile> {
+  return request<SubscriberProfile>("/api/subscriber-profiles/", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function updateSubscriberProfile(
+  id: string,
+  payload: UpdateSubscriberProfilePayload,
+): Promise<SubscriberProfile> {
+  return request<SubscriberProfile>(`/api/subscriber-profiles/${id}/`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function archiveSubscriberProfile(id: string): Promise<void> {
+  return request<void>(`/api/subscriber-profiles/${id}/archive/`, {
+    method: "POST",
+  });
+}
+
+export async function listSubscriberProfileVersions(
+  profile: string,
+): Promise<SubscriberProfileVersion[]> {
+  const result = await request<Paginated<SubscriberProfileVersion>>(
+    `/api/subscriber-profile-versions/?profile=${encodeURIComponent(profile)}`,
+  );
+  return result.results;
+}
+
+export function updateSubscriberProfileVersion(
+  id: string,
+  payload: EditableRFInputFields,
+): Promise<SubscriberProfileVersion> {
+  return request<SubscriberProfileVersion>(
+    `/api/subscriber-profile-versions/${id}/`,
+    {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    },
+  );
+}
+
+export function copySubscriberProfileVersion(
+  id: string,
+): Promise<SubscriberProfileVersion> {
+  return request<SubscriberProfileVersion>(
+    `/api/subscriber-profile-versions/${id}/copy/`,
+    { method: "POST" },
+  );
+}
+
+export function approveSubscriberProfileVersion(
+  id: string,
+): Promise<SubscriberProfileVersion> {
+  return request<SubscriberProfileVersion>(
+    `/api/subscriber-profile-versions/${id}/approve/`,
+    { method: "POST" },
+  );
+}
+
+export function createRFAnalysisInputSnapshot(
+  id: string,
+  label: string,
+): Promise<RFAnalysisInputSnapshot> {
+  return request<RFAnalysisInputSnapshot>(
+    `/api/subscriber-profile-versions/${id}/create_snapshot/`,
+    {
+      method: "POST",
+      body: JSON.stringify({ label }),
+    },
+  );
+}
+
+export async function listRFAnalysisInputSnapshots(
+  incident: string,
+): Promise<RFAnalysisInputSnapshot[]> {
+  const result = await request<Paginated<RFAnalysisInputSnapshot>>(
+    `/api/rf-analysis-input-snapshots/?incident=${encodeURIComponent(incident)}`,
+  );
+  return result.results;
 }

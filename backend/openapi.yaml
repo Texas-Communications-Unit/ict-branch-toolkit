@@ -1851,6 +1851,77 @@ paths:
               schema:
                 $ref: '#/components/schemas/ResourceRelease'
           description: ''
+  /api/rf-analysis-input-snapshots/:
+    get:
+      operationId: rf_analysis_input_snapshots_list
+      parameters:
+      - in: query
+        name: incident
+        schema:
+          type: string
+          format: uuid
+        description: Limit results to one incident.
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - rf-analysis-input-snapshots
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedRFAnalysisInputSnapshotList'
+          description: ''
+  /api/rf-analysis-input-snapshots/{id}/:
+    get:
+      operationId: rf_analysis_input_snapshots_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this rf analysis input snapshot.
+        required: true
+      tags:
+      - rf-analysis-input-snapshots
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RFAnalysisInputSnapshot'
+          description: ''
+  /api/rf-analysis-input-snapshots/{id}/archive/:
+    post:
+      operationId: rf_analysis_input_snapshots_archive_create
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this rf analysis input snapshot.
+        required: true
+      tags:
+      - rf-analysis-input-snapshots
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RFAnalysisInputSnapshot'
+          description: ''
   /api/site-assignments/:
     get:
       operationId: site_assignments_list
@@ -2028,6 +2099,326 @@ paths:
                 type: string
                 format: binary
           description: ''
+  /api/subscriber-profile-versions/:
+    get:
+      operationId: subscriber_profile_versions_list
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - in: query
+        name: profile
+        schema:
+          type: string
+          format: uuid
+        description: Limit results to one subscriber profile.
+      tags:
+      - subscriber-profile-versions
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedSubscriberProfileVersionList'
+          description: ''
+  /api/subscriber-profile-versions/{id}/:
+    get:
+      operationId: subscriber_profile_versions_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this subscriber profile version.
+        required: true
+      tags:
+      - subscriber-profile-versions
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubscriberProfileVersion'
+          description: ''
+    patch:
+      operationId: subscriber_profile_versions_partial_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this subscriber profile version.
+        required: true
+      tags:
+      - subscriber-profile-versions
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedSubscriberProfileVersion'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedSubscriberProfileVersion'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedSubscriberProfileVersion'
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubscriberProfileVersion'
+          description: ''
+  /api/subscriber-profile-versions/{id}/approve/:
+    post:
+      operationId: subscriber_profile_versions_approve_create
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this subscriber profile version.
+        required: true
+      tags:
+      - subscriber-profile-versions
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubscriberProfileVersion'
+          description: ''
+  /api/subscriber-profile-versions/{id}/copy/:
+    post:
+      operationId: subscriber_profile_versions_copy_create
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this subscriber profile version.
+        required: true
+      tags:
+      - subscriber-profile-versions
+      security:
+      - tokenAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubscriberProfileVersion'
+          description: ''
+  /api/subscriber-profile-versions/{id}/create_snapshot/:
+    post:
+      operationId: subscriber_profile_versions_create_snapshot_create
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this subscriber profile version.
+        required: true
+      tags:
+      - subscriber-profile-versions
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateRFAnalysisInputSnapshot'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CreateRFAnalysisInputSnapshot'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CreateRFAnalysisInputSnapshot'
+        required: true
+      security:
+      - tokenAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RFAnalysisInputSnapshot'
+          description: ''
+  /api/subscriber-profiles/:
+    get:
+      operationId: subscriber_profiles_list
+      parameters:
+      - in: query
+        name: incident
+        schema:
+          type: string
+          format: uuid
+        description: Limit results to one incident.
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - subscriber-profiles
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedSubscriberProfileList'
+          description: ''
+    post:
+      operationId: subscriber_profiles_create
+      tags:
+      - subscriber-profiles
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubscriberProfile'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SubscriberProfile'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SubscriberProfile'
+        required: true
+      security:
+      - tokenAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubscriberProfile'
+          description: ''
+  /api/subscriber-profiles/{id}/:
+    get:
+      operationId: subscriber_profiles_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this subscriber profile.
+        required: true
+      tags:
+      - subscriber-profiles
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubscriberProfile'
+          description: ''
+    put:
+      operationId: subscriber_profiles_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this subscriber profile.
+        required: true
+      tags:
+      - subscriber-profiles
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubscriberProfile'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SubscriberProfile'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SubscriberProfile'
+        required: true
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubscriberProfile'
+          description: ''
+    patch:
+      operationId: subscriber_profiles_partial_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this subscriber profile.
+        required: true
+      tags:
+      - subscriber-profiles
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedSubscriberProfile'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedSubscriberProfile'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedSubscriberProfile'
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubscriberProfile'
+          description: ''
+  /api/subscriber-profiles/{id}/archive/:
+    post:
+      operationId: subscriber_profiles_archive_create
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this subscriber profile.
+        required: true
+      tags:
+      - subscriber-profiles
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubscriberProfile'
+          description: ''
   /api/trunked-talkgroups/:
     get:
       operationId: trunked_talkgroups_list
@@ -2085,6 +2476,16 @@ paths:
           description: ''
 components:
   schemas:
+    AntennaGainReferenceEnum:
+      enum:
+      - unknown
+      - dbi
+      - dbd
+      type: string
+      description: |-
+        * `unknown` - Unknown
+        * `dbi` - dBi
+        * `dbd` - dBd
     Assignment:
       type: object
       properties:
@@ -2344,6 +2745,14 @@ components:
           maxLength: 240
       required:
       - coordinate
+    CreateRFAnalysisInputSnapshot:
+      type: object
+      properties:
+        label:
+          type: string
+          maxLength: 200
+      required:
+      - label
     CurrentUser:
       type: object
       properties:
@@ -2376,6 +2785,16 @@ components:
         * `draft` - Draft
         * `effective` - Effective
         * `superseded` - Superseded
+    ErpSourceEnum:
+      enum:
+      - unknown
+      - entered
+      - calculated
+      type: string
+      description: |-
+        * `unknown` - Unknown
+        * `entered` - Entered
+        * `calculated` - Calculated
     ExportDigestVerificationRequest:
       type: object
       properties:
@@ -2386,6 +2805,26 @@ components:
           type: string
           format: uri
           nullable: true
+    FrequencyBandEnum:
+      enum:
+      - unknown
+      - vhf_low
+      - vhf_high
+      - uhf
+      - '700'
+      - '800'
+      - '900'
+      - other
+      type: string
+      description: |-
+        * `unknown` - Unknown
+        * `vhf_low` - VHF low
+        * `vhf_high` - VHF high
+        * `uhf` - UHF
+        * `700` - 700 MHz
+        * `800` - 800 MHz
+        * `900` - 900 MHz
+        * `other` - Other
     GeocoderQuery:
       type: object
       properties:
@@ -2647,6 +3086,18 @@ components:
         * `planning` - Planning
         * `active` - Active
         * `closed` - Closed
+    InputBasisEnum:
+      enum:
+      - unknown
+      - recorded_fact
+      - modeled_assumption
+      - mixed
+      type: string
+      description: |-
+        * `unknown` - Unknown
+        * `recorded_fact` - Recorded fact
+        * `modeled_assumption` - Modeled assumption
+        * `mixed` - Mixed
     ManualRing:
       type: object
       properties:
@@ -2694,6 +3145,24 @@ components:
         * `p25` - P25
         * `dmr` - DMR
         * `nxdn` - NXDN
+        * `other` - Other
+    MountingTypeEnum:
+      enum:
+      - unknown
+      - handheld
+      - vehicle
+      - structure
+      - tower
+      - mast
+      - other
+      type: string
+      description: |-
+        * `unknown` - Unknown
+        * `handheld` - Handheld
+        * `vehicle` - Vehicle
+        * `structure` - Structure
+        * `tower` - Tower
+        * `mast` - Mast
         * `other` - Other
     OperationalPeriod:
       type: object
@@ -2920,6 +3389,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/PlanRevision'
+    PaginatedRFAnalysisInputSnapshotList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/RFAnalysisInputSnapshot'
     PaginatedRadioSiteList:
       type: object
       required:
@@ -3012,6 +3504,52 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/SiteAssignment'
+    PaginatedSubscriberProfileList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/SubscriberProfile'
+    PaginatedSubscriberProfileVersionList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/SubscriberProfileVersion'
     PaginatedTrunkedTalkgroupList:
       type: object
       required:
@@ -3452,6 +3990,191 @@ components:
           type: string
           format: date-time
           readOnly: true
+    PatchedSubscriberProfile:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        incident:
+          type: string
+          format: uuid
+        name:
+          type: string
+          maxLength: 160
+        profile_type:
+          $ref: '#/components/schemas/ProfileTypeEnum'
+        description:
+          type: string
+        initial_version:
+          allOf:
+          - $ref: '#/components/schemas/SubscriberProfileVersionInput'
+          writeOnly: true
+        versions:
+          type: array
+          items:
+            $ref: '#/components/schemas/SubscriberProfileVersion'
+          readOnly: true
+        created_by:
+          type: integer
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+        archived_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+    PatchedSubscriberProfileVersion:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        profile:
+          type: string
+          format: uuid
+          readOnly: true
+        number:
+          type: integer
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/PlanRevisionStatusEnum'
+          readOnly: true
+        tx_frequency_hz:
+          type: integer
+          maximum: 1000000000000
+          minimum: 1
+          format: int64
+          nullable: true
+        rx_frequency_hz:
+          type: integer
+          maximum: 1000000000000
+          minimum: 1
+          format: int64
+          nullable: true
+        transmitter_power_w:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,6})?$
+          nullable: true
+        effective_radiated_power_w:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,6})?$
+          nullable: true
+        erp_source:
+          $ref: '#/components/schemas/ErpSourceEnum'
+        receiver_sensitivity_dbm:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,4}(?:\.\d{0,3})?$
+          nullable: true
+        antenna_model:
+          type: string
+          nullable: true
+          maxLength: 200
+        antenna_gain_db:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,4}(?:\.\d{0,3})?$
+          nullable: true
+        antenna_gain_reference:
+          $ref: '#/components/schemas/AntennaGainReferenceEnum'
+        feed_line_type:
+          type: string
+          nullable: true
+          maxLength: 160
+        feed_line_length_m:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,9}(?:\.\d{0,3})?$
+          nullable: true
+        feed_line_loss_db:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,5}(?:\.\d{0,3})?$
+          nullable: true
+        additional_system_loss_db:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,5}(?:\.\d{0,3})?$
+          nullable: true
+        polarization:
+          $ref: '#/components/schemas/PolarizationEnum'
+        frequency_band:
+          $ref: '#/components/schemas/FrequencyBandEnum'
+        emission_designator:
+          type: string
+          nullable: true
+          maxLength: 32
+        emission_bandwidth_hz:
+          type: integer
+          maximum: 1000000000000
+          minimum: 1
+          format: int64
+          nullable: true
+        mounting_type:
+          $ref: '#/components/schemas/MountingTypeEnum'
+        antenna_center_agl_m:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,9}(?:\.\d{0,3})?$
+          nullable: true
+        antenna_center_amsl_m:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,9}(?:\.\d{0,3})?$
+          nullable: true
+        haat_m:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,9}(?:\.\d{0,3})?$
+          nullable: true
+        input_basis:
+          $ref: '#/components/schemas/InputBasisEnum'
+        notes:
+          type: string
+          nullable: true
+        erp_calculation_path:
+          readOnly: true
+        input_snapshot:
+          readOnly: true
+        input_sha256:
+          type: string
+          readOnly: true
+        created_by:
+          type: integer
+          readOnly: true
+        approved_by:
+          type: integer
+          readOnly: true
+          nullable: true
+        approved_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+        is_locked:
+          type: boolean
+          readOnly: true
     Plan:
       type: object
       properties:
@@ -3580,6 +4303,86 @@ components:
       description: |-
         * `draft` - Draft
         * `approved` - Approved
+    PolarizationEnum:
+      enum:
+      - unknown
+      - vertical
+      - horizontal
+      - circular
+      - mixed
+      type: string
+      description: |-
+        * `unknown` - Unknown
+        * `vertical` - Vertical
+        * `horizontal` - Horizontal
+        * `circular` - Circular
+        * `mixed` - Mixed
+    ProfileTypeEnum:
+      enum:
+      - portable
+      - mobile
+      - fixed
+      - configurable
+      type: string
+      description: |-
+        * `portable` - Portable
+        * `mobile` - Mobile
+        * `fixed` - Fixed
+        * `configurable` - Configurable
+    RFAnalysisInputSnapshot:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        incident:
+          type: string
+          format: uuid
+          readOnly: true
+        profile_version:
+          type: string
+          format: uuid
+          readOnly: true
+        label:
+          type: string
+          readOnly: true
+        input_snapshot:
+          readOnly: true
+        input_sha256:
+          type: string
+          readOnly: true
+        created_by:
+          type: integer
+          readOnly: true
+        approved_by:
+          type: integer
+          readOnly: true
+        approved_at:
+          type: string
+          format: date-time
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        archived_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+      required:
+      - approved_at
+      - approved_by
+      - archived_at
+      - created_at
+      - created_by
+      - id
+      - incident
+      - input_sha256
+      - input_snapshot
+      - label
+      - profile_version
     RadioSite:
       type: object
       properties:
@@ -3877,6 +4680,313 @@ components:
         * `link` - Link
         * `patch` - Patch
         * `other` - Other
+    SubscriberProfile:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        incident:
+          type: string
+          format: uuid
+        name:
+          type: string
+          maxLength: 160
+        profile_type:
+          $ref: '#/components/schemas/ProfileTypeEnum'
+        description:
+          type: string
+        initial_version:
+          allOf:
+          - $ref: '#/components/schemas/SubscriberProfileVersionInput'
+          writeOnly: true
+        versions:
+          type: array
+          items:
+            $ref: '#/components/schemas/SubscriberProfileVersion'
+          readOnly: true
+        created_by:
+          type: integer
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+        archived_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+      required:
+      - archived_at
+      - created_at
+      - created_by
+      - id
+      - incident
+      - name
+      - profile_type
+      - updated_at
+      - versions
+    SubscriberProfileVersion:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        profile:
+          type: string
+          format: uuid
+          readOnly: true
+        number:
+          type: integer
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/PlanRevisionStatusEnum'
+          readOnly: true
+        tx_frequency_hz:
+          type: integer
+          maximum: 1000000000000
+          minimum: 1
+          format: int64
+          nullable: true
+        rx_frequency_hz:
+          type: integer
+          maximum: 1000000000000
+          minimum: 1
+          format: int64
+          nullable: true
+        transmitter_power_w:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,6})?$
+          nullable: true
+        effective_radiated_power_w:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,6})?$
+          nullable: true
+        erp_source:
+          $ref: '#/components/schemas/ErpSourceEnum'
+        receiver_sensitivity_dbm:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,4}(?:\.\d{0,3})?$
+          nullable: true
+        antenna_model:
+          type: string
+          nullable: true
+          maxLength: 200
+        antenna_gain_db:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,4}(?:\.\d{0,3})?$
+          nullable: true
+        antenna_gain_reference:
+          $ref: '#/components/schemas/AntennaGainReferenceEnum'
+        feed_line_type:
+          type: string
+          nullable: true
+          maxLength: 160
+        feed_line_length_m:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,9}(?:\.\d{0,3})?$
+          nullable: true
+        feed_line_loss_db:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,5}(?:\.\d{0,3})?$
+          nullable: true
+        additional_system_loss_db:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,5}(?:\.\d{0,3})?$
+          nullable: true
+        polarization:
+          $ref: '#/components/schemas/PolarizationEnum'
+        frequency_band:
+          $ref: '#/components/schemas/FrequencyBandEnum'
+        emission_designator:
+          type: string
+          nullable: true
+          maxLength: 32
+        emission_bandwidth_hz:
+          type: integer
+          maximum: 1000000000000
+          minimum: 1
+          format: int64
+          nullable: true
+        mounting_type:
+          $ref: '#/components/schemas/MountingTypeEnum'
+        antenna_center_agl_m:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,9}(?:\.\d{0,3})?$
+          nullable: true
+        antenna_center_amsl_m:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,9}(?:\.\d{0,3})?$
+          nullable: true
+        haat_m:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,9}(?:\.\d{0,3})?$
+          nullable: true
+        input_basis:
+          $ref: '#/components/schemas/InputBasisEnum'
+        notes:
+          type: string
+          nullable: true
+        erp_calculation_path:
+          readOnly: true
+        input_snapshot:
+          readOnly: true
+        input_sha256:
+          type: string
+          readOnly: true
+        created_by:
+          type: integer
+          readOnly: true
+        approved_by:
+          type: integer
+          readOnly: true
+          nullable: true
+        approved_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+        is_locked:
+          type: boolean
+          readOnly: true
+      required:
+      - approved_at
+      - approved_by
+      - created_at
+      - created_by
+      - erp_calculation_path
+      - id
+      - input_sha256
+      - input_snapshot
+      - is_locked
+      - number
+      - profile
+      - status
+      - updated_at
+    SubscriberProfileVersionInput:
+      type: object
+      properties:
+        tx_frequency_hz:
+          type: integer
+          maximum: 1000000000000
+          minimum: 1
+          format: int64
+          nullable: true
+        rx_frequency_hz:
+          type: integer
+          maximum: 1000000000000
+          minimum: 1
+          format: int64
+          nullable: true
+        transmitter_power_w:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,6})?$
+          nullable: true
+        effective_radiated_power_w:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,6})?$
+          nullable: true
+        erp_source:
+          $ref: '#/components/schemas/ErpSourceEnum'
+        receiver_sensitivity_dbm:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,4}(?:\.\d{0,3})?$
+          nullable: true
+        antenna_model:
+          type: string
+          nullable: true
+          maxLength: 200
+        antenna_gain_db:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,4}(?:\.\d{0,3})?$
+          nullable: true
+        antenna_gain_reference:
+          $ref: '#/components/schemas/AntennaGainReferenceEnum'
+        feed_line_type:
+          type: string
+          nullable: true
+          maxLength: 160
+        feed_line_length_m:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,9}(?:\.\d{0,3})?$
+          nullable: true
+        feed_line_loss_db:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,5}(?:\.\d{0,3})?$
+          nullable: true
+        additional_system_loss_db:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,5}(?:\.\d{0,3})?$
+          nullable: true
+        polarization:
+          $ref: '#/components/schemas/PolarizationEnum'
+        frequency_band:
+          $ref: '#/components/schemas/FrequencyBandEnum'
+        emission_designator:
+          type: string
+          nullable: true
+          maxLength: 32
+        emission_bandwidth_hz:
+          type: integer
+          maximum: 1000000000000
+          minimum: 1
+          format: int64
+          nullable: true
+        mounting_type:
+          $ref: '#/components/schemas/MountingTypeEnum'
+        antenna_center_agl_m:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,9}(?:\.\d{0,3})?$
+          nullable: true
+        antenna_center_amsl_m:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,9}(?:\.\d{0,3})?$
+          nullable: true
+        haat_m:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,9}(?:\.\d{0,3})?$
+          nullable: true
+        input_basis:
+          $ref: '#/components/schemas/InputBasisEnum'
+        notes:
+          type: string
+          nullable: true
     TokenSession:
       type: object
       properties:
