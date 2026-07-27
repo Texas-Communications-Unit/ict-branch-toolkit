@@ -10,6 +10,7 @@ from django.utils import timezone
 from rest_framework.test import APIClient
 
 from apps.accounts.models import Role, UserRoleAssignment
+from apps.audit.models import AuditEvent
 from apps.incidents.models import Incident, IncidentMembership, OperationalPeriod
 from apps.plans.models import Assignment, AssignmentRelationship, ICS205Plan, PlanRevision
 from apps.resources.models import ConventionalChannel, ResourceRelease, ResourceSource
@@ -18,25 +19,27 @@ from apps.sites.models import ManualRing, RadioSite
 INCIDENT_TOTAL = 101
 INCIDENT_PAGE_SIZE = 100
 PERIODS_PER_INCIDENT = 2
-INCIDENT_QUERY_BUDGET = 4
+INCIDENT_QUERY_BUDGET = 6
 INCIDENT_RESPONSE_BUDGET = 128 * 1024
+INCIDENT_UPDATE_QUERY_BUDGET = 12
+INCIDENT_UPDATE_RESPONSE_BUDGET = 8 * 1024
 
 RESOURCE_TOTAL = 1_001
 RESOURCE_MAX_PAGE_SIZE = 1_000
-RESOURCE_QUERY_BUDGET = 2
+RESOURCE_QUERY_BUDGET = 4
 RESOURCE_RESPONSE_BUDGET = 1_536 * 1024
 
 SITE_TOTAL = 101
 SITE_PAGE_SIZE = 100
 RINGS_PER_SITE = 3
-SITE_QUERY_BUDGET = 3
+SITE_QUERY_BUDGET = 5
 SITE_RESPONSE_BUDGET = 256 * 1024
 
 PLAN_TOTAL = 25
 REVISIONS_PER_PLAN = 2
 ASSIGNMENTS_PER_REVISION = 10
 RELATIONSHIPS_PER_REVISION = 1
-PLAN_QUERY_BUDGET = 6
+PLAN_QUERY_BUDGET = 8
 PLAN_RESPONSE_BUDGET = 512 * 1024
 
 pytestmark = pytest.mark.django_db
@@ -54,6 +57,14 @@ def authenticated_client(user) -> APIClient:
 def measured_get(client: APIClient, path: str):
     with CaptureQueriesContext(connection) as queries:
         response = client.get(path)
+        content = response.content
+    assert response.status_code == 200, content
+    return response, len(queries), len(content)
+
+
+def measured_patch(client: APIClient, path: str, payload: dict):
+    with CaptureQueriesContext(connection) as queries:
+        response = client.patch(path, payload, format="json")
         content = response.content
     assert response.status_code == 200, content
     return response, len(queries), len(content)
@@ -144,6 +155,41 @@ def test_incident_list_envelope_for_scoped_reader():
         query_budget=INCIDENT_QUERY_BUDGET,
         response_bytes=response_bytes,
         response_budget=INCIDENT_RESPONSE_BUDGET,
+    )
+
+
+def test_incident_update_envelope_includes_append_only_audit():
+    user = get_user_model().objects.create_user(
+        "performance-writer", password="synthetic-test-password"
+    )
+    UserRoleAssignment.objects.create(user=user, role=Role.COML, assigned_by=user)
+    incident = Incident.objects.create(
+        name="Synthetic Performance Write Exercise",
+        incident_number="SYN-PERF-WRITE",
+        created_by=user,
+    )
+    IncidentMembership.objects.create(
+        incident=incident,
+        user=user,
+        role=Role.COML,
+        assigned_by=user,
+    )
+
+    response, query_count, response_bytes = measured_patch(
+        authenticated_client(user),
+        f"/api/incidents/{incident.id}/",
+        {"status": Incident.Status.ACTIVE},
+    )
+
+    assert response.json()["status"] == Incident.Status.ACTIVE
+    event = AuditEvent.objects.get(action="incident.updated")
+    assert event.details == {"changed_fields": ["status"]}
+    assert_envelope(
+        name="incident-update-with-audit",
+        query_count=query_count,
+        query_budget=INCIDENT_UPDATE_QUERY_BUDGET,
+        response_bytes=response_bytes,
+        response_budget=INCIDENT_UPDATE_RESPONSE_BUDGET,
     )
 
 

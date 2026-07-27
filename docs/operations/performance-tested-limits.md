@@ -19,13 +19,15 @@ tests these authenticated list paths:
 
 | Workload | Synthetic dataset and returned page | Database-query budget | JSON response budget |
 | --- | --- | ---: | ---: |
-| Incident list | 101 incident memberships; first 100 incidents, each with 2 operational periods | 4 | 128 KiB |
-| Conventional-channel list | 1,001 channels; oversized request is clamped to 1,000 results | 2 | 1.5 MiB |
-| Radio-site list | 101 sites; first 100 sites, each with 3 manual rings | 3 | 256 KiB |
-| ICS-205 plan list | 25 plans, 2 revisions per plan, 10 assignments and 1 two-assignment relationship per revision | 6 | 512 KiB |
+| Incident list | 101 incident memberships; first 100 incidents, each with 2 operational periods | 6 | 128 KiB |
+| Incident update with audit | 1 incident membership; status patch plus append-only audit event | 12 | 8 KiB |
+| Conventional-channel list | 1,001 channels; oversized request is clamped to 1,000 results | 4 | 1.5 MiB |
+| Radio-site list | 101 sites; first 100 sites, each with 3 manual rings | 5 | 256 KiB |
+| ICS-205 plan list | 25 plans, 2 revisions per plan, 10 assignments and 1 two-assignment relationship per revision | 8 | 512 KiB |
 
-The query budgets cover pagination counts, object retrieval, and all nested
-serialization. They exclude the single token-authentication lookup so the
+The query budgets cover request transaction control, pagination counts, object
+retrieval, nested serialization, and—on the update workload—the material write
+and audit append. They exclude the single token-authentication lookup so the
 tests isolate endpoint data-access behavior. The response budgets cover the
 uncompressed JSON body produced by the fixed synthetic fixtures; they do not
 cap arbitrarily long text values or HTTP headers.
@@ -37,10 +39,11 @@ representative 25-plan nested workload, not a claim that revisions or
 assignments have a hard application-level maximum.
 
 On July 27, 2026, the isolated suite passed locally with Python 3.12.10 and
-SQLite. It measured 4 queries and 96,190 bytes for incidents; 2 queries and
-1,283,120 bytes for channels; 3 queries and 148,638 bytes for sites; and 6
-queries and 374,577 bytes for plans. This is evidence for the published
-hardware-neutral budgets, not a PostgreSQL/PostGIS or deployed-load result.
+SQLite. It measured 6 queries and 96,190 bytes for the incident list; 4 queries
+and 1,283,120 bytes for channels; 5 queries and 148,638 bytes for sites; 8
+queries and 374,577 bytes for plans; and 11 queries and 545 bytes for the
+audited incident update. This is evidence for the published hardware-neutral
+budgets, not a PostgreSQL/PostGIS or deployed-load result.
 
 ## Reproduce and measure
 
@@ -70,10 +73,12 @@ the CI database path remains required before merge.
 
 ## Deliberate limitations and release gates
 
-These tests do not measure concurrent users, write-heavy imports, PDF or
-spatial-export generation, network latency, reverse-proxy behavior, database
-growth over time, or deployment-specific CPU and memory use. They do not
-establish a maximum incident count or a safe operational user count.
+These tests do not measure concurrent users, sustained or write-heavy imports,
+PDF or spatial-export generation, network latency, reverse-proxy behavior,
+database growth over time, or deployment-specific CPU and memory use. The one
+audited incident update is a regression envelope, not a sustained-write load
+test. The tests do not establish a maximum incident count or a safe operational
+user count.
 
 Before any production claim or hosted use beyond the approved synthetic test
 scope, maintainers must run a deployment-specific load test with synthetic
