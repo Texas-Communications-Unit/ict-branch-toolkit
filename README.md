@@ -156,6 +156,10 @@ Database backups, isolated restore drills, controlled restoration, upgrades,
 and application or migration rollback follow the
 [recovery runbook](docs/operations/backup-restore-and-rollback.md).
 
+Preparation and human acceptance of a Phase 1 pre-release follow the
+[non-production release candidate checklist](docs/operations/non-production-release-candidate-checklist.md).
+Publishing a candidate does not authorize deployment or operational data.
+
 ## P1.1 vertical slice
 
 The current slice provides token-based local authentication; centralized Administrator, COML, COMC, COMT, Contributor, and Read-only policy defaults; incident memberships; audit-preserving archival; append-only API audit events; and separate source-versioned conventional-channel and trunked-talkgroup libraries. Administrators can validate an import without writing data and apply an atomic approved import. CISA reference releases remain blocked from application until their exact type, version, authoritative URL, and digest pass the configured human gate.
