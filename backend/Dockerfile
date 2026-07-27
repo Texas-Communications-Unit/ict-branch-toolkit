@@ -5,6 +5,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1
 
 RUN apt-get update \
+    && apt-get upgrade -y \
     && apt-get install --no-install-recommends -y binutils gdal-bin libgdal-dev libgeos-dev \
     && rm -rf /var/lib/apt/lists/*
 
