@@ -51,8 +51,10 @@ class ExportDigestVerificationView(APIView):
         if not user_has_permission(request.user, required_permission, revision.plan.incident):
             raise PermissionDenied("Your incident role cannot verify this export.")
 
-        content_sha256 = request.data.get("content_sha256")
-        uploaded_file = request.data.get("file")
+        serializer = ExportDigestVerificationRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        content_sha256 = serializer.validated_data.get("content_sha256")
+        uploaded_file = serializer.validated_data.get("file")
         if uploaded_file is not None:
             hasher = hashlib.sha256()
             for chunk in uploaded_file.chunks():

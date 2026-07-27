@@ -1,4 +1,4 @@
-.PHONY: setup up down reset test lint format check migrations schema
+.PHONY: setup up down reset test lint format docs check migrations schema
 
 setup:
 	cp .env.example .env
@@ -27,11 +27,14 @@ format:
 	docker compose run --rm backend ruff format .
 	docker compose run --rm frontend pnpm format
 
+docs:
+	python scripts/check-markdown-links.py
+
 migrations:
 	docker compose run --rm backend python manage.py makemigrations --check --dry-run
 
 schema:
 	docker compose run --rm backend python manage.py spectacular --file openapi.yaml --validate
 
-check: lint migrations test schema
+check: docs lint migrations test schema
 	docker compose build

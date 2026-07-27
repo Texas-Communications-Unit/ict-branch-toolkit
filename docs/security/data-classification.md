@@ -2,21 +2,23 @@
 
 ## Classification
 
-| Class | Examples | Public repository | Prototype environment |
-| --- | --- | --- | --- |
-| Public | Source code, public requirements, approved public reference metadata | Allowed | Allowed |
-| Synthetic | Invented incidents, channels, sites, users, and credentials clearly marked for tests | Allowed | Allowed |
-| Internal | Non-public planning notes, draft organizational configuration | Prohibited | Not approved in P1.0 |
-| Protected/operational | Real incident data, protected channels, PII, credentials, keys, certificates, private infrastructure or connection details | Prohibited | Prohibited in P1.0 |
+| Class                 | Examples                                                                                                                   | Public repository | Prototype environment |
+| --------------------- | -------------------------------------------------------------------------------------------------------------------------- | ----------------- | --------------------- |
+| Public                | Source code, public requirements, approved public reference metadata                                                       | Allowed           | Allowed               |
+| Synthetic             | Invented incidents, channels, sites, users, and credentials clearly marked for tests                                       | Allowed           | Allowed               |
+| Internal              | Non-public planning notes, draft organizational configuration                                                              | Prohibited        | Not approved in P1.0  |
+| Protected/operational | Real incident data, protected channels, PII, credentials, keys, certificates, private infrastructure or connection details | Prohibited        | Prohibited in P1.0    |
 
 ## Trust boundaries
 
 The browser is untrusted. The backend enforces authentication, authorization, validation, and lifecycle rules. PostgreSQL/PostGIS is reachable only inside the Compose network by default. Map providers and future integrations are external systems and receive no operational data without an approved design and configuration.
 
-## P1.0 controls
+## Current prototype controls
 
-- Administrator-only mutation; authenticated reads.
-- Token authentication for the local prototype; tokens are held in browser session storage and cleared when the session ends.
+- Centralized backend policy for installation and incident-scoped roles.
+- Bounded local-token authentication; tokens rotate at sign-in, can be revoked
+  at sign-out, and are held only in browser session storage until sign-out,
+  expiry, an authentication failure, or the browser session ends.
 - Configuration through environment variables; `.env` is ignored.
 - No required external map request or credential.
 - Optional external basemaps fail closed unless endpoint, attribution, license,
@@ -24,9 +26,23 @@ The browser is untrusted. The backend enforces authentication, authorization, va
   one discloses the viewed geographic area to that provider and remains
   synthetic-test-only until a separate operational privacy determination.
 - Dependency, secret, static, test, and container checks in CI.
+- Secure response headers, configurable HTTPS/HSTS behavior, general API rate
+  limits, and a stricter authentication rate limit.
+- Generic server-error responses that do not disclose exception detail.
+- Guarded database backup, checksum verification, isolated restore drills,
+  controlled restoration, and application/migration rollback procedures.
+- Append-only audit events with an internally verifiable hash chain.
 - Protective foreign keys and archival fields for operational records.
 
 ## Known risks and required hardening
 
-P1.0 token authentication lacks production-grade expiration, rotation, revocation workflow, federation, and incident-scoped policy. Compose defaults are intentionally obvious development values. TLS termination, secure headers, backup encryption, audit completeness, rate limiting, upload controls, privacy retention, and production secrets management remain release blockers.
-
+Local tokens are bounded and revocable but remain bearer credentials without
+self-service recovery, multifactor authentication, or approved federation.
+Compose development defaults are intentionally obvious values and must never be
+used on a shared system. TLS termination, secret management, backup encryption
+and retention, certificate monitoring, external audit anchoring, privacy
+retention, provider governance, and operational alerting remain
+installation-owner controls. Tested capacity is limited to the published
+prototype performance evidence. These limitations must be resolved or
+explicitly accepted for a non-production candidate and still do not establish
+production readiness.

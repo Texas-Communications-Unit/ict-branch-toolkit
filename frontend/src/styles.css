@@ -229,6 +229,16 @@ p {
   gap: 0.35rem;
   font-size: 0.78rem;
 }
+.sign-out-button {
+  border-color: var(--tx-comu-white);
+  background: transparent;
+  padding: 0.3rem 0.55rem;
+  font-size: 0.75rem;
+}
+.sign-out-button:hover:not(:disabled) {
+  background: var(--tx-comu-white);
+  color: var(--tx-comu-navy);
+}
 .banner {
   margin: 1rem 2rem 0;
 }
@@ -711,7 +721,7 @@ footer a {
   }
   .identity-summary {
     width: 100%;
-    grid-template-columns: 1fr auto;
+    grid-template-columns: 1fr auto auto;
     align-items: center;
     justify-items: start;
   }

@@ -1,7 +1,7 @@
 import logging
 
 from rest_framework.response import Response
-from rest_framework.views import exception_handler
+from rest_framework.views import exception_handler, set_rollback
 
 logger = logging.getLogger("ict_toolkit.api")
 
@@ -27,4 +27,5 @@ def handle_exception(exc, context):
         getattr(request, "path", "?"),
         exc_info=exc,
     )
+    set_rollback()
     return Response({"detail": "An unexpected error occurred."}, status=500)

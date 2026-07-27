@@ -1,15 +1,18 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 
 import {
+  AUTHENTICATION_EXPIRED_EVENT,
   createIncident,
   createOperationalPeriod,
   archiveIncident,
   getCurrentUser,
+  hasActiveSession,
   importChannelLibrary,
   listConventionalChannels,
   listIncidents,
   listTrunkedTalkgroups,
   login,
+  logout,
 } from "./api";
 import { BrandMark } from "./BrandMark";
 import { MapShell } from "./MapShell";
@@ -70,9 +73,7 @@ const syntheticImportExample = JSON.stringify(
 );
 
 export default function App() {
-  const [authenticated, setAuthenticated] = useState(() =>
-    Boolean(sessionStorage.getItem("ict-toolkit-token")),
-  );
+  const [authenticated, setAuthenticated] = useState(hasActiveSession);
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [channels, setChannels] = useState<ConventionalChannel[]>([]);
@@ -152,6 +153,23 @@ export default function App() {
     if (authenticated) void refresh();
   }, [authenticated, refresh]);
 
+  useEffect(() => {
+    const handleExpiredAuthentication = () => {
+      setAuthenticated(false);
+      setCurrentUser(null);
+      setError("Your session expired. Sign in again.");
+    };
+    window.addEventListener(
+      AUTHENTICATION_EXPIRED_EVENT,
+      handleExpiredAuthentication,
+    );
+    return () =>
+      window.removeEventListener(
+        AUTHENTICATION_EXPIRED_EVENT,
+        handleExpiredAuthentication,
+      );
+  }, []);
+
   async function handleLogin(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
@@ -162,6 +180,17 @@ export default function App() {
     } catch {
       setError("Sign-in failed. Verify the local administrator credentials.");
     }
+  }
+
+  async function handleLogout() {
+    const serverRevocationConfirmed = await logout();
+    setAuthenticated(false);
+    setCurrentUser(null);
+    setError(
+      serverRevocationConfirmed
+        ? ""
+        : "Signed out locally, but server revocation could not be confirmed. Contact an administrator if the session may be compromised.",
+    );
   }
 
   async function handleIncident(event: FormEvent<HTMLFormElement>) {
@@ -332,6 +361,13 @@ export default function App() {
           <div className="prototype-badge">
             P1.3 Prototype · {currentUser?.role}
           </div>
+          <button
+            className="sign-out-button"
+            type="button"
+            onClick={() => void handleLogout()}
+          >
+            Sign out
+          </button>
         </div>
       </header>
       {error && (

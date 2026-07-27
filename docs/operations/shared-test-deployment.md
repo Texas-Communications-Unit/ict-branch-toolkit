@@ -24,9 +24,15 @@ POSTGRES_PASSWORD=<URL-safe random database password>
 DJANGO_SECRET_KEY=<random Django secret key>
 DJANGO_ALLOWED_HOSTS=<public hostname>,backend
 DJANGO_CORS_ALLOWED_ORIGINS=https://<public hostname>
+DJANGO_FORCE_HTTPS=true
+DJANGO_HSTS_SECONDS=3600
+DJANGO_THROTTLE_ANON_RATE=30/min
+DJANGO_THROTTLE_USER_RATE=300/min
+DJANGO_THROTTLE_AUTH_RATE=10/min
 DJANGO_SUPERUSER_USERNAME=<non-default administrator name>
 DJANGO_SUPERUSER_EMAIL=<administrator email>
 DJANGO_SUPERUSER_PASSWORD=<random initial administrator password>
+ICT_TOKEN_TTL_SECONDS=28800
 APP_BIND_ADDRESS=<application-host address reachable by the reverse proxy>
 APP_PORT=8088
 VITE_MAP_STYLE_URL=
@@ -42,6 +48,17 @@ VITE_MAP_PRIVACY_URL=
 VITE_MAP_REPORT_ISSUE_URL=
 VITE_MAP_CONTACT_URL=
 ```
+
+`ICT_TOKEN_TTL_SECONDS` sets the maximum local login lifetime. The eight-hour default is the
+non-production baseline. A shorter value is allowed after operator review; zero and negative values
+prevent application startup. Changing the value can immediately expire existing sessions.
+
+`DJANGO_HSTS_SECONDS=3600` is a deliberately short initial test value. The
+current application also emits the HSTS `includeSubDomains` and `preload`
+directives when HTTPS enforcement is enabled. Increase the duration only after
+the certificate, trusted-proxy header, affected host names, and rollback path
+have passed maintainer review. Changing HSTS is a separate human-approved
+configuration change.
 
 The blank map-provider values are the secure default and render the neutral,
 network-free map. After completing the
@@ -73,8 +90,17 @@ Start and verify the isolated stack:
 ```sh
 docker compose --env-file /path/to/deployment.env -f compose.production.yaml config --quiet
 docker compose --env-file /path/to/deployment.env -f compose.production.yaml up --build --detach --wait
-curl --fail http://<application-host>:8088/api/health/
+application_host=127.0.0.1
+public_hostname=toolkit.example.invalid
+curl --fail \
+  --header "Host: $public_hostname" \
+  --header 'X-Forwarded-Proto: https' \
+  "http://$application_host:8088/api/health/"
 ```
+
+The forwarded-protocol header is valid only because the application listener is
+restricted to the trusted reverse proxy or administrator. Do not expose a
+listener that trusts this header to an untrusted network.
 
 ## Controlled GitHub deployment
 
@@ -142,6 +168,12 @@ Create a dedicated HTTPS virtual host for the application hostname. Preserve the
 ```
 
 Validate before reloading the reverse proxy. Confirm the health endpoint through the public hostname before allowing test use.
+
+Complete the
+[installation verification](installation-and-configuration.md#installation-verification)
+and adopt the
+[operation and monitoring runbook](operation-and-monitoring.md) before opening
+the synthetic test to evaluators.
 
 ## Rollback
 

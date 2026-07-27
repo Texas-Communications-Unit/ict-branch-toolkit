@@ -2,7 +2,10 @@
 
 ICT Branch Toolkit is an open-source web application for incident communications planning, radio-site mapping, coverage visualization, and frequency deconfliction. It is intended to support Communications Unit and Information and Communications Technology (ICT) Branch personnel during incidents, planned events, exercises, and pre-incident planning.
 
-> **Project status:** P1.0 non-production prototype scaffold. No production-ready release is available yet, and the application must use synthetic data only.
+> **Project status:** Phase 1 non-production prototype. No production-ready
+> release is available, and the application must use synthetic data only. Any
+> candidate must follow the
+> [non-production release-candidate process](docs/releases/non-production-release-candidate.md).
 
 ## Vision
 
@@ -155,12 +158,40 @@ The shared synthetic-data test deployment uses a separate production Compose def
 Database backups, isolated restore drills, controlled restoration, upgrades,
 and application or migration rollback follow the
 [recovery runbook](docs/operations/backup-restore-and-rollback.md).
+The current hardware-neutral API regression envelopes and their deliberately
+limited non-production scope are published in
+[tested performance limits](docs/operations/performance-tested-limits.md).
+
+### Operations and release evaluation
+
+Use the
+[installation and configuration guide](docs/operations/installation-and-configuration.md)
+for a reviewed evaluation build and the
+[operation and monitoring runbook](docs/operations/operation-and-monitoring.md)
+for routine health, logging, backup, audit-chain, access, and escalation checks.
+The
+[release-candidate process and checklist](docs/releases/non-production-release-candidate.md)
+defines the artifacts, evidence, immutable candidate identity, and human
+approvals required before a clearly labeled non-production prototype
+prerelease. It does not authorize a tag, release, deployment, or non-synthetic
+data by itself.
 
 ## P1.1 vertical slice
 
-The current slice provides token-based local authentication; centralized Administrator, COML, COMC, COMT, Contributor, and Read-only policy defaults; incident memberships; audit-preserving archival; append-only API audit events; and separate source-versioned conventional-channel and trunked-talkgroup libraries. Administrators can validate an import without writing data and apply an atomic approved import. CISA reference releases remain blocked from application until their exact type, version, authoritative URL, and digest pass the configured human gate.
+The current slice provides bounded, rotating token-based local authentication with server-backed
+sign-out; centralized Administrator, COML, COMC, COMT, Contributor, and Read-only policy defaults;
+incident memberships; audit-preserving archival; append-only API audit events; and separate
+source-versioned conventional-channel and trunked-talkgroup libraries. Administrators can validate
+an import without writing data and apply an atomic approved import. CISA reference releases remain
+blocked from application until their exact type, version, authoritative URL, and digest pass the
+configured human gate.
 
-The browser workspace consumes backend capabilities, displays library provenance, and provides an administrator-only validation/import panel using a clearly synthetic example. See [reference import operations](docs/operations/reference-library-imports.md), [account and audit controls](docs/security/accounts-and-audit.md), and [ADR-0002](docs/adr/0002-identity-authorization-and-audit.md).
+The browser workspace consumes backend capabilities, displays library provenance, and provides an
+administrator-only validation/import panel using a clearly synthetic example. See
+[reference import operations](docs/operations/reference-library-imports.md),
+[account and audit controls](docs/security/accounts-and-audit.md),
+[ADR-0002](docs/adr/0002-identity-authorization-and-audit.md), and
+[ADR-0007](docs/adr/0007-local-token-lifecycle.md).
 
 ## P1.2 ICS-205 vertical slice
 
@@ -182,7 +213,8 @@ support metadata are complete. See
 
 See [ADR-0004](docs/adr/0004-spatial-sites-snapshots-and-exports.md) and [spatial input and reference-source controls](docs/operations/spatial-inputs-and-reference-sources.md).
 
-The prototype does not yet implement deconfliction, completed official export records/digests, or production authentication hardening.
+The prototype does not yet implement deconfliction or production identity controls such as
+multifactor authentication and approved external federation.
 
 ## Accessibility
 
@@ -217,7 +249,9 @@ The project is currently establishing its requirements and architecture. Early p
 
 Please do not submit real incident data, protected channel information, credentials, private keys, certificates, personal information, or other sensitive material to the public repository.
 
-Contributor guidance, security reporting instructions, development setup, and coding standards will be added with the initial application scaffold.
+See [CONTRIBUTING.md](CONTRIBUTING.md), [SECURITY.md](SECURITY.md), and the
+operations guides above for the current contributor, reporting, development,
+and evaluation procedures.
 
 ## License
 
