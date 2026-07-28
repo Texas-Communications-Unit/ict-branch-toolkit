@@ -310,6 +310,25 @@ See [ADR-0011](docs/adr/0011-separate-directional-and-two-way-analysis.md), the
 [directional analysis operations guide](docs/operations/directional-coverage-analysis.md), and the
 [Phase 2 data model](docs/data-model/phase-2.md).
 
+## P2.5 field observations and controlled local calibration
+
+Issue #19 records immutable, incident-scoped good, marginal, and failed-communications
+observations tied to exact approved RF input snapshots and optional approved analysis evidence.
+Measured, operator, imported, and modeled evidence remain distinguishable. Corrections create a
+superseding record; approval and exclusion decisions are separate append-only evidence.
+
+Exact WGS 84 locations can be retained only through an explicit choice. Generalized locations are
+rounded before persistence, and redacted locations discard coordinates before persistence.
+Versioned calibration sets preserve the selected observation/review digests, algorithm and
+parameters, missing/outlier exclusions, incident-local recommendation, and transparent
+before/after error comparison. No result overwrites or auto-promotes an organization default.
+
+Approval fails closed until the exact `observation-envelope-v1-provisional` method passes the
+configured security/privacy and qualified RF gate. Repository fixtures and tests remain synthetic.
+See [ADR-0012](docs/adr/0012-field-observations-and-incident-local-calibration.md), the
+[field observation and calibration guide](docs/operations/field-observations-and-calibration.md),
+and the [Phase 2 data model](docs/data-model/phase-2.md).
+
 ## Accessibility
 
 The Toolkit targets WCAG 2.2 Level AA across complete user processes. GitHub

@@ -44,6 +44,18 @@ cache may not be committed, exported, or redistributed until its exact permitted
 retention, and redistribution terms are approved. SHA-256 digests identify retained content; they
 do not anonymize the source or incident.
 
+Field observations and calibration evidence inherit the highest classification of their incident,
+RF input, analysis source, observer/source, location, time, measurements, notes, and collection
+authority. Generalization reduces coordinate precision but is not anonymization; redaction is the
+only current mode that retains no coordinate. Repeated time/location/path records can still reveal
+people, sites, equipment behavior, or operational capability.
+
+Observation review and calibration snapshots minimize derived evidence but do not declassify it.
+Digests remain identifiers, not confidentiality controls. The public repository and Actions
+fixtures use synthetic observers, locations, measurements, source identifiers, and notes only.
+Real field evidence, screenshots, exports, database backups, or support material require an
+approved classification, access, retention, disclosure, and destruction plan.
+
 ## Current prototype controls
 
 - Centralized backend policy for installation and incident-scoped roles.
