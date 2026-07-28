@@ -2,9 +2,14 @@
 
 ## Status
 
-Accepted for non-production prototype evaluation. Qualified RF/GIS,
-security/privacy, accessibility, operations, and maintainer acceptance remains
-pending.
+Accepted on July 28, 2026, for synthetic, non-production prototype evaluation
+as best-estimate planning support. This acceptance does not establish
+real-world RF accuracy, official coverage mapping, RF-penetration evidence,
+frequency coordination, spectrum authorization, or operational approval.
+Security/privacy, operations, automated accessibility, and maintainer
+acceptance are recorded in the Phase 2 candidate evidence. Manual keyboard and
+screen-reader evaluation remains tracked in Issue #69 without a formal
+accessibility-conformance claim.
 
 ## Context
 
@@ -51,8 +56,9 @@ record.
   linked observation/review evidence changes. Stale evidence remains visible
   but cannot be approved or exported.
 - Approval fails closed unless the exact validation profile is listed in
-  `ICT_APPROVED_PHASE2_VALIDATION_PROFILES`. This separate gate requires
-  qualified RF/GIS, security/privacy, and maintainer acceptance.
+  `ICT_APPROVED_PHASE2_VALIDATION_PROFILES`. The Phase 2 milestone acceptance
+  does not automatically enable that deployment-specific setting or authorize
+  non-synthetic use.
 - Controlled deterministic JSON export requires both `rf.approve` and
   `plan.export`. Every exact export byte stream is SHA-256 recorded in the
   append-only audit chain, and an authorized user can verify a downloaded
