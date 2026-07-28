@@ -26,6 +26,10 @@ import type {
   PlanAssignment,
   PlanRelationship,
   PlanRevision,
+  Phase2ExportVerification,
+  Phase2ValidationBundle,
+  Phase2ValidationStatus,
+  CreatePhase2ValidationBundlePayload,
   RFAnalysisInputSnapshot,
   RevisionComparison,
   RadioSite,
@@ -632,4 +636,92 @@ export function approveCalibrationSet(id: string): Promise<CalibrationSet> {
   return request<CalibrationSet>(`/api/calibration-sets/${id}/approve/`, {
     method: "POST",
   });
+}
+
+export function getPhase2ValidationStatus(): Promise<Phase2ValidationStatus> {
+  return request<Phase2ValidationStatus>("/api/phase2-validation-status/");
+}
+
+export async function listPhase2ValidationBundles(
+  incident: string,
+): Promise<Phase2ValidationBundle[]> {
+  const result = await request<Paginated<Phase2ValidationBundle>>(
+    `/api/phase2-validation-bundles/?incident=${encodeURIComponent(incident)}`,
+  );
+  return result.results;
+}
+
+export function createPhase2ValidationBundle(
+  payload: CreatePhase2ValidationBundlePayload,
+): Promise<Phase2ValidationBundle> {
+  return request<Phase2ValidationBundle>("/api/phase2-validation-bundles/", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function runPhase2ValidationBundle(
+  id: string,
+): Promise<Phase2ValidationBundle> {
+  return request<Phase2ValidationBundle>(
+    `/api/phase2-validation-bundles/${id}/run/`,
+    { method: "POST" },
+  );
+}
+
+export function cancelPhase2ValidationBundle(
+  id: string,
+): Promise<Phase2ValidationBundle> {
+  return request<Phase2ValidationBundle>(
+    `/api/phase2-validation-bundles/${id}/cancel/`,
+    { method: "POST" },
+  );
+}
+
+export function retryPhase2ValidationBundle(
+  id: string,
+): Promise<Phase2ValidationBundle> {
+  return request<Phase2ValidationBundle>(
+    `/api/phase2-validation-bundles/${id}/retry/`,
+    { method: "POST" },
+  );
+}
+
+export function approvePhase2ValidationBundle(
+  id: string,
+): Promise<Phase2ValidationBundle> {
+  return request<Phase2ValidationBundle>(
+    `/api/phase2-validation-bundles/${id}/approve/`,
+    { method: "POST" },
+  );
+}
+
+export async function downloadPhase2ValidationBundle(
+  id: string,
+): Promise<void> {
+  const token = tokenForRequest();
+  const response = await fetch(
+    `${API_BASE}/api/phase2-validation-bundles/${id}/export/`,
+    { headers: token ? { Authorization: `Token ${token}` } : {} },
+  );
+  if (!response.ok) throw new Error(await response.text());
+  const url = URL.createObjectURL(await response.blob());
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = `phase-2-validation-${id}.json`;
+  anchor.click();
+  URL.revokeObjectURL(url);
+}
+
+export function verifyPhase2ValidationExport(
+  id: string,
+  contentSha256: string,
+): Promise<Phase2ExportVerification> {
+  return request<Phase2ExportVerification>(
+    `/api/phase2-validation-bundles/${id}/verify/`,
+    {
+      method: "POST",
+      body: JSON.stringify({ content_sha256: contentSha256 }),
+    },
+  );
 }

@@ -1220,3 +1220,220 @@ class CalibrationSetObservation(models.Model):
 
     def delete(self, *args, **kwargs):
         raise ValidationError("Calibration set membership is retained.")
+
+
+class Phase2ValidationBundle(models.Model):
+    """Retained, version-pinned evidence for a Phase 2 release-candidate check.
+
+    Source selections and completed evidence are immutable. Only explicit job
+    lifecycle and approval fields may change after the row is queued.
+    """
+
+    class JobState(models.TextChoices):
+        QUEUED = "queued", "Queued"
+        RUNNING = "running", "Running"
+        COMPLETE = "complete", "Complete"
+        FAILED = "failed", "Failed"
+        CANCELLED = "cancelled", "Cancelled"
+
+    class Status(models.TextChoices):
+        DRAFT = "draft", "Draft"
+        APPROVED = "approved", "Approved"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    incident = models.ForeignKey(
+        Incident,
+        related_name="phase2_validation_bundles",
+        on_delete=models.PROTECT,
+    )
+    approved_revision = models.ForeignKey(
+        "plans.PlanRevision",
+        related_name="phase2_validation_bundles",
+        on_delete=models.PROTECT,
+    )
+    haat_calculation = models.ForeignKey(
+        HAATCalculation,
+        related_name="phase2_validation_bundles",
+        on_delete=models.PROTECT,
+    )
+    coverage_estimate = models.ForeignKey(
+        CoverageEstimate,
+        related_name="phase2_validation_bundles",
+        on_delete=models.PROTECT,
+    )
+    directional_analysis = models.ForeignKey(
+        DirectionalCoverageAnalysis,
+        related_name="phase2_validation_bundles",
+        on_delete=models.PROTECT,
+    )
+    calibration_set = models.ForeignKey(
+        CalibrationSet,
+        related_name="phase2_validation_bundles",
+        on_delete=models.PROTECT,
+    )
+    supersedes = models.ForeignKey(
+        "self",
+        related_name="retries",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+    )
+    validation_profile_id = models.CharField(max_length=80)
+    validation_profile_version = models.CharField(max_length=120)
+    app_version = models.CharField(max_length=80)
+    job_state = models.CharField(
+        max_length=12,
+        choices=JobState.choices,
+        default=JobState.QUEUED,
+    )
+    progress_step = models.CharField(max_length=80, default="queued")
+    progress_percent = models.PositiveSmallIntegerField(
+        default=0,
+        validators=[MinValueValidator(0), MaxValueValidator(100)],
+    )
+    status = models.CharField(max_length=12, choices=Status.choices, default=Status.DRAFT)
+    input_snapshot = models.JSONField()
+    input_sha256 = models.CharField(max_length=64)
+    result_snapshot = models.JSONField(default=dict, blank=True)
+    result_sha256 = models.CharField(max_length=64, blank=True)
+    failure_code = models.CharField(max_length=80, blank=True)
+    failure_message = models.CharField(max_length=240, blank=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        related_name="created_phase2_validation_bundles",
+        on_delete=models.PROTECT,
+    )
+    approved_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        related_name="approved_phase2_validation_bundles",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    started_at = models.DateTimeField(null=True, blank=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    approved_at = models.DateTimeField(null=True, blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(
+                fields=["incident", "job_state"],
+                name="rf_p2val_inc_state_idx",
+            ),
+            models.Index(
+                fields=["incident", "status"],
+                name="rf_p2val_inc_status_idx",
+            ),
+        ]
+        constraints = [
+            models.CheckConstraint(
+                condition=(
+                    models.Q(
+                        status="draft",
+                        approved_by__isnull=True,
+                        approved_at__isnull=True,
+                    )
+                    | models.Q(
+                        status="approved",
+                        approved_by__isnull=False,
+                        approved_at__isnull=False,
+                    )
+                ),
+                name="rf_p2val_approval_consistent",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    models.Q(
+                        job_state="queued",
+                        started_at__isnull=True,
+                        completed_at__isnull=True,
+                        progress_percent=0,
+                    )
+                    | models.Q(
+                        job_state="running",
+                        started_at__isnull=False,
+                        completed_at__isnull=True,
+                    )
+                    | models.Q(
+                        job_state__in=["complete", "failed", "cancelled"],
+                        completed_at__isnull=False,
+                    )
+                ),
+                name="rf_p2val_job_state_consistent",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    models.Q(
+                        job_state="complete",
+                    )
+                    & ~models.Q(result_sha256="")
+                    | ~models.Q(job_state="complete")
+                ),
+                name="rf_p2val_complete_has_digest",
+            ),
+        ]
+
+    def __str__(self):
+        return (
+            f"{self.incident}: {self.validation_profile_version} ({self.job_state}; {self.status})"
+        )
+
+    def save(self, *args, **kwargs):
+        if self.pk:
+            previous = Phase2ValidationBundle.objects.filter(pk=self.pk).first()
+            if previous:
+                immutable_fields = (
+                    "incident_id",
+                    "approved_revision_id",
+                    "haat_calculation_id",
+                    "coverage_estimate_id",
+                    "directional_analysis_id",
+                    "calibration_set_id",
+                    "supersedes_id",
+                    "validation_profile_id",
+                    "validation_profile_version",
+                    "app_version",
+                    "input_snapshot",
+                    "input_sha256",
+                    "created_by_id",
+                )
+                if any(
+                    getattr(self, field) != getattr(previous, field) for field in immutable_fields
+                ):
+                    raise ValidationError(
+                        "Phase 2 validation source selections and inputs are immutable."
+                    )
+                if previous.job_state in {
+                    self.JobState.COMPLETE,
+                    self.JobState.FAILED,
+                    self.JobState.CANCELLED,
+                }:
+                    terminal_fields = (
+                        "job_state",
+                        "progress_step",
+                        "progress_percent",
+                        "result_snapshot",
+                        "result_sha256",
+                        "failure_code",
+                        "failure_message",
+                        "started_at",
+                        "completed_at",
+                    )
+                    if any(
+                        getattr(self, field) != getattr(previous, field)
+                        for field in terminal_fields
+                    ):
+                        raise ValidationError("Completed Phase 2 validation evidence is immutable.")
+                if previous.status == self.Status.APPROVED:
+                    raise ValidationError("Approved Phase 2 validation bundles are immutable.")
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError("Phase 2 validation bundles are retained.")
+
+    @property
+    def is_locked(self):
+        return self.status == self.Status.APPROVED

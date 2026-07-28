@@ -1,17 +1,30 @@
+import hashlib
+
 from django.db.models import Prefetch
+from django.http import HttpResponse
 from django.utils import timezone
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema, extend_schema_view
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
-from rest_framework.exceptions import PermissionDenied
+from rest_framework.exceptions import PermissionDenied, ValidationError
+from rest_framework.parsers import JSONParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.accounts.models import Role
 from apps.accounts.permissions import PolicyPermission
-from apps.accounts.policy import RF_APPROVE, RF_EDIT, RF_VIEW, role_for_user, user_has_permission
+from apps.accounts.policy import (
+    PLAN_EXPORT,
+    RF_APPROVE,
+    RF_EDIT,
+    RF_VIEW,
+    role_for_user,
+    user_has_permission,
+)
+from apps.audit.models import AuditEvent
+from apps.audit.serializers import ExportDigestVerificationRequestSerializer
 from apps.audit.services import record_event
 
 from .calibration import (
@@ -44,9 +57,19 @@ from .models import (
     ElevationSnapshot,
     FieldObservation,
     HAATCalculation,
+    Phase2ValidationBundle,
     RFAnalysisInputSnapshot,
     SubscriberProfile,
     SubscriberProfileVersion,
+)
+from .phase2_validation import (
+    approve_validation_bundle,
+    cancel_validation_bundle,
+    queue_validation_bundle,
+    run_validation_bundle,
+    sha256_bytes,
+    validation_export_bytes,
+    validation_status,
 )
 from .serializers import (
     CalibrationSetSerializer,
@@ -56,11 +79,13 @@ from .serializers import (
     CreateDirectionalCoverageAnalysisSerializer,
     CreateFieldObservationSerializer,
     CreateHAATCalculationSerializer,
+    CreatePhase2ValidationBundleSerializer,
     CreateRFAnalysisInputSnapshotSerializer,
     DirectionalCoverageAnalysisSerializer,
     ElevationSnapshotSerializer,
     FieldObservationSerializer,
     HAATCalculationSerializer,
+    Phase2ValidationBundleSerializer,
     ReviewFieldObservationSerializer,
     RFAnalysisInputSnapshotSerializer,
     SubscriberProfileSerializer,
@@ -933,3 +958,271 @@ class CalibrationStatusView(APIView):
     @extend_schema(responses={200: OpenApiTypes.OBJECT})
     def get(self, request):
         return Response(calibration_status())
+
+
+class Phase2ValidationBundleViewSet(
+    mixins.ListModelMixin,
+    mixins.RetrieveModelMixin,
+    mixins.CreateModelMixin,
+    viewsets.GenericViewSet,
+):
+    queryset = Phase2ValidationBundle.objects.none()
+    serializer_class = Phase2ValidationBundleSerializer
+    permission_classes = [PolicyPermission]
+    policy_actions = {
+        "list": RF_VIEW,
+        "retrieve": RF_VIEW,
+        "create": RF_EDIT,
+        "run": RF_EDIT,
+        "cancel": RF_EDIT,
+        "retry": RF_EDIT,
+        "approve": RF_APPROVE,
+        "export": RF_APPROVE,
+        "verify": RF_APPROVE,
+    }
+
+    def get_queryset(self):
+        queryset = scoped_to_incidents(
+            Phase2ValidationBundle.objects.select_related(
+                "incident",
+                "approved_revision__plan__incident",
+                "approved_revision__plan__operational_period",
+                "haat_calculation__elevation_snapshot",
+                "haat_calculation__rf_input_snapshot",
+                "coverage_estimate",
+                "directional_analysis__infrastructure_rf_input_snapshot",
+                "directional_analysis__subscriber_rf_input_snapshot",
+                "calibration_set",
+                "created_by",
+                "approved_by",
+                "supersedes",
+            ).prefetch_related(
+                "approved_revision__assignments__site_links",
+                "approved_revision__relationships__assignments",
+                "calibration_set__observation_links__observation__reviews",
+            ),
+            self.request.user,
+        )
+        incident_id = self.request.query_params.get("incident")
+        return queryset.filter(incident_id=incident_id) if incident_id else queryset
+
+    def get_serializer_class(self):
+        if self.action == "create":
+            return CreatePhase2ValidationBundleSerializer
+        return Phase2ValidationBundleSerializer
+
+    @extend_schema(
+        request=CreatePhase2ValidationBundleSerializer,
+        responses={201: Phase2ValidationBundleSerializer},
+    )
+    def create(self, request, *args, **kwargs):
+        request_serializer = CreatePhase2ValidationBundleSerializer(data=request.data)
+        request_serializer.is_valid(raise_exception=True)
+        values = request_serializer.validated_data
+        incident = values["incident"]
+        if not user_has_permission(request.user, RF_EDIT, incident):
+            raise PermissionDenied("Your incident role cannot queue Phase 2 validation evidence.")
+        bundle = queue_validation_bundle(actor=request.user, **values)
+        record_event(
+            actor=request.user,
+            action="phase2_validation.queued",
+            target=bundle,
+            details={
+                "approved_revision_id": str(bundle.approved_revision_id),
+                "haat_result_sha256": bundle.haat_calculation.result_sha256,
+                "coverage_result_sha256": bundle.coverage_estimate.result_sha256,
+                "directional_result_sha256": bundle.directional_analysis.result_sha256,
+                "calibration_result_sha256": bundle.calibration_set.result_sha256,
+                "input_sha256": bundle.input_sha256,
+                "validation_profile_version": bundle.validation_profile_version,
+            },
+        )
+        return Response(
+            Phase2ValidationBundleSerializer(bundle).data,
+            status=status.HTTP_201_CREATED,
+        )
+
+    @extend_schema(request=None, responses={200: Phase2ValidationBundleSerializer})
+    @action(detail=True, methods=["post"])
+    def run(self, request, pk=None):
+        bundle = run_validation_bundle(self.get_object())
+        record_event(
+            actor=request.user,
+            action=(
+                "phase2_validation.completed"
+                if bundle.job_state == Phase2ValidationBundle.JobState.COMPLETE
+                else "phase2_validation.failed"
+            ),
+            target=bundle,
+            details={
+                "job_state": bundle.job_state,
+                "failure_code": bundle.failure_code,
+                "input_sha256": bundle.input_sha256,
+                "result_sha256": bundle.result_sha256,
+                "validation_profile_version": bundle.validation_profile_version,
+            },
+        )
+        return Response(Phase2ValidationBundleSerializer(bundle).data)
+
+    @extend_schema(request=None, responses={200: Phase2ValidationBundleSerializer})
+    @action(detail=True, methods=["post"])
+    def cancel(self, request, pk=None):
+        bundle = cancel_validation_bundle(self.get_object())
+        record_event(
+            actor=request.user,
+            action="phase2_validation.cancelled",
+            target=bundle,
+            details={"job_state": bundle.job_state, "failure_code": bundle.failure_code},
+        )
+        return Response(Phase2ValidationBundleSerializer(bundle).data)
+
+    @extend_schema(request=None, responses={201: Phase2ValidationBundleSerializer})
+    @action(detail=True, methods=["post"])
+    def retry(self, request, pk=None):
+        source = self.get_object()
+        if source.job_state not in {
+            Phase2ValidationBundle.JobState.FAILED,
+            Phase2ValidationBundle.JobState.CANCELLED,
+        }:
+            raise ValidationError("Only failed or cancelled validation work can be retried.")
+        bundle = queue_validation_bundle(
+            incident=source.incident,
+            approved_revision=source.approved_revision,
+            haat_calculation=source.haat_calculation,
+            coverage_estimate=source.coverage_estimate,
+            directional_analysis=source.directional_analysis,
+            calibration_set=source.calibration_set,
+            supersedes=source,
+            actor=request.user,
+        )
+        record_event(
+            actor=request.user,
+            action="phase2_validation.retried",
+            target=bundle,
+            details={
+                "supersedes_id": str(source.id),
+                "input_sha256": bundle.input_sha256,
+            },
+        )
+        return Response(
+            Phase2ValidationBundleSerializer(bundle).data,
+            status=status.HTTP_201_CREATED,
+        )
+
+    @extend_schema(request=None, responses={200: Phase2ValidationBundleSerializer})
+    @action(detail=True, methods=["post"])
+    def approve(self, request, pk=None):
+        bundle = approve_validation_bundle(self.get_object(), actor=request.user)
+        record_event(
+            actor=request.user,
+            action="phase2_validation.approved",
+            target=bundle,
+            details={
+                "changed_fields": ["approved_at", "approved_by", "status"],
+                "result_sha256": bundle.result_sha256,
+                "validation_profile_version": bundle.validation_profile_version,
+            },
+        )
+        return Response(Phase2ValidationBundleSerializer(bundle).data)
+
+    def _require_controlled_export_permission(self, request, bundle):
+        if not user_has_permission(request.user, PLAN_EXPORT, bundle.incident):
+            raise PermissionDenied(
+                "Controlled Phase 2 evidence export also requires plan export permission."
+            )
+
+    @extend_schema(request=None, responses={(200, "application/json"): OpenApiTypes.BINARY})
+    @action(detail=True, methods=["get"])
+    def export(self, request, pk=None):
+        bundle = self.get_object()
+        self._require_controlled_export_permission(request, bundle)
+        content = validation_export_bytes(bundle)
+        digest = sha256_bytes(content)
+        record_event(
+            actor=request.user,
+            action="phase2_validation.exported",
+            target=bundle,
+            details={
+                "format": "json",
+                "content_sha256": digest,
+                "byte_size": len(content),
+                "result_sha256": bundle.result_sha256,
+                "validation_profile_version": bundle.validation_profile_version,
+            },
+        )
+        response = HttpResponse(content, content_type="application/json")
+        response["Content-Disposition"] = (
+            f'attachment; filename="phase-2-validation-{bundle.id}.json"'
+        )
+        response["X-Content-SHA256"] = digest
+        return response
+
+    @extend_schema(
+        request=ExportDigestVerificationRequestSerializer,
+        responses={200: OpenApiTypes.OBJECT},
+    )
+    @action(
+        detail=True,
+        methods=["post"],
+        parser_classes=[JSONParser, MultiPartParser],
+    )
+    def verify(self, request, pk=None):
+        bundle = self.get_object()
+        self._require_controlled_export_permission(request, bundle)
+        serializer = ExportDigestVerificationRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        content_sha256 = serializer.validated_data.get("content_sha256")
+        uploaded_file = serializer.validated_data.get("file")
+        if uploaded_file is not None:
+            if uploaded_file.size > 10 * 1024 * 1024:
+                raise ValidationError({"file": "The verification upload limit is 10 MiB."})
+            hasher = hashlib.sha256()
+            for chunk in uploaded_file.chunks():
+                hasher.update(chunk)
+            content_sha256 = hasher.hexdigest()
+        if not content_sha256:
+            raise ValidationError({"content_sha256": "Provide a SHA-256 digest or a file to hash."})
+        event = (
+            AuditEvent.objects.filter(
+                action="phase2_validation.exported",
+                target_type=bundle._meta.label_lower,
+                target_id=str(bundle.id),
+                details__content_sha256=content_sha256.strip().lower(),
+            )
+            .order_by("sequence")
+            .first()
+        )
+        record_event(
+            actor=request.user,
+            action="phase2_validation.export_verified",
+            target=bundle,
+            details={
+                "content_sha256": content_sha256.strip().lower(),
+                "verified": event is not None,
+            },
+        )
+        if event is None:
+            return Response(
+                {
+                    "verified": False,
+                    "detail": "No controlled export audit event matches this digest.",
+                }
+            )
+        return Response(
+            {
+                "verified": True,
+                "audit_event_id": str(event.id),
+                "occurred_at": event.occurred_at,
+                "actor_id": event.actor_id,
+                "byte_size": event.details.get("byte_size"),
+                "result_sha256": event.details.get("result_sha256"),
+            }
+        )
+
+
+class Phase2ValidationStatusView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(responses={200: OpenApiTypes.OBJECT})
+    def get(self, request):
+        return Response(validation_status())

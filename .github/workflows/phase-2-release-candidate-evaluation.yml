@@ -1,0 +1,225 @@
+name: Phase 2 RC evaluation
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/phase-2-release-candidate-evaluation.yml"
+      - "backend/apps/rf_analysis/**"
+      - "backend/tests/test_phase2_validation_api.py"
+      - "frontend/src/Phase2ValidationWorkspace.tsx"
+      - "frontend/tests/Phase2ValidationWorkspace.test.tsx"
+      - "compose.production.yaml"
+      - "scripts/database-recovery.sh"
+      - "docs/releases/v0.2.0-rc.1*"
+
+concurrency:
+  group: "phase-2-rc-evaluation-${{ github.event.pull_request.number || github.sha }}"
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+jobs:
+  installed-stack-evidence:
+    name: Installed stack and recovery evidence
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Record public evaluation environment
+        shell: bash
+        run: |
+          mkdir -p evaluation-evidence
+          {
+            printf 'classification=synthetic-only\n'
+            printf 'evaluated_commit=%s\n' "$GITHUB_SHA"
+            printf 'runner_os=%s\n' "$RUNNER_OS"
+            printf 'runner_arch=%s\n' "$RUNNER_ARCH"
+            docker --version
+            docker compose version
+          } > evaluation-evidence/environment.txt
+
+      - name: Create protected synthetic configuration
+        shell: bash
+        run: |
+          deploy_env="$RUNNER_TEMP/ict-phase2-rc.env"
+          umask 077
+          {
+            echo 'POSTGRES_DB=ict_toolkit_phase2_rc'
+            echo 'POSTGRES_USER=ict_toolkit_phase2_rc'
+            echo 'POSTGRES_PASSWORD=synthetic-phase2-rc-database-password'
+            echo 'DJANGO_SECRET_KEY=synthetic-phase2-rc-django-secret-key'
+            echo 'DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1,backend'
+            echo 'DJANGO_CORS_ALLOWED_ORIGINS=http://127.0.0.1:8088'
+            echo 'DJANGO_FORCE_HTTPS=false'
+            echo 'DJANGO_SUPERUSER_USERNAME=synthetic-phase2-rc-admin'
+            echo 'DJANGO_SUPERUSER_EMAIL=synthetic-phase2-rc-admin@example.invalid'
+            echo 'DJANGO_SUPERUSER_PASSWORD=synthetic-phase2-rc-admin-password'
+            echo 'APP_BIND_ADDRESS=127.0.0.1'
+            echo 'APP_PORT=8088'
+            echo 'ICT_IDENTITY_PROVIDER=local'
+            echo 'ICT_APPROVED_REFERENCE_IMPORTS=[]'
+            echo 'ICT_GEOCODER_PROVIDER=apps.sites.geocoders.DisabledGeocoder'
+            echo 'ICT_ELEVATION_PROVIDER=apps.rf_analysis.elevation.DisabledElevationProvider'
+            echo 'ICT_APPROVED_ELEVATION_SOURCES=[]'
+            echo 'ICT_APPROVED_COVERAGE_CONFIGURATIONS=[]'
+            echo 'ICT_APPROVED_DIRECTIONAL_RULES=[]'
+            echo 'ICT_APPROVED_CALIBRATION_METHODS=[]'
+            echo 'ICT_APPROVED_PHASE2_VALIDATION_PROFILES=[]'
+          } > "$deploy_env"
+          chmod 600 "$deploy_env"
+          echo "DEPLOY_ENV=$deploy_env" >> "$GITHUB_ENV"
+
+      - name: Build and start clean production Compose stack
+        shell: bash
+        run: |
+          docker compose \
+            --env-file "$DEPLOY_ENV" \
+            -f compose.production.yaml \
+            config --quiet
+          docker compose \
+            --env-file "$DEPLOY_ENV" \
+            -f compose.production.yaml \
+            build
+          docker compose \
+            --env-file "$DEPLOY_ENV" \
+            -f compose.production.yaml \
+            up --detach --wait
+          docker compose \
+            --env-file "$DEPLOY_ENV" \
+            -f compose.production.yaml \
+            ps > evaluation-evidence/compose-services.txt
+
+      - name: Verify installed health and fail-closed profile status
+        shell: bash
+        run: |
+          curl --fail --silent --show-error \
+            http://127.0.0.1:8088/api/health/ \
+            --output evaluation-evidence/health.json
+          token_response="$(
+            curl --fail --silent --show-error \
+              --header 'Content-Type: application/json' \
+              --data '{"username":"synthetic-phase2-rc-admin","password":"synthetic-phase2-rc-admin-password"}' \
+              http://127.0.0.1:8088/api/auth/token/
+          )"
+          token="$(
+            TOKEN_RESPONSE="$token_response" python -c \
+              'import json, os; print(json.loads(os.environ["TOKEN_RESPONSE"])["token"])'
+          )"
+          curl --fail --silent --show-error \
+            --header "Authorization: Token $token" \
+            http://127.0.0.1:8088/api/phase2-validation-status/ \
+            --output evaluation-evidence/phase2-status.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          health = json.loads(Path("evaluation-evidence/health.json").read_text())
+          status = json.loads(Path("evaluation-evidence/phase2-status.json").read_text())
+          assert health["status"] == "ok", health
+          assert health["database"] == "postgresql", health
+          assert health["postgis"], health
+          assert status["validation_profile_version"] == (
+              "phase-2-validation-v1-provisional"
+          ), status
+          assert status["approved_for_release_candidate_use"] is False, status
+          assert status["execution_model"] == "explicit synchronous staged job", status
+          PY
+
+      - name: Exercise the synthetic end-to-end validation pipeline
+        shell: bash
+        run: |
+          docker compose \
+            --env-file "$DEPLOY_ENV" \
+            -f compose.production.yaml \
+            exec -T backend \
+            pytest --no-cov -q tests/test_phase2_validation_api.py \
+            | tee evaluation-evidence/phase2-integration.txt
+
+      - name: Verify backup and isolated restore
+        shell: bash
+        env:
+          ICT_BACKUP_DIR: ${{ runner.temp }}/ict-phase2-rc-backups
+        run: |
+          export ICT_APP_DIR="$GITHUB_WORKSPACE"
+          export ICT_DEPLOY_ENV_FILE="$DEPLOY_ENV"
+          export ICT_COMPOSE_FILE="$GITHUB_WORKSPACE/compose.production.yaml"
+          backup_path="$ICT_BACKUP_DIR/phase2-rc.dump"
+          scripts/database-recovery.sh backup "$backup_path" \
+            > evaluation-evidence/backup.txt
+          scripts/database-recovery.sh verify "$backup_path" \
+            > evaluation-evidence/backup-verify.txt
+          scripts/database-recovery.sh drill "$backup_path" \
+            > evaluation-evidence/restore-drill.txt
+          sha256sum "$backup_path" \
+            | awk '{print $1 "  phase2-rc.dump"}' \
+            > evaluation-evidence/backup-sha256.txt
+
+      - name: Rehearse P2.6 migration rollback and reapply
+        shell: bash
+        run: |
+          docker compose \
+            --env-file "$DEPLOY_ENV" \
+            -f compose.production.yaml \
+            exec -T backend \
+            python manage.py migrate rf_analysis 0005 --noinput \
+            | tee evaluation-evidence/migration-rollback.txt
+          docker compose \
+            --env-file "$DEPLOY_ENV" \
+            -f compose.production.yaml \
+            exec -T backend \
+            python manage.py migrate --noinput \
+            | tee evaluation-evidence/migration-reapply.txt
+          docker compose \
+            --env-file "$DEPLOY_ENV" \
+            -f compose.production.yaml \
+            exec -T backend \
+            python manage.py showmigrations rf_analysis \
+            > evaluation-evidence/migration-state.txt
+          grep -Eq '\[X\][[:space:]]+0006_phase2validationbundle' \
+            evaluation-evidence/migration-state.txt
+
+      - name: Verify audit chain and container health after recovery exercise
+        shell: bash
+        run: |
+          docker compose \
+            --env-file "$DEPLOY_ENV" \
+            -f compose.production.yaml \
+            exec -T backend \
+            python manage.py shell -c \
+            "from apps.audit.services import verify_audit_chain; ok, event = verify_audit_chain(); print({'ok': ok, 'broken_sequence': getattr(event, 'sequence', None)}); raise SystemExit(0 if ok else 1)" \
+            | tee evaluation-evidence/audit-chain.txt
+          docker compose \
+            --env-file "$DEPLOY_ENV" \
+            -f compose.production.yaml \
+            ps --status running --services \
+            | sort > evaluation-evidence/running-services.txt
+          diff -u \
+            <(printf 'backend\ndb\nfrontend\n') \
+            evaluation-evidence/running-services.txt
+
+      - name: Upload sanitized evaluation evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: phase-2-rc-evaluation-${{ github.sha }}
+          path: evaluation-evidence/
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Remove temporary evaluation stack
+        if: always()
+        shell: bash
+        run: |
+          if [[ -n "${DEPLOY_ENV:-}" && -f "$DEPLOY_ENV" ]]; then
+            docker compose \
+              --env-file "$DEPLOY_ENV" \
+              -f compose.production.yaml \
+              down --volumes --remove-orphans
+          fi

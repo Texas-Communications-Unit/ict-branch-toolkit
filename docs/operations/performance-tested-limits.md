@@ -86,3 +86,27 @@ data, review database query plans and resource utilization, define acceptable
 latency and concurrency targets, and complete the Issue #7 security and
 operational human gates. Maintainer approval is still required for every merge
 and deployment.
+
+## Phase 2 validation workload
+
+P2.6 adds focused deterministic integration coverage for one approved plan,
+one HAAT/coverage/directional chain, three reviewed synthetic observations, one
+calibration set, one validation bundle, controlled export, digest verification,
+cancellation/retry, stale-review handling, and incident isolation.
+
+The first implementation executes the validation result synchronously after an
+explicit request. It does not publish a wall-clock capacity, concurrency limit,
+queue throughput, or safe maximum observation count. General pagination and
+authenticated throttling still apply. The interface reports durable staged
+state, but mid-request cancellation and background-worker recovery are
+explicitly unsupported.
+
+The server rejects a bundle above 1,000 plan assignments or 1,000 calibration
+observations and rejects verification uploads above 10 MiB. Those ceilings
+bound accidental resource use; the current release-candidate fixture does not
+validate performance at either ceiling.
+
+Before expanding the tested synthetic scope, record observation/assignment
+counts, result/export byte size, PostgreSQL query plans, CPU/memory, concurrent
+requests, timeout behavior, and audit growth. Do not infer production capacity
+from the three-observation release-candidate fixture.

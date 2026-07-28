@@ -673,6 +673,33 @@ test("administrator signs in and sees the incident planning workspace", async ({
       },
     }),
   );
+  await page.route("**/api/phase2-validation-status/", (route) =>
+    route.fulfill({
+      json: {
+        validation_profile_id: "phase-2-validation",
+        validation_profile_version: "phase-2-validation-v1-provisional",
+        validation_method_version:
+          "deterministic-distance-ratio-comparison-v1-provisional",
+        approved_for_release_candidate_use: false,
+        execution_model: "explicit synchronous staged job",
+        cancellation_boundary:
+          "Queued work can be cancelled before execution. Mid-request cancellation is not configured.",
+        classification: "NON-PRODUCTION PHASE 2 VALIDATION EVIDENCE",
+        resource_safety_limits: {
+          maximum_plan_assignments: 1000,
+          maximum_calibration_observations: 1000,
+          maximum_verification_upload_bytes: 10485760,
+        },
+        disclaimer:
+          "Deterministic software evidence only; not field or scientific validation.",
+      },
+    }),
+  );
+  await page.route("**/api/phase2-validation-bundles/?incident=*", (route) =>
+    route.fulfill({
+      json: { count: 0, next: null, previous: null, results: [] },
+    }),
+  );
   await page.route("**/api/field-observations/?incident=*", (route) =>
     route.fulfill({
       json: {
@@ -792,7 +819,7 @@ test("administrator signs in and sees the incident planning workspace", async ({
   await expect(skipLink).toBeFocused();
   await skipLink.press("Enter");
   await expect(page.locator("#main-content")).toBeFocused();
-  await expect(page.getByText(/P2.5 Prototype/)).toBeVisible();
+  await expect(page.getByText(/P2.6 RC Prototype/)).toBeVisible();
   await expect(page.getByRole("heading", { name: "ICS-205" })).toBeVisible();
   await expect(
     page.getByText("SYN CALL", { exact: true }).first(),
@@ -957,6 +984,21 @@ test("administrator signs in and sees the incident planning workspace", async ({
   await expect(calibrationTable).toContainText("1.100× distance");
   await expect(calibrationTable).toContainText("100.0 m → 10.0 m");
   await expect(calibrationTable).toContainText("Incident-local · not promoted");
+  const phase2ValidationWorkspace = page.getByRole("region", {
+    name: "End-to-end validation bundle",
+  });
+  await expect(phase2ValidationWorkspace).toBeVisible();
+  await expect(
+    phase2ValidationWorkspace.getByText("phase-2-validation-v1-provisional", {
+      exact: true,
+    }),
+  ).toBeVisible();
+  await expect(
+    phase2ValidationWorkspace.getByText(
+      "Fail closed — qualified review still required",
+      { exact: true },
+    ),
+  ).toBeVisible();
   await page
     .getByLabel("Coordinate", { exact: true })
     .fill("33° 12′ 52.20″ N, 97° 07′ 59.16″ W");
@@ -1000,7 +1042,7 @@ test("administrator signs in and sees the incident planning workspace", async ({
   await expect(
     page.getByRole("heading", { name: "ICT Branch Toolkit" }),
   ).toBeVisible();
-  await expect(page.getByText(/P2.5 Prototype/)).toBeVisible();
+  await expect(page.getByText(/P2.6 RC Prototype/)).toBeVisible();
   await expectDocumentReflow(page);
   await expectNoAccessibilityViolations(
     page,

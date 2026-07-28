@@ -691,3 +691,73 @@ export interface CreateCalibrationSetPayload {
     maximum_ratio: string;
   };
 }
+
+export interface Phase2ValidationStatus {
+  validation_profile_id: string;
+  validation_profile_version: string;
+  validation_method_version: string;
+  approved_for_release_candidate_use: boolean;
+  execution_model: string;
+  cancellation_boundary: string;
+  classification: string;
+  resource_safety_limits: {
+    maximum_plan_assignments: number;
+    maximum_calibration_observations: number;
+    maximum_verification_upload_bytes: number;
+  };
+  disclaimer: string;
+}
+
+export interface Phase2ValidationBundle {
+  id: string;
+  incident: string;
+  approved_revision: string;
+  haat_calculation: string;
+  coverage_estimate: string;
+  directional_analysis: string;
+  calibration_set: string;
+  supersedes: string | null;
+  validation_profile_id: string;
+  validation_profile_version: string;
+  app_version: string;
+  job_state: "queued" | "running" | "complete" | "failed" | "cancelled";
+  progress_step: string;
+  progress_percent: number;
+  status: "draft" | "approved";
+  input_snapshot: Record<string, unknown>;
+  input_sha256: string;
+  result_snapshot: Record<string, unknown>;
+  result_sha256: string;
+  failure_code: string;
+  failure_message: string;
+  created_by: number;
+  approved_by: number | null;
+  created_at: string;
+  started_at: string | null;
+  completed_at: string | null;
+  approved_at: string | null;
+  updated_at: string;
+  is_locked: boolean;
+  is_stale: boolean;
+  stale_reasons: string[];
+  approval_eligible: boolean;
+}
+
+export interface CreatePhase2ValidationBundlePayload {
+  incident: string;
+  approved_revision: string;
+  haat_calculation: string;
+  coverage_estimate: string;
+  directional_analysis: string;
+  calibration_set: string;
+}
+
+export interface Phase2ExportVerification {
+  verified: boolean;
+  detail?: string;
+  audit_event_id?: string;
+  occurred_at?: string;
+  actor_id?: number;
+  byte_size?: number;
+  result_sha256?: string;
+}

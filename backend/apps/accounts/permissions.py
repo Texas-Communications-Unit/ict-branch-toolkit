@@ -25,6 +25,10 @@ class PolicyPermission(BasePermission):
             "create_snapshot",
             "retry",
             "review",
+            "run",
+            "cancel",
+            "export",
+            "verify",
         }:
             return True
         if action == "create" and getattr(view, "basename", None) in {
@@ -34,6 +38,7 @@ class PolicyPermission(BasePermission):
             "haat-calculation",
             "field-observation",
             "calibration-set",
+            "phase2-validation-bundle",
         }:
             return True
         return required is None or user_has_permission(request.user, required)

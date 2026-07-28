@@ -70,6 +70,14 @@ fixtures use synthetic observers, locations, measurements, source identifiers, a
 Real field evidence, screenshots, exports, database backups, or support material require an
 approved classification, access, retention, disclosure, and destruction plan.
 
+Phase 2 validation bundles inherit the strictest classification of the
+incident, plan, RF inputs, sites, terrain, observations, and calibration
+evidence. The controlled export omits plan contacts and remarks plus
+observation coordinates, observer/source text, and notes, but minimization does
+not declassify the remaining infrastructure, capability, actor, time, or digest
+evidence. Exports and backups remain protected application records unless an
+explicit authority determines otherwise.
+
 ## Current prototype controls
 
 - Centralized backend policy for installation and incident-scoped roles.
