@@ -838,6 +838,11 @@ footer a {
   gap: 0.45rem;
   min-width: max-content;
 }
+.footer-links a {
+  align-items: center;
+  display: inline-flex;
+  min-height: 2.75rem;
+}
 @media (max-width: 900px) {
   .workspace {
     grid-template-columns: 1fr;
