@@ -86,7 +86,8 @@ const capability: OfflineStatus = {
   protection: {
     browser_storage: "AES-256-GCM encrypted IndexedDB envelope",
     key_derivation: "PBKDF2-SHA-256",
-    key_persistence: "The unlock key remains in memory only.",
+    unlock_material:
+      "Passphrase-derived unlock material remains in memory only.",
     limitation: "An unlocked or compromised browser remains exposed.",
   },
   supported_operations: ["revision.update", "assignment.update"],

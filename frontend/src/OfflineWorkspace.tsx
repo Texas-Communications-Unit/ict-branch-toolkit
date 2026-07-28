@@ -680,7 +680,7 @@ export function OfflineWorkspace({ incident }: OfflineWorkspaceProps) {
             <strong>Local protection</strong>
             <span>{capability.protection.browser_storage}</span>
             <span>{capability.protection.key_derivation}</span>
-            <span>{capability.protection.key_persistence}</span>
+            <span>{capability.protection.unlock_material}</span>
             <p>{capability.protection.limitation}</p>
           </article>
           <article className="resource-card">

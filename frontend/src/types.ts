@@ -1023,7 +1023,7 @@ export interface OfflineStatus {
   protection: {
     browser_storage: string;
     key_derivation: string;
-    key_persistence: string;
+    unlock_material: string;
     limitation: string;
   };
   supported_operations: string[];

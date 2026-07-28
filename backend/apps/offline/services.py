@@ -98,7 +98,7 @@ def offline_status() -> dict[str, Any]:
         "protection": {
             "browser_storage": "AES-256-GCM encrypted IndexedDB envelope",
             "key_derivation": "PBKDF2-SHA-256 with per-package salt and 310000 iterations",
-            "key_persistence": "The unlock key remains in memory only.",
+            "unlock_material": "Passphrase-derived unlock material remains in memory only.",
             "limitation": (
                 "Browser encryption protects data at rest after lock. It does not protect an "
                 "unlocked session or a compromised browser/device."
