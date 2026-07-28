@@ -909,3 +909,188 @@ footer a {
     flex-direction: column;
   }
 }
+
+.haat-panel {
+  background: var(--tx-comu-white);
+  border: 1px solid var(--tx-comu-border);
+  border-radius: 1rem;
+  box-shadow: 0 0.7rem 1.8rem var(--tx-comu-shadow);
+  padding: 1.25rem;
+}
+
+.elevation-provider-card,
+.haat-form,
+.haat-result-card {
+  border: 1px solid var(--tx-comu-border);
+  border-radius: 0.8rem;
+  margin-top: 1rem;
+  padding: 1rem;
+}
+
+.elevation-provider-card {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.elevation-provider-card > div:first-child,
+.haat-result-heading > div:first-child {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.elevation-provider-card.available {
+  border-left: 0.35rem solid #2f7d32;
+}
+
+.elevation-provider-card.unavailable {
+  border-left: 0.35rem solid #a64b00;
+}
+
+.warning-text,
+.haat-warnings {
+  background: #fff5e6;
+  border: 1px solid #dba45d;
+  border-radius: 0.55rem;
+  color: #6c3700;
+  padding: 0.75rem;
+}
+
+.state-badge {
+  align-items: center;
+  border: 1px solid var(--tx-comu-border);
+  border-radius: 999px;
+  display: inline-flex;
+  font-size: 0.78rem;
+  font-weight: 700;
+  justify-content: center;
+  padding: 0.25rem 0.65rem;
+  text-transform: capitalize;
+  width: fit-content;
+}
+
+.state-badge.complete {
+  background: #e8f5e9;
+  border-color: #79ae7b;
+  color: #1e5e25;
+}
+
+.state-badge.partial {
+  background: #fff5e6;
+  border-color: #dba45d;
+  color: #6c3700;
+}
+
+.state-badge.unavailable {
+  background: #f8e9e7;
+  border-color: #c77b72;
+  color: #7d2118;
+}
+
+.provenance-grid,
+.haat-measurements {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  margin: 1rem 0;
+}
+
+.provenance-grid div,
+.haat-measurements div {
+  background: var(--tx-comu-light);
+  border-radius: 0.55rem;
+  padding: 0.65rem;
+}
+
+.provenance-grid dt,
+.haat-measurements dt {
+  color: var(--tx-comu-slate);
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.provenance-grid dd,
+.haat-measurements dd {
+  margin: 0.3rem 0 0;
+  overflow-wrap: anywhere;
+}
+
+.haat-form {
+  display: grid;
+  gap: 0.85rem;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+}
+
+.haat-form h3,
+.haat-form .form-note,
+.haat-form fieldset,
+.haat-form .checkbox-label,
+.haat-form > button {
+  grid-column: 1 / -1;
+}
+
+.haat-form fieldset {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+}
+
+.checkbox-label {
+  align-items: center;
+  display: flex;
+  flex-direction: row;
+  gap: 0.6rem;
+}
+
+.checkbox-label input {
+  width: auto;
+}
+
+.haat-results {
+  margin-top: 1.25rem;
+}
+
+.haat-result-heading {
+  align-items: flex-start;
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+}
+
+.state-badges {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.haat-measurements .haat-primary-value {
+  background: #e7f0f8;
+  border: 1px solid #8bacc8;
+}
+
+.haat-primary-value dd {
+  color: var(--tx-comu-blue);
+  font-size: 1.35rem;
+  font-weight: 800;
+}
+
+.haat-warnings ul {
+  margin-bottom: 0;
+}
+
+.haat-result-card details {
+  margin-top: 0.85rem;
+}
+
+.haat-result-card pre {
+  max-height: 22rem;
+  overflow: auto;
+}
+
+@media (max-width: 640px) {
+  .haat-result-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}

@@ -87,6 +87,24 @@ See the [Phase 2 RF input data model](../data-model/phase-2.md) and
 [ADR-0008](../adr/0008-versioned-rf-analysis-inputs-and-subscriber-profiles.md) for the exact
 implemented fields, provisional validators, snapshot boundary, and human gate.
 
+## P2.2 elevation and HAAT controls
+
+- `rf.view`, `rf.edit`, and `rf.approve` also govern incident-scoped HAAT listing, calculation,
+  retry, and approval. Browser controls are not authorization.
+- Provider selection and source approval are server configuration. Requests cannot supply a
+  provider class, URL, credential, or allowlist entry.
+- The disabled provider is the default. An unapproved configured provider is not called.
+- Elevation cache and HAAT records are retained and immutable. Retry and cache refresh create new
+  records; approval locks a complete HAAT calculation.
+- Create, retry, and approval actions emit append-only audit events. Audit details identify
+  changed fields, cache use, superseded result identity, and result digest without duplicating
+  incident coordinates, terrain samples, RF inputs, or source credentials.
+- Partial, missing, out-of-coverage, unavailable, and stale source states are operator-visible.
+  Partial and unavailable calculations cannot be approved.
+
+See [ADR-0009](../adr/0009-source-aware-elevation-and-reproducible-haat.md) and the
+[elevation/HAAT operations guide](../operations/elevation-and-haat.md).
+
 ## P1.6 append-only audit review
 
 The append-only implementation, request transaction boundary, hash-chain verification, protected

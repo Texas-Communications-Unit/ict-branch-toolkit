@@ -211,6 +211,43 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+  /api/elevation-provider/:
+    get:
+      operationId: elevation_provider_retrieve
+      tags:
+      - elevation-provider
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/elevation-snapshots/{id}/:
+    get:
+      operationId: elevation_snapshots_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this elevation snapshot.
+        required: true
+      tags:
+      - elevation-snapshots
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ElevationSnapshot'
+          description: ''
   /api/geocoder/search/:
     post:
       operationId: geocoder_search_create
@@ -237,6 +274,118 @@ paths:
               schema:
                 type: object
                 additionalProperties: {}
+          description: ''
+  /api/haat-calculations/:
+    get:
+      operationId: haat_calculations_list
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - haat-calculations
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedHAATCalculationList'
+          description: ''
+    post:
+      operationId: haat_calculations_create
+      tags:
+      - haat-calculations
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateHAATCalculation'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CreateHAATCalculation'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CreateHAATCalculation'
+        required: true
+      security:
+      - tokenAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HAATCalculation'
+          description: ''
+  /api/haat-calculations/{id}/:
+    get:
+      operationId: haat_calculations_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this haat calculation.
+        required: true
+      tags:
+      - haat-calculations
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HAATCalculation'
+          description: ''
+  /api/haat-calculations/{id}/approve/:
+    post:
+      operationId: haat_calculations_approve_create
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this haat calculation.
+        required: true
+      tags:
+      - haat-calculations
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HAATCalculation'
+          description: ''
+  /api/haat-calculations/{id}/retry/:
+    post:
+      operationId: haat_calculations_retry_create
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this haat calculation.
+        required: true
+      tags:
+      - haat-calculations
+      security:
+      - tokenAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HAATCalculation'
           description: ''
   /api/ics205-plans/:
     get:
@@ -2476,6 +2625,18 @@ paths:
           description: ''
 components:
   schemas:
+    AcquisitionStateEnum:
+      enum:
+      - complete
+      - partial
+      - missing
+      - out_of_coverage
+      type: string
+      description: |-
+        * `complete` - Complete
+        * `partial` - Partial
+        * `missing` - Missing
+        * `out_of_coverage` - Out of coverage
     AntennaGainReferenceEnum:
       enum:
       - unknown
@@ -2593,6 +2754,16 @@ components:
     BlankEnum:
       enum:
       - ''
+    CalculationStateEnum:
+      enum:
+      - complete
+      - partial
+      - unavailable
+      type: string
+      description: |-
+        * `complete` - Complete
+        * `partial` - Partial
+        * `unavailable` - Unavailable
     ChannelImport:
       type: object
       properties:
@@ -2745,6 +2916,51 @@ components:
           maxLength: 240
       required:
       - coordinate
+    CreateHAATCalculation:
+      type: object
+      properties:
+        site:
+          type: string
+          format: uuid
+        rf_input_snapshot:
+          type: string
+          format: uuid
+        radial_count:
+          type: integer
+          maximum: 360
+          minimum: 4
+          default: 8
+        start_azimuth_deg:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,3})?$
+          default: '0.000'
+        sampling_interval_m:
+          type: integer
+          maximum: 100000
+          minimum: 10
+          default: 1000
+        inner_distance_m:
+          type: integer
+          maximum: 100000
+          minimum: 1
+          default: 3000
+        outer_distance_m:
+          type: integer
+          maximum: 100000
+          minimum: 1
+          default: 16000
+        rounding_m:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,4}(?:\.\d{0,3})?$
+          default: '0.100'
+        force_refresh:
+          type: boolean
+          default: false
+      required:
+      - rf_input_snapshot
+      - site
     CreateRFAnalysisInputSnapshot:
       type: object
       properties:
@@ -2785,6 +3001,242 @@ components:
         * `draft` - Draft
         * `effective` - Effective
         * `superseded` - Superseded
+    ElevationSnapshot:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        incident:
+          type: string
+          format: uuid
+          readOnly: true
+        site:
+          type: string
+          format: uuid
+          readOnly: true
+        query_sha256:
+          type: string
+          readOnly: true
+        provider:
+          type: string
+          readOnly: true
+        dataset_product:
+          type: string
+          readOnly: true
+        horizontal_crs:
+          type: string
+          readOnly: true
+        vertical_crs:
+          type: string
+          readOnly: true
+        target_vertical_crs:
+          type: string
+          readOnly: true
+        resolution_m:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,9}(?:\.\d{0,3})?$
+          readOnly: true
+          nullable: true
+        source_version:
+          type: string
+          readOnly: true
+        source_retrieved_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        license_terms_url:
+          type: string
+          format: uri
+          readOnly: true
+        permitted_use:
+          type: string
+          readOnly: true
+        coverage:
+          readOnly: true
+        source_content_sha256:
+          type: string
+          readOnly: true
+        acquisition_state:
+          allOf:
+          - $ref: '#/components/schemas/AcquisitionStateEnum'
+          readOnly: true
+        current_state:
+          type: string
+          readOnly: true
+        sample_sha256:
+          type: string
+          readOnly: true
+        transformation:
+          readOnly: true
+        warnings:
+          readOnly: true
+        retrieved_at:
+          type: string
+          format: date-time
+          readOnly: true
+        stale_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        created_by:
+          type: integer
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        query_snapshot:
+          readOnly: true
+        sample_snapshot:
+          readOnly: true
+      required:
+      - acquisition_state
+      - coverage
+      - created_at
+      - created_by
+      - current_state
+      - dataset_product
+      - horizontal_crs
+      - id
+      - incident
+      - license_terms_url
+      - permitted_use
+      - provider
+      - query_sha256
+      - query_snapshot
+      - resolution_m
+      - retrieved_at
+      - sample_sha256
+      - sample_snapshot
+      - site
+      - source_content_sha256
+      - source_retrieved_at
+      - source_version
+      - stale_at
+      - target_vertical_crs
+      - transformation
+      - vertical_crs
+      - warnings
+    ElevationSnapshotSummary:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        incident:
+          type: string
+          format: uuid
+          readOnly: true
+        site:
+          type: string
+          format: uuid
+          readOnly: true
+        query_sha256:
+          type: string
+          readOnly: true
+        provider:
+          type: string
+          readOnly: true
+        dataset_product:
+          type: string
+          readOnly: true
+        horizontal_crs:
+          type: string
+          readOnly: true
+        vertical_crs:
+          type: string
+          readOnly: true
+        target_vertical_crs:
+          type: string
+          readOnly: true
+        resolution_m:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,9}(?:\.\d{0,3})?$
+          readOnly: true
+          nullable: true
+        source_version:
+          type: string
+          readOnly: true
+        source_retrieved_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        license_terms_url:
+          type: string
+          format: uri
+          readOnly: true
+        permitted_use:
+          type: string
+          readOnly: true
+        coverage:
+          readOnly: true
+        source_content_sha256:
+          type: string
+          readOnly: true
+        acquisition_state:
+          allOf:
+          - $ref: '#/components/schemas/AcquisitionStateEnum'
+          readOnly: true
+        current_state:
+          type: string
+          readOnly: true
+        sample_sha256:
+          type: string
+          readOnly: true
+        transformation:
+          readOnly: true
+        warnings:
+          readOnly: true
+        retrieved_at:
+          type: string
+          format: date-time
+          readOnly: true
+        stale_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        created_by:
+          type: integer
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - acquisition_state
+      - coverage
+      - created_at
+      - created_by
+      - current_state
+      - dataset_product
+      - horizontal_crs
+      - id
+      - incident
+      - license_terms_url
+      - permitted_use
+      - provider
+      - query_sha256
+      - resolution_m
+      - retrieved_at
+      - sample_sha256
+      - site
+      - source_content_sha256
+      - source_retrieved_at
+      - source_version
+      - stale_at
+      - target_vertical_crs
+      - transformation
+      - vertical_crs
+      - warnings
     ErpSourceEnum:
       enum:
       - unknown
@@ -2833,6 +3285,195 @@ components:
           maxLength: 500
       required:
       - address
+    HAATCalculation:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        incident:
+          type: string
+          format: uuid
+          readOnly: true
+        site:
+          type: string
+          format: uuid
+          readOnly: true
+        site_name:
+          type: string
+          readOnly: true
+        profile_version:
+          type: string
+          format: uuid
+          readOnly: true
+        profile_name:
+          type: string
+          readOnly: true
+        profile_version_number:
+          type: integer
+          readOnly: true
+        rf_input_snapshot:
+          type: string
+          format: uuid
+          readOnly: true
+        rf_input_label:
+          type: string
+          readOnly: true
+        elevation_snapshot:
+          type: string
+          format: uuid
+          readOnly: true
+        elevation:
+          allOf:
+          - $ref: '#/components/schemas/ElevationSnapshotSummary'
+          readOnly: true
+        supersedes:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/PlanRevisionStatusEnum'
+          readOnly: true
+        calculation_state:
+          allOf:
+          - $ref: '#/components/schemas/CalculationStateEnum'
+          readOnly: true
+        method:
+          type: string
+          readOnly: true
+        method_version:
+          type: string
+          readOnly: true
+        radial_count:
+          type: integer
+          readOnly: true
+        start_azimuth_deg:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,3})?$
+          readOnly: true
+        sampling_interval_m:
+          type: integer
+          readOnly: true
+        inner_distance_m:
+          type: integer
+          readOnly: true
+        outer_distance_m:
+          type: integer
+          readOnly: true
+        rounding_m:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,4}(?:\.\d{0,3})?$
+          readOnly: true
+        antenna_agl_m:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,9}(?:\.\d{0,3})?$
+          readOnly: true
+        site_elevation_m:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,9}(?:\.\d{0,3})?$
+          readOnly: true
+          nullable: true
+        antenna_amsl_m:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,9}(?:\.\d{0,3})?$
+          readOnly: true
+          nullable: true
+        average_terrain_m:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,9}(?:\.\d{0,3})?$
+          readOnly: true
+          nullable: true
+        haat_m:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,9}(?:\.\d{0,3})?$
+          readOnly: true
+          nullable: true
+        sample_count:
+          type: integer
+          readOnly: true
+        excluded_sample_count:
+          type: integer
+          readOnly: true
+        algorithm_snapshot:
+          readOnly: true
+        exclusions:
+          readOnly: true
+        warnings:
+          readOnly: true
+        result_snapshot:
+          readOnly: true
+        result_sha256:
+          type: string
+          readOnly: true
+        created_by:
+          type: integer
+          readOnly: true
+        approved_by:
+          type: integer
+          readOnly: true
+          nullable: true
+        approved_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        is_locked:
+          type: boolean
+          readOnly: true
+      required:
+      - algorithm_snapshot
+      - antenna_agl_m
+      - antenna_amsl_m
+      - approved_at
+      - approved_by
+      - average_terrain_m
+      - calculation_state
+      - created_at
+      - created_by
+      - elevation
+      - elevation_snapshot
+      - excluded_sample_count
+      - exclusions
+      - haat_m
+      - id
+      - incident
+      - inner_distance_m
+      - is_locked
+      - method
+      - method_version
+      - outer_distance_m
+      - profile_name
+      - profile_version
+      - profile_version_number
+      - radial_count
+      - result_sha256
+      - result_snapshot
+      - rf_input_label
+      - rf_input_snapshot
+      - rounding_m
+      - sample_count
+      - sampling_interval_m
+      - site
+      - site_elevation_m
+      - site_name
+      - start_azimuth_deg
+      - status
+      - supersedes
+      - warnings
     ImportConventionalChannel:
       type: object
       properties:
@@ -3251,6 +3892,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ConventionalChannel'
+    PaginatedHAATCalculationList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/HAATCalculation'
     PaginatedIncidentList:
       type: object
       required:

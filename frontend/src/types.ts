@@ -314,3 +314,103 @@ export interface UpdateSubscriberProfilePayload {
   profile_type?: SubscriberProfileType;
   description?: string;
 }
+
+export interface ElevationProviderStatus {
+  provider: string;
+  dataset_product: string;
+  horizontal_crs: string;
+  vertical_crs: string;
+  target_vertical_crs: string;
+  resolution_m: string | null;
+  source_version: string;
+  license_terms_url: string;
+  permitted_use: string;
+  coverage: Record<string, unknown>;
+  source_content_sha256: string;
+  offline: boolean;
+  configured: boolean;
+  approved: boolean;
+  available: boolean;
+  warning: string;
+}
+
+export type ElevationState =
+  "complete" | "partial" | "missing" | "out_of_coverage" | "stale";
+
+export interface ElevationSnapshot {
+  id: string;
+  incident: string;
+  site: string;
+  query_sha256: string;
+  provider: string;
+  dataset_product: string;
+  horizontal_crs: string;
+  vertical_crs: string;
+  target_vertical_crs: string;
+  resolution_m: string | null;
+  source_version: string;
+  source_retrieved_at: string | null;
+  license_terms_url: string;
+  permitted_use: string;
+  coverage: Record<string, unknown>;
+  source_content_sha256: string;
+  acquisition_state: Exclude<ElevationState, "stale">;
+  current_state: ElevationState;
+  sample_sha256: string;
+  transformation: Record<string, unknown>;
+  warnings: string[];
+  retrieved_at: string;
+  stale_at: string | null;
+}
+
+export interface HAATCalculation {
+  id: string;
+  incident: string;
+  site: string;
+  site_name: string;
+  profile_version: string;
+  profile_name: string;
+  profile_version_number: number;
+  rf_input_snapshot: string;
+  rf_input_label: string;
+  elevation_snapshot: string;
+  elevation: ElevationSnapshot;
+  supersedes: string | null;
+  status: "draft" | "approved";
+  calculation_state: "complete" | "partial" | "unavailable";
+  method: string;
+  method_version: string;
+  radial_count: number;
+  start_azimuth_deg: string;
+  sampling_interval_m: number;
+  inner_distance_m: number;
+  outer_distance_m: number;
+  rounding_m: string;
+  antenna_agl_m: string;
+  site_elevation_m: string | null;
+  antenna_amsl_m: string | null;
+  average_terrain_m: string | null;
+  haat_m: string | null;
+  sample_count: number;
+  excluded_sample_count: number;
+  algorithm_snapshot: Record<string, unknown>;
+  exclusions: Record<string, unknown>[];
+  warnings: string[];
+  result_snapshot: Record<string, unknown>;
+  result_sha256: string;
+  approved_at: string | null;
+  created_at: string;
+  is_locked: boolean;
+}
+
+export interface CreateHAATCalculationPayload {
+  site: string;
+  rf_input_snapshot: string;
+  radial_count: number;
+  start_azimuth_deg: string;
+  sampling_interval_m: number;
+  inner_distance_m: number;
+  outer_distance_m: number;
+  rounding_m: string;
+  force_refresh: boolean;
+}

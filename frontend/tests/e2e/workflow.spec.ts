@@ -17,6 +17,8 @@ test("administrator signs in and sees the incident planning workspace", async ({
   let rfProfileCreated = false;
   let rfApproved = false;
   let rfSnapshotCreated = false;
+  let haatCreated = false;
+  let haatApproved = false;
   let rfInputs = {
     tx_frequency_hz: null as number | null,
     rx_frequency_hz: null as number | null,
@@ -66,6 +68,90 @@ test("administrator signs in and sees the incident planning workspace", async ({
       : null,
     input_snapshot: null,
     input_sha256: null,
+  });
+  const rfInputSnapshot = () => ({
+    id: "rf-snapshot-1",
+    incident: "syn-1",
+    profile_version: "rf-version-1",
+    label: "Synthetic RF baseline",
+    input_snapshot: {
+      schema_version: 1,
+      profile: {
+        id: "rf-profile-1",
+        incident: "syn-1",
+        name: "Synthetic Portable Assumption",
+        profile_type: "portable",
+      },
+      profile_version: { id: "rf-version-1", number: 1 },
+      inputs: { ...rfInputs },
+    },
+    input_sha256: "b".repeat(64),
+    created_at: "2026-07-27T22:05:00Z",
+  });
+  const haatCalculation = () => ({
+    id: "haat-1",
+    incident: "syn-1",
+    site: "site-1",
+    site_name: "Synthetic Command Site",
+    profile_version: "rf-version-1",
+    profile_name: "Synthetic Portable Assumption",
+    profile_version_number: 1,
+    rf_input_snapshot: "rf-snapshot-1",
+    rf_input_label: "Synthetic RF baseline",
+    elevation_snapshot: "elevation-1",
+    elevation: {
+      id: "elevation-1",
+      incident: "syn-1",
+      site: "site-1",
+      query_sha256: "c".repeat(64),
+      provider: "synthetic-offline",
+      dataset_product: "ICT Toolkit deterministic terrain fixture (flat)",
+      horizontal_crs: "EPSG:4326",
+      vertical_crs: "SYNTHETIC:LOCAL",
+      target_vertical_crs: "SYNTHETIC:LOCAL",
+      resolution_m: "30.000",
+      source_version: "synthetic-terrain-v1",
+      source_retrieved_at: "2026-07-27T22:10:00Z",
+      license_terms_url: "",
+      permitted_use: "Synthetic fixture data only.",
+      coverage: { type: "synthetic" },
+      source_content_sha256: "d".repeat(64),
+      acquisition_state: "complete",
+      current_state: "complete",
+      sample_sha256: "e".repeat(64),
+      transformation: { method: "identity" },
+      warnings: ["Synthetic fixture only."],
+      retrieved_at: "2026-07-27T22:10:00Z",
+      stale_at: "2026-08-03T22:10:00Z",
+    },
+    supersedes: null,
+    status: haatApproved ? "approved" : "draft",
+    calculation_state: "complete",
+    method: "general_radial_average_terrain",
+    method_version: "haat-radial-average-v1-provisional",
+    radial_count: 8,
+    start_azimuth_deg: "0.000",
+    sampling_interval_m: 1000,
+    inner_distance_m: 3000,
+    outer_distance_m: 16000,
+    rounding_m: "0.100",
+    antenna_agl_m: "12.500",
+    site_elevation_m: "100.000",
+    antenna_amsl_m: "112.500",
+    average_terrain_m: "100.000",
+    haat_m: "12.500",
+    sample_count: 112,
+    excluded_sample_count: 0,
+    algorithm_snapshot: {
+      method_scope: "General planning radial-average terrain method.",
+    },
+    exclusions: [],
+    warnings: ["Synthetic fixture only."],
+    result_snapshot: {},
+    result_sha256: "f".repeat(64),
+    approved_at: haatApproved ? "2026-07-27T22:15:00Z" : null,
+    created_at: "2026-07-27T22:10:00Z",
+    is_locked: haatApproved,
   });
   await page.route("**/api/auth/token/", (route) =>
     route.fulfill({
@@ -323,15 +409,7 @@ test("administrator signs in and sees the incident planning workspace", async ({
       });
       rfSnapshotCreated = true;
       return route.fulfill({
-        json: {
-          id: "rf-snapshot-1",
-          incident: "syn-1",
-          profile_version: "rf-version-1",
-          label: "Synthetic RF baseline",
-          input_snapshot: rfVersion(),
-          input_sha256: "b".repeat(64),
-          created_at: "2026-07-27T22:05:00Z",
-        },
+        json: rfInputSnapshot(),
       });
     },
   );
@@ -341,22 +419,65 @@ test("administrator signs in and sees the incident planning workspace", async ({
         count: rfSnapshotCreated ? 1 : 0,
         next: null,
         previous: null,
-        results: rfSnapshotCreated
-          ? [
-              {
-                id: "rf-snapshot-1",
-                incident: "syn-1",
-                profile_version: "rf-version-1",
-                label: "Synthetic RF baseline",
-                input_snapshot: rfVersion(),
-                input_sha256: "b".repeat(64),
-                created_at: "2026-07-27T22:05:00Z",
-              },
-            ]
-          : [],
+        results: rfSnapshotCreated ? [rfInputSnapshot()] : [],
       },
     }),
   );
+  await page.route("**/api/elevation-provider/", (route) =>
+    route.fulfill({
+      json: {
+        provider: "synthetic-offline",
+        dataset_product: "ICT Toolkit deterministic terrain fixture (flat)",
+        horizontal_crs: "EPSG:4326",
+        vertical_crs: "SYNTHETIC:LOCAL",
+        target_vertical_crs: "SYNTHETIC:LOCAL",
+        resolution_m: "30.000",
+        source_version: "synthetic-terrain-v1",
+        license_terms_url: "",
+        permitted_use: "Synthetic fixture data only.",
+        coverage: { type: "synthetic" },
+        source_content_sha256: "d".repeat(64),
+        offline: true,
+        configured: true,
+        approved: true,
+        available: true,
+        warning: "",
+      },
+    }),
+  );
+  await page.route("**/api/haat-calculations/?incident=*", (route) =>
+    route.fulfill({
+      json: {
+        count: haatCreated ? 1 : 0,
+        next: null,
+        previous: null,
+        results: haatCreated ? [haatCalculation()] : [],
+      },
+    }),
+  );
+  await page.route("**/api/haat-calculations/", async (route) => {
+    expect(route.request().method()).toBe("POST");
+    expect(route.request().postDataJSON()).toMatchObject({
+      site: "site-1",
+      rf_input_snapshot: "rf-snapshot-1",
+      radial_count: 8,
+      start_azimuth_deg: "0",
+      sampling_interval_m: 1000,
+      inner_distance_m: 3000,
+      outer_distance_m: 16000,
+      rounding_m: "0.1",
+      force_refresh: false,
+    });
+    haatCreated = true;
+    return route.fulfill({ json: haatCalculation() });
+  });
+  await page.route("**/api/haat-calculations/haat-1/retry/", (route) =>
+    route.fulfill({ json: haatCalculation() }),
+  );
+  await page.route("**/api/haat-calculations/haat-1/approve/", (route) => {
+    haatApproved = true;
+    return route.fulfill({ json: haatCalculation() });
+  });
   await page.route("**/api/channel-imports/", (route) =>
     route.fulfill({
       json: {
@@ -390,7 +511,7 @@ test("administrator signs in and sees the incident planning workspace", async ({
     "srcset",
     "/brand/tx-comu-logo-transparent.svg",
   );
-  await expect(page.getByText("ICT Toolkit")).toBeVisible();
+  await expect(page.getByText("ICT Toolkit", { exact: true })).toBeVisible();
   const planningMap = page.getByRole("region", {
     name: "Radio site planning map",
   });
@@ -406,7 +527,7 @@ test("administrator signs in and sees the incident planning workspace", async ({
   await expect(skipLink).toBeFocused();
   await skipLink.press("Enter");
   await expect(page.locator("#main-content")).toBeFocused();
-  await expect(page.getByText(/P2.1 Prototype/)).toBeVisible();
+  await expect(page.getByText(/P2.2 Prototype/)).toBeVisible();
   await expect(page.getByRole("heading", { name: "ICS-205" })).toBeVisible();
   await expect(
     page.getByText("SYN CALL", { exact: true }).first(),
@@ -473,6 +594,40 @@ test("administrator signs in and sees the incident planning workspace", async ({
     rfWorkspace.getByText("Synthetic RF baseline", { exact: true }).last(),
   ).toBeVisible();
   await expect(rfWorkspace.getByText("b".repeat(64))).toBeVisible();
+  const haatWorkspace = page.getByRole("region", {
+    name: "Elevation and HAAT",
+  });
+  await expect(
+    haatWorkspace.getByText("ICT Toolkit deterministic terrain fixture (flat)"),
+  ).toBeVisible();
+  await haatWorkspace
+    .getByRole("button", {
+      name: "Refresh sites, RF snapshots, and source status",
+    })
+    .click();
+  await haatWorkspace.getByLabel("Radio site").selectOption("site-1");
+  await haatWorkspace
+    .getByLabel("Approved RF input snapshot with antenna AGL")
+    .selectOption("rf-snapshot-1");
+  await haatWorkspace
+    .getByRole("button", { name: "Calculate elevation and HAAT" })
+    .click();
+  await expect(
+    haatWorkspace.getByText("12.500 m", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    haatWorkspace.getByText("Synthetic fixture only."),
+  ).toBeVisible();
+  await haatWorkspace
+    .getByRole("button", { name: "Retry with fresh elevation data" })
+    .click();
+  page.once("dialog", (dialog) => dialog.accept());
+  await haatWorkspace
+    .getByRole("button", { name: "Approve and lock result" })
+    .click();
+  await expect(
+    haatWorkspace.getByText("approved", { exact: true }),
+  ).toBeVisible();
   await page
     .getByLabel("Coordinate", { exact: true })
     .fill("33° 12′ 52.20″ N, 97° 07′ 59.16″ W");
@@ -512,7 +667,7 @@ test("administrator signs in and sees the incident planning workspace", async ({
   await expect(
     page.getByRole("heading", { name: "ICT Branch Toolkit" }),
   ).toBeVisible();
-  await expect(page.getByText(/P2.1 Prototype/)).toBeVisible();
+  await expect(page.getByText(/P2.2 Prototype/)).toBeVisible();
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= window.innerWidth,

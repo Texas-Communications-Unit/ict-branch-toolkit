@@ -1,10 +1,13 @@
 import type {
   ConventionalChannel,
   CoordinateParseResult,
+  CreateHAATCalculationPayload,
   CreateSubscriberProfilePayload,
   CurrentUser,
   EditableRFInputFields,
+  ElevationProviderStatus,
   GeocoderSearchResult,
+  HAATCalculation,
   ImportResult,
   Incident,
   ICS205Plan,
@@ -463,4 +466,38 @@ export async function listRFAnalysisInputSnapshots(
     `/api/rf-analysis-input-snapshots/?incident=${encodeURIComponent(incident)}`,
   );
   return result.results;
+}
+
+export function getElevationProviderStatus(): Promise<ElevationProviderStatus> {
+  return request<ElevationProviderStatus>("/api/elevation-provider/");
+}
+
+export async function listHAATCalculations(
+  incident: string,
+): Promise<HAATCalculation[]> {
+  const result = await request<Paginated<HAATCalculation>>(
+    `/api/haat-calculations/?incident=${encodeURIComponent(incident)}`,
+  );
+  return result.results;
+}
+
+export function createHAATCalculation(
+  payload: CreateHAATCalculationPayload,
+): Promise<HAATCalculation> {
+  return request<HAATCalculation>("/api/haat-calculations/", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function retryHAATCalculation(id: string): Promise<HAATCalculation> {
+  return request<HAATCalculation>(`/api/haat-calculations/${id}/retry/`, {
+    method: "POST",
+  });
+}
+
+export function approveHAATCalculation(id: string): Promise<HAATCalculation> {
+  return request<HAATCalculation>(`/api/haat-calculations/${id}/approve/`, {
+    method: "POST",
+  });
 }

@@ -23,6 +23,10 @@ only.
 - AGL, AMSL, and HAAT being conflated or silently derived with an unapproved terrain method.
 - A mutable input/profile change rewriting the meaning of an approved calculation.
 - Cross-incident access to RF inputs, profiles, snapshots, or sensitive equipment/site details.
+- An unapproved elevation provider receiving incident coordinates or returning misleading terrain.
+- Stale, partial, missing, or out-of-coverage terrain being presented as complete.
+- Vertical-reference or datum conversion being omitted while apparently precise elevations remain.
+- Retry or cache refresh rewriting the source evidence behind an earlier HAAT result.
 
 ## Design responses
 
@@ -36,8 +40,8 @@ cases and security tests as they are implemented.
 For P2.1, use typed canonical units; preserve transmitter power, losses, antenna gain/reference,
 and every ERP derivation step; distinguish isotropic and dipole gain references; keep AGL, AMSL,
 and HAAT separate; represent unknown values explicitly; and create immutable canonical RF input
-snapshots and digests from approved profile versions. A future approved analysis must bind to its
-exact snapshot. Version-level `input_basis` distinguishes
+snapshots and digests from approved profile versions. P2.2 HAAT calculations bind to the exact
+approved snapshot. Version-level `input_basis` distinguishes
 `recorded_fact`, `modeled_assumption`, `mixed`, and `unknown`; mixed versions use minimized notes to
 explain the boundary. The current contract does not claim per-field provenance.
 
@@ -47,4 +51,13 @@ terrain method, or calculation convention is operationally approved until qualif
 COMC, and RF engineering reviewers complete the
 [ADR-0008 human gate](../adr/0008-versioned-rf-analysis-inputs-and-subscriber-profiles.md).
 Calculated output remains planning decision support, not propagation or coordination authority.
+
+For P2.2, provider selection is server-controlled and exact source descriptors must be
+allowlisted before retrieval. The safe default makes no external request. Exact query/sample
+snapshots, source and result digests, cache state, transformation metadata, exclusions, warnings,
+and method versions are retained. Cache refresh and retry create new immutable evidence. Incident
+policy scopes every HAAT result and its elevation snapshot; audit events identify material actions
+without duplicating coordinates, RF values, or terrain samples in audit detail. Partial and
+unavailable results cannot be approved. See
+[ADR-0009](../adr/0009-source-aware-elevation-and-reproducible-haat.md).
 
