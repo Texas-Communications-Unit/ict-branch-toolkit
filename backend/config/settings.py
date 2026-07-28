@@ -118,6 +118,18 @@ if ICT_SYNTHETIC_ELEVATION_MODE not in {
     "failure",
 }:
     raise ValueError("ICT_SYNTHETIC_ELEVATION_MODE is not supported.")
+ICT_COVERAGE_ENGINE = os.getenv(
+    "ICT_COVERAGE_ENGINE",
+    "apps.rf_analysis.coverage.ProvisionalFsplHorizonEngine",
+)
+ICT_COVERAGE_PRESETS = json.loads(os.getenv("ICT_COVERAGE_PRESETS", "{}"))
+if not isinstance(ICT_COVERAGE_PRESETS, dict):
+    raise ValueError("ICT_COVERAGE_PRESETS must be a JSON object.")
+ICT_APPROVED_COVERAGE_CONFIGURATIONS = json.loads(
+    os.getenv("ICT_APPROVED_COVERAGE_CONFIGURATIONS", "[]")
+)
+if not isinstance(ICT_APPROVED_COVERAGE_CONFIGURATIONS, list):
+    raise ValueError("ICT_APPROVED_COVERAGE_CONFIGURATIONS must be a JSON array.")
 
 CORS_ALLOWED_ORIGINS = [
     origin.strip()

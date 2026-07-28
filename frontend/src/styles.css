@@ -910,17 +910,22 @@ footer a {
   }
 }
 
-.haat-panel {
+.haat-panel,
+.coverage-panel {
   background: var(--tx-comu-white);
   border: 1px solid var(--tx-comu-border);
   border-radius: 1rem;
   box-shadow: 0 0.7rem 1.8rem var(--tx-comu-shadow);
+  grid-column: 1 / -1;
   padding: 1.25rem;
 }
 
 .elevation-provider-card,
 .haat-form,
-.haat-result-card {
+.haat-result-card,
+.coverage-engine-card,
+.coverage-form,
+.coverage-results {
   border: 1px solid var(--tx-comu-border);
   border-radius: 0.8rem;
   margin-top: 1rem;
@@ -1019,6 +1024,86 @@ footer a {
   display: grid;
   gap: 0.85rem;
   grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+}
+
+.coverage-engine-card {
+  border-left: 0.35rem solid #a64b00;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.coverage-engine-card > div:first-child {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.coverage-form {
+  display: grid;
+  gap: 0.85rem;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+}
+
+.coverage-form h3,
+.coverage-form .form-note,
+.coverage-form > button,
+.coverage-form > .warning-text {
+  grid-column: 1 / -1;
+}
+
+.table-scroll {
+  overflow-x: auto;
+}
+
+.coverage-results table {
+  border-collapse: collapse;
+  min-width: 62rem;
+  width: 100%;
+}
+
+.coverage-results caption {
+  color: var(--tx-comu-slate);
+  font-size: 0.82rem;
+  padding: 0.25rem 0 0.75rem;
+  text-align: left;
+}
+
+.coverage-results th,
+.coverage-results td {
+  border-bottom: 1px solid var(--tx-comu-border);
+  padding: 0.7rem;
+  text-align: left;
+  vertical-align: top;
+}
+
+.coverage-results thead th {
+  background: var(--tx-comu-light);
+}
+
+.coverage-results details {
+  min-width: 14rem;
+}
+
+.digest-list {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.digest-list div {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.digest-list dt {
+  color: var(--tx-comu-slate);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.digest-list dd {
+  margin: 0;
+  max-width: 30rem;
+  overflow-wrap: anywhere;
 }
 
 .haat-form h3,

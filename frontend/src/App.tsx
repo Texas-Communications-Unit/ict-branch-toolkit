@@ -16,6 +16,7 @@ import {
 } from "./api";
 import { BrandMark } from "./BrandMark";
 import { HAATWorkspace } from "./HAATWorkspace";
+import { CoverageEstimateWorkspace } from "./CoverageEstimateWorkspace";
 import { MapShell } from "./MapShell";
 import { PlanWorkspace } from "./PlanWorkspace";
 import { RFProfileWorkspace } from "./RFProfileWorkspace";
@@ -492,6 +493,7 @@ export default function App() {
         <PlanWorkspace incident={selected} />
         <RFProfileWorkspace incident={selected} />
         <HAATWorkspace incident={selected} />
+        <CoverageEstimateWorkspace incident={selected} />
         <MapShell incident={selected} />
         <section className="library-panel" aria-labelledby="library-heading">
           <div className="section-heading">

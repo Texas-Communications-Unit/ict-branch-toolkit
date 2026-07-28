@@ -5,6 +5,7 @@ from rest_framework import serializers
 from apps.sites.models import RadioSite
 
 from .models import (
+    CoverageEstimate,
     ElevationSnapshot,
     HAATCalculation,
     RFAnalysisInputSnapshot,
@@ -304,3 +305,70 @@ class CreateHAATCalculationSerializer(serializers.Serializer):
                 {"outer_distance_m": "Outer distance must be greater than inner distance."}
             )
         return attrs
+
+
+class CoverageEstimateSerializer(serializers.ModelSerializer):
+    is_locked = serializers.BooleanField(read_only=True)
+    site_name = serializers.CharField(source="site.name", read_only=True)
+    rf_input_label = serializers.CharField(source="rf_input_snapshot.label", read_only=True)
+    haat_result_sha256 = serializers.CharField(
+        source="haat_calculation.result_sha256",
+        read_only=True,
+    )
+
+    class Meta:
+        model = CoverageEstimate
+        fields = [
+            "id",
+            "incident",
+            "site",
+            "site_name",
+            "rf_input_snapshot",
+            "rf_input_label",
+            "haat_calculation",
+            "haat_result_sha256",
+            "status",
+            "calculation_state",
+            "environment",
+            "band",
+            "engine",
+            "engine_version",
+            "preset",
+            "preset_version",
+            "center_latitude",
+            "center_longitude",
+            "nominal_distance_m",
+            "conservative_distance_m",
+            "optimistic_distance_m",
+            "input_snapshot",
+            "input_sha256",
+            "model_snapshot",
+            "warnings",
+            "exclusions",
+            "explanation",
+            "result_snapshot",
+            "result_sha256",
+            "created_by",
+            "approved_by",
+            "approved_at",
+            "created_at",
+            "is_locked",
+        ]
+        read_only_fields = fields
+
+
+class CreateCoverageEstimateSerializer(serializers.Serializer):
+    haat_calculation = serializers.PrimaryKeyRelatedField(
+        queryset=HAATCalculation.objects.select_related(
+            "incident",
+            "site",
+            "rf_input_snapshot",
+        )
+    )
+    environment = serializers.ChoiceField(choices=CoverageEstimate.Environment.choices)
+    preset = serializers.CharField(
+        max_length=80,
+        default="balanced",
+        allow_blank=False,
+        trim_whitespace=True,
+    )

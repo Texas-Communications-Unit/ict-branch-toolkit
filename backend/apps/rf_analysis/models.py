@@ -600,3 +600,138 @@ class HAATCalculation(models.Model):
     @property
     def is_locked(self):
         return self.status == self.Status.APPROVED
+
+
+class CoverageEstimate(models.Model):
+    class Status(models.TextChoices):
+        DRAFT = "draft", "Draft"
+        APPROVED = "approved", "Approved"
+
+    class CalculationState(models.TextChoices):
+        COMPLETE = "complete", "Complete"
+        UNSUPPORTED = "unsupported", "Unsupported"
+
+    class Environment(models.TextChoices):
+        OPEN = "open", "Open"
+        RURAL = "rural", "Rural"
+        SUBURBAN = "suburban", "Suburban"
+        URBAN = "urban", "Urban"
+        DENSE_URBAN = "dense_urban", "Dense urban"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    incident = models.ForeignKey(
+        Incident,
+        related_name="coverage_estimates",
+        on_delete=models.PROTECT,
+    )
+    site = models.ForeignKey(
+        RadioSite,
+        related_name="coverage_estimates",
+        on_delete=models.PROTECT,
+    )
+    rf_input_snapshot = models.ForeignKey(
+        RFAnalysisInputSnapshot,
+        related_name="coverage_estimates",
+        on_delete=models.PROTECT,
+    )
+    haat_calculation = models.ForeignKey(
+        HAATCalculation,
+        related_name="coverage_estimates",
+        on_delete=models.PROTECT,
+    )
+    status = models.CharField(max_length=12, choices=Status.choices, default=Status.DRAFT)
+    calculation_state = models.CharField(
+        max_length=16,
+        choices=CalculationState.choices,
+    )
+    environment = models.CharField(max_length=16, choices=Environment.choices)
+    band = models.CharField(max_length=32)
+    engine = models.CharField(max_length=120)
+    engine_version = models.CharField(max_length=80)
+    preset = models.CharField(max_length=80)
+    preset_version = models.CharField(max_length=80)
+    center_latitude = models.DecimalField(max_digits=9, decimal_places=6)
+    center_longitude = models.DecimalField(max_digits=9, decimal_places=6)
+    nominal_distance_m = models.PositiveIntegerField(null=True, blank=True)
+    conservative_distance_m = models.PositiveIntegerField(null=True, blank=True)
+    optimistic_distance_m = models.PositiveIntegerField(null=True, blank=True)
+    input_snapshot = models.JSONField()
+    input_sha256 = models.CharField(max_length=64)
+    model_snapshot = models.JSONField()
+    warnings = models.JSONField(default=list, blank=True)
+    exclusions = models.JSONField(default=list, blank=True)
+    explanation = models.TextField()
+    result_snapshot = models.JSONField()
+    result_sha256 = models.CharField(max_length=64)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        related_name="created_coverage_estimates",
+        on_delete=models.PROTECT,
+    )
+    approved_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        related_name="approved_coverage_estimates",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+    )
+    approved_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(
+                fields=["incident", "site", "status"],
+                name="rf_cov_inc_site_status_idx",
+            )
+        ]
+        constraints = [
+            models.CheckConstraint(
+                condition=(
+                    models.Q(
+                        status="draft",
+                        approved_by__isnull=True,
+                        approved_at__isnull=True,
+                    )
+                    | models.Q(
+                        status="approved",
+                        approved_by__isnull=False,
+                        approved_at__isnull=False,
+                    )
+                ),
+                name="rf_cov_approval_consistent",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    models.Q(
+                        calculation_state="complete",
+                        nominal_distance_m__isnull=False,
+                        conservative_distance_m__isnull=False,
+                        optimistic_distance_m__isnull=False,
+                    )
+                    | models.Q(
+                        calculation_state="unsupported",
+                        nominal_distance_m__isnull=True,
+                        conservative_distance_m__isnull=True,
+                        optimistic_distance_m__isnull=True,
+                    )
+                ),
+                name="rf_cov_distance_state_consistent",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.site}: {self.engine_version} ({self.calculation_state})"
+
+    def save(self, *args, **kwargs):
+        if self.pk and CoverageEstimate.objects.filter(pk=self.pk).exists():
+            raise ValidationError("Coverage estimates are immutable after creation.")
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError("Coverage estimates are retained.")
+
+    @property
+    def is_locked(self):
+        return self.status == self.Status.APPROVED

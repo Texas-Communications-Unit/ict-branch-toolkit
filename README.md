@@ -272,6 +272,26 @@ See [ADR-0009](docs/adr/0009-source-aware-elevation-and-reproducible-haat.md) an
 provisional general planning radial-average terrain method, not a claim that any one regulatory
 service's HAAT method governs all land-mobile-radio work.
 
+## P2.3 explainable band and environment estimates
+
+Issue #17 adds a replaceable server-side estimate-engine interface and an immutable
+`CoverageEstimate` workflow. The initial `fspl-horizon-v1-provisional` implementation consumes
+only a complete approved HAAT calculation and its exact approved RF input snapshot. It preserves
+the site coordinates, source digests, engine and preset versions, formulas, constants,
+intermediate values, limiting factors, warnings, explanation, conservative/nominal/optimistic
+distances, deterministic WGS 84 geometry, and result digest.
+
+Manual Phase 1 rings remain separate. Calculated nominal geometry uses a dashed map layer and the
+same results, assumptions, warnings, and digests appear in an accessible table. Unsupported bands
+or inputs create explicit retained results without invented geometry.
+
+The shipped band groups, environment margins, receiver-height assumption, uncertainty, distance
+limits, rounding, and formulas are synthetic-evaluation defaults that have not passed the
+qualified practitioner gate. They are not operational defaults. See
+[ADR-0010](docs/adr/0010-provisional-explainable-coverage-estimates.md), the
+[coverage-estimate operations guide](docs/operations/coverage-estimates.md), and the
+[Phase 2 data model](docs/data-model/phase-2.md).
+
 ## Accessibility
 
 The browser workflow targets WCAG 2.1 Level A and AA. GitHub Actions runs

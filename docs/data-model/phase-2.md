@@ -5,7 +5,8 @@
 P2.1 implements incident-scoped, versioned subscriber profiles and immutable RF analysis input
 snapshots. P2.2 adds source-aware elevation snapshots and reproducible HAAT calculations. Both
 include migrations, API/OpenAPI, backend permissions, unit/integration tests, and authenticated
-synthetic browser workflows.
+synthetic browser workflows. P2.3 adds an immutable, explainable `CoverageEstimate` aggregate and
+a replaceable provisional calculation-engine boundary.
 
 The implemented aggregates are:
 
@@ -13,12 +14,18 @@ The implemented aggregates are:
 - `SubscriberProfileVersion`; and
 - `RFAnalysisInputSnapshot`;
 - `ElevationSnapshot`; and
-- `HAATCalculation`.
+- `HAATCalculation`; and
+- `CoverageEstimate`.
 
 The first three records are the P2.1 input aggregate. The P2.2 terrain aggregate references an
 exact site and immutable approved RF input snapshot, including its profile version, but is not a
 propagation result. Future coverage estimates must reference the exact approved RF input and
 applicable elevation/HAAT result rather than resolving a current mutable record.
+
+P2.3 now follows that rule: every estimate references the exact approved RF input snapshot and
+complete approved HAAT calculation, then preserves the site coordinates, engine and preset
+versions, assumptions, intermediate values, geometry, warnings, explanation, and integrity
+digests used for its result.
 
 Only synthetic or explicitly approved data may be used. All field enumerations, numerical ranges,
 cross-field rules, calculation conventions, and subscriber assumptions are provisional. **No
@@ -306,6 +313,36 @@ an operational method limit.
 not represented as the governing method for any FCC, NTIA, coordination, licensing, or
 land-mobile-radio service. See [ADR-0009](../adr/0009-source-aware-elevation-and-reproducible-haat.md)
 and the [operations guide](../operations/elevation-and-haat.md).
+
+## `CoverageEstimate`
+
+Each retained estimate references one incident, one radio site, one immutable approved
+`RFAnalysisInputSnapshot`, and one complete approved `HAATCalculation`. It stores:
+
+- draft or approved/locked lifecycle and `complete` or `unsupported` calculation state;
+- selected environment, derived band group, engine/version, and preset/version;
+- WGS 84 center coordinates;
+- conservative, nominal, and optimistic integer-meter distances when complete;
+- canonical input snapshot and SHA-256;
+- model snapshot containing formulas, constants, assumptions, intermediate values, and limiting
+  factors;
+- warnings, exclusions, and a plain-language explanation;
+- deterministic WGS 84 output geometry and canonical result SHA-256; and
+- creator/approver identity and timestamps.
+
+Complete results may be approved and locked. Unsupported results are retained without distances or
+geometry and cannot be approved. All results are immutable after creation and cannot be deleted.
+Changing a source input, engine version, preset version, environment, or site coordinate creates a
+new record; it never rewrites an existing estimate.
+
+The first engine is `fspl-horizon-v1-provisional`. Its band groups, environment margins,
+receiver-height assumption, uncertainty, distance limits, rounding, and formulas require
+qualified review and are not operational defaults. It is intentionally a single-path prototype;
+P2.4 introduces separate talk-out, talk-in, and probable two-way analysis.
+
+See
+[ADR-0010](../adr/0010-provisional-explainable-coverage-estimates.md) and the
+[coverage-estimate evaluation guide](../operations/coverage-estimates.md).
 
 ## `RFAnalysisInputSnapshot`
 
