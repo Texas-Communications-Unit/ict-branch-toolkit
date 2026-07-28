@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<soap:Envelope
+  xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
+  xmlns:rr="urn:tx-comu:synthetic:radioreference:v1"
+>
+  <soap:Body>
+    <rr:ReferenceData sourceVersion="synthetic-contract-v1">
+      <rr:Record type="agency" sourceId="SYN-AGENCY-001">
+        <rr:Name>Synthetic County Communications</rr:Name>
+      </rr:Record>
+      <rr:Record type="frequency" sourceId="SYN-FREQUENCY-001">
+        <rr:Name>Synthetic Dispatch</rr:Name>
+        <rr:AgencyName>Synthetic County Communications</rr:AgencyName>
+        <rr:FrequencyHz>155001000</rr:FrequencyHz>
+        <rr:TxFrequencyHz>155001000</rr:TxFrequencyHz>
+      </rr:Record>
+      <rr:Record type="trunked_system" sourceId="SYN-SYSTEM-001">
+        <rr:Name>Synthetic Regional Radio System</rr:Name>
+        <rr:SystemName>Synthetic Regional Radio System</rr:SystemName>
+      </rr:Record>
+      <rr:Record type="site" sourceId="SYN-SITE-001">
+        <rr:Name>Synthetic North Site</rr:Name>
+        <rr:SiteName>Synthetic North Site</rr:SiteName>
+        <rr:SystemName>Synthetic Regional Radio System</rr:SystemName>
+        <rr:Latitude>33.214500</rr:Latitude>
+        <rr:Longitude>-97.133100</rr:Longitude>
+      </rr:Record>
+      <rr:Record type="talkgroup" sourceId="SYN-TALKGROUP-001">
+        <rr:Name>Synthetic Operations</rr:Name>
+        <rr:SystemName>Synthetic Regional Radio System</rr:SystemName>
+        <rr:TalkgroupId>12001</rr:TalkgroupId>
+      </rr:Record>
+    </rr:ReferenceData>
+  </soap:Body>
+</soap:Envelope>

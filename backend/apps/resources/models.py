@@ -13,6 +13,7 @@ class ResourceSource(models.Model):
         CISA_NIFOG = "cisa_nifog", "CISA NIFOG"
         CISA_AUXFOG = "cisa_auxfog", "CISA AUXFOG"
         CISA_STATE_FOG = "cisa_state_fog", "CISA state or regional FOG"
+        RADIOREFERENCE = "radioreference", "RadioReference"
         LOCAL = "local", "Local controlled source"
         INCIDENT = "incident", "Incident-created source"
         OTHER = "other", "Other approved source"

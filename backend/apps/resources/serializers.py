@@ -83,6 +83,25 @@ class TrunkedTalkgroupSerializer(serializers.ModelSerializer):
         ]
 
 
+class RadioReferenceProviderStatusSerializer(serializers.Serializer):
+    provider = serializers.CharField()
+    contract_version = serializers.CharField()
+    enabled_requested = serializers.BooleanField()
+    available = serializers.BooleanField()
+    mode = serializers.CharField()
+    wsdl_url = serializers.URLField()
+    maximum_response_bytes = serializers.IntegerField()
+    synthetic_contract_available = serializers.BooleanField()
+    live_transport_implemented = serializers.BooleanField()
+    developer_key_loaded = serializers.BooleanField()
+    user_credentials_supported = serializers.BooleanField()
+    credentials_retained = serializers.BooleanField()
+    cache_supported = serializers.BooleanField()
+    import_supported = serializers.BooleanField()
+    export_supported = serializers.BooleanField()
+    warning = serializers.CharField()
+
+
 class ImportSourceSerializer(serializers.Serializer):
     slug = serializers.SlugField(max_length=80)
     name = serializers.CharField(max_length=200)

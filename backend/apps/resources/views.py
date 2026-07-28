@@ -2,16 +2,20 @@ from drf_spectacular.utils import extend_schema
 from rest_framework import generics, status, viewsets
 from rest_framework.filters import SearchFilter
 from rest_framework.pagination import PageNumberPagination
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from apps.accounts.permissions import LibraryImportPermission, PolicyPermission
 from apps.accounts.policy import LIBRARY_VIEW
 
 from .models import ConventionalChannel, ResourceRelease, TrunkedTalkgroup
+from .radioreference import provider_status
 from .serializers import (
     ChannelImportResponseSerializer,
     ChannelImportSerializer,
     ConventionalChannelSerializer,
+    RadioReferenceProviderStatusSerializer,
     ResourceReleaseSerializer,
     TrunkedTalkgroupSerializer,
 )
@@ -70,6 +74,14 @@ class TrunkedTalkgroupViewSet(LibraryReadOnlyViewSet):
         "release__source__name",
         "release__version",
     ]
+
+
+class RadioReferenceProviderStatusView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(responses={200: RadioReferenceProviderStatusSerializer})
+    def get(self, request):
+        return Response(provider_status())
 
 
 def structured_errors(errors, prefix=""):

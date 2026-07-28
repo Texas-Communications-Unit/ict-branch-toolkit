@@ -2167,6 +2167,20 @@ paths:
       responses:
         '204':
           description: No response body
+  /api/radioreference-provider/:
+    get:
+      operationId: radioreference_provider_retrieve
+      tags:
+      - radioreference-provider
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RadioReferenceProviderStatus'
+          description: ''
   /api/resource-releases/:
     get:
       operationId: resource_releases_list
@@ -5727,6 +5741,59 @@ components:
       - profile_type
       - profile_version
       - profile_version_number
+    RadioReferenceProviderStatus:
+      type: object
+      properties:
+        provider:
+          type: string
+        contract_version:
+          type: string
+        enabled_requested:
+          type: boolean
+        available:
+          type: boolean
+        mode:
+          type: string
+        wsdl_url:
+          type: string
+          format: uri
+        maximum_response_bytes:
+          type: integer
+        synthetic_contract_available:
+          type: boolean
+        live_transport_implemented:
+          type: boolean
+        developer_key_loaded:
+          type: boolean
+        user_credentials_supported:
+          type: boolean
+        credentials_retained:
+          type: boolean
+        cache_supported:
+          type: boolean
+        import_supported:
+          type: boolean
+        export_supported:
+          type: boolean
+        warning:
+          type: string
+      required:
+      - available
+      - cache_supported
+      - contract_version
+      - credentials_retained
+      - developer_key_loaded
+      - enabled_requested
+      - export_supported
+      - import_supported
+      - live_transport_implemented
+      - maximum_response_bytes
+      - mode
+      - provider
+      - synthetic_contract_available
+      - user_credentials_supported
+      - warning
+      - wsdl_url
     RadioSite:
       type: object
       properties:
@@ -5986,6 +6053,7 @@ components:
       - cisa_nifog
       - cisa_auxfog
       - cisa_state_fog
+      - radioreference
       - local
       - incident
       - other
@@ -5995,6 +6063,7 @@ components:
         * `cisa_nifog` - CISA NIFOG
         * `cisa_auxfog` - CISA AUXFOG
         * `cisa_state_fog` - CISA state or regional FOG
+        * `radioreference` - RadioReference
         * `local` - Local controlled source
         * `incident` - Incident-created source
         * `other` - Other approved source
