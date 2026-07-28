@@ -4,6 +4,8 @@ from rest_framework.routers import DefaultRouter
 from .views import (
     CoverageEngineStatusView,
     CoverageEstimateViewSet,
+    DirectionalAnalysisStatusView,
+    DirectionalCoverageAnalysisViewSet,
     ElevationProviderStatusView,
     ElevationSnapshotViewSet,
     HAATCalculationViewSet,
@@ -39,6 +41,11 @@ router.register(
     CoverageEstimateViewSet,
     basename="coverage-estimate",
 )
+router.register(
+    "directional-coverage-analyses",
+    DirectionalCoverageAnalysisViewSet,
+    basename="directional-coverage-analysis",
+)
 
 urlpatterns = [
     path(
@@ -50,6 +57,11 @@ urlpatterns = [
         "coverage-engine/",
         CoverageEngineStatusView.as_view(),
         name="coverage-engine-status",
+    ),
+    path(
+        "directional-analysis-status/",
+        DirectionalAnalysisStatusView.as_view(),
+        name="directional-analysis-status",
     ),
     *router.urls,
 ]

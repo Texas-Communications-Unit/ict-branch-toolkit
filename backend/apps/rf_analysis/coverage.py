@@ -120,6 +120,7 @@ class EstimateRequest:
     haat_m: Decimal
     environment: str
     preset_name: str
+    receiver_height_m: Decimal | None = None
 
 
 @dataclass(frozen=True)
@@ -245,7 +246,11 @@ class ProvisionalFsplHorizonEngine(CoverageEstimateEngine):
         environment_margin_db = DEFAULT_ENVIRONMENT_MARGINS_DB[request.environment]
         fade_margin_db = Decimal(str(preset["fade_margin_db"]))
         uncertainty_db = Decimal(str(preset["uncertainty_db"]))
-        receiver_height_m = Decimal(str(preset["receiver_height_m"]))
+        receiver_height_m = (
+            request.receiver_height_m
+            if request.receiver_height_m is not None
+            else Decimal(str(preset["receiver_height_m"]))
+        )
         maximum_distance_m = int(preset["maximum_distance_m"])
         rounding_m = int(preset["distance_rounding_m"])
         if (

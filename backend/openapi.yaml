@@ -316,6 +316,111 @@ paths:
               schema:
                 $ref: '#/components/schemas/CoverageEstimate'
           description: ''
+  /api/directional-analysis-status/:
+    get:
+      operationId: directional_analysis_status_retrieve
+      tags:
+      - directional-analysis-status
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/directional-coverage-analyses/:
+    get:
+      operationId: directional_coverage_analyses_list
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - directional-coverage-analyses
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedDirectionalCoverageAnalysisList'
+          description: ''
+    post:
+      operationId: directional_coverage_analyses_create
+      tags:
+      - directional-coverage-analyses
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateDirectionalCoverageAnalysis'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CreateDirectionalCoverageAnalysis'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CreateDirectionalCoverageAnalysis'
+        required: true
+      security:
+      - tokenAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DirectionalCoverageAnalysis'
+          description: ''
+  /api/directional-coverage-analyses/{id}/:
+    get:
+      operationId: directional_coverage_analyses_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this directional coverage analysis.
+        required: true
+      tags:
+      - directional-coverage-analyses
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DirectionalCoverageAnalysis'
+          description: ''
+  /api/directional-coverage-analyses/{id}/approve/:
+    post:
+      operationId: directional_coverage_analyses_approve_create
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this directional coverage analysis.
+        required: true
+      tags:
+      - directional-coverage-analyses
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DirectionalCoverageAnalysis'
+          description: ''
   /api/elevation-provider/:
     get:
       operationId: elevation_provider_retrieve
@@ -3188,6 +3293,25 @@ components:
       required:
       - environment
       - haat_calculation
+    CreateDirectionalCoverageAnalysis:
+      type: object
+      properties:
+        haat_calculation:
+          type: string
+          format: uuid
+        subscriber_rf_input_snapshot:
+          type: string
+          format: uuid
+        environment:
+          $ref: '#/components/schemas/EnvironmentEnum'
+        preset:
+          type: string
+          default: balanced
+          maxLength: 80
+      required:
+      - environment
+      - haat_calculation
+      - subscriber_rf_input_snapshot
     CreateHAATCalculation:
       type: object
       properties:
@@ -3263,6 +3387,192 @@ components:
       - permissions
       - role
       - username
+    DirectionalCoverageAnalysis:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        incident:
+          type: string
+          format: uuid
+          readOnly: true
+        site:
+          type: string
+          format: uuid
+          readOnly: true
+        site_name:
+          type: string
+          readOnly: true
+        infrastructure_rf_input_snapshot:
+          type: string
+          format: uuid
+          readOnly: true
+        infrastructure_label:
+          type: string
+          readOnly: true
+        subscriber_rf_input_snapshot:
+          type: string
+          format: uuid
+          readOnly: true
+        subscriber_label:
+          type: string
+          readOnly: true
+        subscriber_profile_name:
+          type: string
+          readOnly: true
+        subscriber_profile_type:
+          type: string
+          readOnly: true
+        haat_calculation:
+          type: string
+          format: uuid
+          readOnly: true
+        haat_result_sha256:
+          type: string
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/PlanRevisionStatusEnum'
+          readOnly: true
+        calculation_state:
+          allOf:
+          - $ref: '#/components/schemas/DirectionalCoverageAnalysisCalculationStateEnum'
+          readOnly: true
+        environment:
+          allOf:
+          - $ref: '#/components/schemas/EnvironmentEnum'
+          readOnly: true
+        engine:
+          type: string
+          readOnly: true
+        engine_version:
+          type: string
+          readOnly: true
+        preset:
+          type: string
+          readOnly: true
+        preset_version:
+          type: string
+          readOnly: true
+        rule_version:
+          type: string
+          readOnly: true
+        center_latitude:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,6})?$
+          readOnly: true
+        center_longitude:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,6})?$
+          readOnly: true
+        talk_out_distance_m:
+          type: integer
+          readOnly: true
+          nullable: true
+        talk_in_distance_m:
+          type: integer
+          readOnly: true
+          nullable: true
+        probable_two_way_distance_m:
+          type: integer
+          readOnly: true
+          nullable: true
+        limiting_path:
+          allOf:
+          - $ref: '#/components/schemas/LimitingPathEnum'
+          readOnly: true
+        input_snapshot:
+          readOnly: true
+        input_sha256:
+          type: string
+          readOnly: true
+        model_snapshot:
+          readOnly: true
+        warnings:
+          readOnly: true
+        exclusions:
+          readOnly: true
+        explanation:
+          type: string
+          readOnly: true
+        result_snapshot:
+          readOnly: true
+        result_sha256:
+          type: string
+          readOnly: true
+        created_by:
+          type: integer
+          readOnly: true
+        approved_by:
+          type: integer
+          readOnly: true
+          nullable: true
+        approved_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        is_locked:
+          type: boolean
+          readOnly: true
+      required:
+      - approved_at
+      - approved_by
+      - calculation_state
+      - center_latitude
+      - center_longitude
+      - created_at
+      - created_by
+      - engine
+      - engine_version
+      - environment
+      - exclusions
+      - explanation
+      - haat_calculation
+      - haat_result_sha256
+      - id
+      - incident
+      - infrastructure_label
+      - infrastructure_rf_input_snapshot
+      - input_sha256
+      - input_snapshot
+      - is_locked
+      - limiting_path
+      - model_snapshot
+      - preset
+      - preset_version
+      - probable_two_way_distance_m
+      - result_sha256
+      - result_snapshot
+      - rule_version
+      - site
+      - site_name
+      - status
+      - subscriber_label
+      - subscriber_profile_name
+      - subscriber_profile_type
+      - subscriber_rf_input_snapshot
+      - talk_in_distance_m
+      - talk_out_distance_m
+      - warnings
+    DirectionalCoverageAnalysisCalculationStateEnum:
+      enum:
+      - complete
+      - unsupported
+      - no_overlap
+      type: string
+      description: |-
+        * `complete` - Complete
+        * `unsupported` - Unsupported
+        * `no_overlap` - No probable two-way overlap
     EffectiveStatusEnum:
       enum:
       - draft
@@ -4035,6 +4345,18 @@ components:
         * `recorded_fact` - Recorded fact
         * `modeled_assumption` - Modeled assumption
         * `mixed` - Mixed
+    LimitingPathEnum:
+      enum:
+      - talk_out
+      - talk_in
+      - equal
+      - none
+      type: string
+      description: |-
+        * `talk_out` - Talk-out
+        * `talk_in` - Talk-in
+        * `equal` - Equal
+        * `none` - Not available
     ManualRing:
       type: object
       properties:
@@ -4211,6 +4533,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/CoverageEstimate'
+    PaginatedDirectionalCoverageAnalysisList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/DirectionalCoverageAnalysis'
     PaginatedHAATCalculationList:
       type: object
       required:
@@ -5305,12 +5650,16 @@ components:
       - portable
       - mobile
       - fixed
+      - cache
+      - gateway
       - configurable
       type: string
       description: |-
         * `portable` - Portable
         * `mobile` - Mobile
         * `fixed` - Fixed
+        * `cache` - Cache
+        * `gateway` - Gateway
         * `configurable` - Configurable
     RFAnalysisInputSnapshot:
       type: object
@@ -5326,6 +5675,15 @@ components:
         profile_version:
           type: string
           format: uuid
+          readOnly: true
+        profile_name:
+          type: string
+          readOnly: true
+        profile_type:
+          type: string
+          readOnly: true
+        profile_version_number:
+          type: integer
           readOnly: true
         label:
           type: string
@@ -5365,7 +5723,10 @@ components:
       - input_sha256
       - input_snapshot
       - label
+      - profile_name
+      - profile_type
       - profile_version
+      - profile_version_number
     RadioSite:
       type: object
       properties:

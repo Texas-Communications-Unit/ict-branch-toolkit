@@ -19,6 +19,11 @@ from .coverage import (
     coverage_engine_status,
     create_coverage_estimate,
 )
+from .directional import (
+    approve_directional_analysis,
+    create_directional_analysis,
+    directional_analysis_status,
+)
 from .elevation import provider_status
 from .haat import (
     approve_haat_calculation,
@@ -27,6 +32,7 @@ from .haat import (
 )
 from .models import (
     CoverageEstimate,
+    DirectionalCoverageAnalysis,
     ElevationSnapshot,
     HAATCalculation,
     RFAnalysisInputSnapshot,
@@ -36,8 +42,10 @@ from .models import (
 from .serializers import (
     CoverageEstimateSerializer,
     CreateCoverageEstimateSerializer,
+    CreateDirectionalCoverageAnalysisSerializer,
     CreateHAATCalculationSerializer,
     CreateRFAnalysisInputSnapshotSerializer,
+    DirectionalCoverageAnalysisSerializer,
     ElevationSnapshotSerializer,
     HAATCalculationSerializer,
     RFAnalysisInputSnapshotSerializer,
@@ -601,3 +609,113 @@ class CoverageEstimateViewSet(
             },
         )
         return Response(CoverageEstimateSerializer(estimate).data)
+
+
+class DirectionalCoverageAnalysisViewSet(
+    mixins.ListModelMixin,
+    mixins.RetrieveModelMixin,
+    mixins.CreateModelMixin,
+    viewsets.GenericViewSet,
+):
+    queryset = DirectionalCoverageAnalysis.objects.none()
+    serializer_class = DirectionalCoverageAnalysisSerializer
+    permission_classes = [PolicyPermission]
+    policy_actions = {
+        "list": RF_VIEW,
+        "retrieve": RF_VIEW,
+        "create": RF_EDIT,
+        "approve": RF_APPROVE,
+    }
+
+    def get_queryset(self):
+        queryset = scoped_to_incidents(
+            DirectionalCoverageAnalysis.objects.select_related(
+                "incident",
+                "site",
+                "infrastructure_rf_input_snapshot",
+                "subscriber_rf_input_snapshot__profile_version__profile",
+                "haat_calculation",
+                "created_by",
+                "approved_by",
+            ),
+            self.request.user,
+        )
+        incident_id = self.request.query_params.get("incident")
+        return queryset.filter(incident_id=incident_id) if incident_id else queryset
+
+    def get_serializer_class(self):
+        if self.action == "create":
+            return CreateDirectionalCoverageAnalysisSerializer
+        return DirectionalCoverageAnalysisSerializer
+
+    @extend_schema(
+        request=CreateDirectionalCoverageAnalysisSerializer,
+        responses={201: DirectionalCoverageAnalysisSerializer},
+    )
+    def create(self, request, *args, **kwargs):
+        request_serializer = CreateDirectionalCoverageAnalysisSerializer(data=request.data)
+        request_serializer.is_valid(raise_exception=True)
+        values = request_serializer.validated_data
+        haat_calculation = values["haat_calculation"]
+        if not user_has_permission(request.user, RF_EDIT, haat_calculation.incident):
+            raise PermissionDenied(
+                "Your incident role cannot create directional coverage analyses."
+            )
+        analysis = create_directional_analysis(
+            haat_calculation=haat_calculation,
+            subscriber_rf_input_snapshot=values["subscriber_rf_input_snapshot"],
+            environment=values["environment"],
+            preset=values["preset"],
+            actor=request.user,
+        )
+        record_event(
+            actor=request.user,
+            action="directional_coverage_analysis.created",
+            target=analysis,
+            details={
+                "changed_fields": [
+                    "calculation_state",
+                    "engine_version",
+                    "environment",
+                    "input_sha256",
+                    "limiting_path",
+                    "model_snapshot",
+                    "preset_version",
+                    "result_sha256",
+                    "result_snapshot",
+                    "rule_version",
+                ],
+                "infrastructure_input_sha256": (
+                    analysis.infrastructure_rf_input_snapshot.input_sha256
+                ),
+                "subscriber_input_sha256": (analysis.subscriber_rf_input_snapshot.input_sha256),
+                "source_haat_result_sha256": analysis.haat_calculation.result_sha256,
+            },
+        )
+        return Response(
+            DirectionalCoverageAnalysisSerializer(analysis).data,
+            status=status.HTTP_201_CREATED,
+        )
+
+    @extend_schema(request=None, responses={200: DirectionalCoverageAnalysisSerializer})
+    @action(detail=True, methods=["post"])
+    def approve(self, request, pk=None):
+        analysis = approve_directional_analysis(self.get_object(), actor=request.user)
+        record_event(
+            actor=request.user,
+            action="directional_coverage_analysis.approved",
+            target=analysis,
+            details={
+                "changed_fields": ["approved_at", "approved_by", "status"],
+                "result_sha256": analysis.result_sha256,
+            },
+        )
+        return Response(DirectionalCoverageAnalysisSerializer(analysis).data)
+
+
+class DirectionalAnalysisStatusView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(responses={200: OpenApiTypes.OBJECT})
+    def get(self, request):
+        return Response(directional_analysis_status())

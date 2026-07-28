@@ -130,6 +130,11 @@ ICT_APPROVED_COVERAGE_CONFIGURATIONS = json.loads(
 )
 if not isinstance(ICT_APPROVED_COVERAGE_CONFIGURATIONS, list):
     raise ValueError("ICT_APPROVED_COVERAGE_CONFIGURATIONS must be a JSON array.")
+ICT_APPROVED_DIRECTIONAL_RULES = json.loads(os.getenv("ICT_APPROVED_DIRECTIONAL_RULES", "[]"))
+if not isinstance(ICT_APPROVED_DIRECTIONAL_RULES, list) or not all(
+    isinstance(rule, str) for rule in ICT_APPROVED_DIRECTIONAL_RULES
+):
+    raise ValueError("ICT_APPROVED_DIRECTIONAL_RULES must be a JSON array of strings.")
 
 CORS_ALLOWED_ORIGINS = [
     origin.strip()

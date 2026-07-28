@@ -6,16 +6,18 @@ P2.1 implements incident-scoped, versioned subscriber profiles and immutable RF 
 snapshots. P2.2 adds source-aware elevation snapshots and reproducible HAAT calculations. Both
 include migrations, API/OpenAPI, backend permissions, unit/integration tests, and authenticated
 synthetic browser workflows. P2.3 adds an immutable, explainable `CoverageEstimate` aggregate and
-a replaceable provisional calculation-engine boundary.
+a replaceable provisional calculation-engine boundary. P2.4 adds immutable separate-direction
+talk-out, talk-in, and probable two-way analysis.
 
 The implemented aggregates are:
 
 - `SubscriberProfile`;
-- `SubscriberProfileVersion`; and
+- `SubscriberProfileVersion`;
 - `RFAnalysisInputSnapshot`;
-- `ElevationSnapshot`; and
-- `HAATCalculation`; and
-- `CoverageEstimate`.
+- `ElevationSnapshot`;
+- `HAATCalculation`;
+- `CoverageEstimate`; and
+- `DirectionalCoverageAnalysis`.
 
 The first three records are the P2.1 input aggregate. The P2.2 terrain aggregate references an
 exact site and immutable approved RF input snapshot, including its profile version, but is not a
@@ -26,6 +28,11 @@ P2.3 now follows that rule: every estimate references the exact approved RF inpu
 complete approved HAAT calculation, then preserves the site coordinates, engine and preset
 versions, assumptions, intermediate values, geometry, warnings, explanation, and integrity
 digests used for its result.
+
+P2.4 references that same infrastructure evidence plus one distinct approved subscriber snapshot.
+It preserves talk-out and talk-in separately, derives probable two-way distance only from their
+supported overlap, and stores the limiting path, exact engine/preset/rule versions, path evidence,
+geometry, warnings, exclusions, explanations, and integrity digests.
 
 Only synthetic or explicitly approved data may be used. All field enumerations, numerical ranges,
 cross-field rules, calculation conventions, and subscriber assumptions are provisional. **No
@@ -71,7 +78,7 @@ These are implemented controlled values, not approved operational assumptions.
 
 | Field                    | Values                                                                  |
 | ------------------------ | ----------------------------------------------------------------------- |
-| `profile_type`           | `portable`, `mobile`, `fixed`, `configurable`                           |
+| `profile_type`           | `portable`, `mobile`, `fixed`, `cache`, `gateway`, `configurable`       |
 | `status`                 | `draft`, `approved`                                                     |
 | `erp_source`             | `unknown`, `entered`, `calculated`                                      |
 | `antenna_gain_reference` | `unknown`, `dbi`, `dbd`                                                 |
@@ -91,17 +98,17 @@ claim per-field provenance.
 One stable profile identity groups all numbered versions. It is incident-scoped and archived
 rather than deleted.
 
-| Field          | Type/unknown behavior                    | Meaning                                                                               |
-| -------------- | ---------------------------------------- | ------------------------------------------------------------------------------------- |
-| `id`           | UUID, required                           | Stable profile identifier.                                                            |
-| `incident`     | protected incident foreign key, required | Owning incident and authorization boundary.                                           |
-| `name`         | text, required, maximum 160 characters   | Minimal profile label; not an equipment serial or owner.                              |
-| `profile_type` | controlled value, required               | `portable`, `mobile`, `fixed`, or `configurable`; no type is operationally preferred. |
-| `description`  | text, blank allowed                      | Minimal synthetic/approved purpose description; blank means unknown/not provided.     |
-| `created_by`   | protected user foreign key, required     | Creating actor.                                                                       |
-| `created_at`   | UTC timestamp, required                  | Server-assigned creation time.                                                        |
-| `updated_at`   | UTC timestamp, required                  | Server-assigned last-change time.                                                     |
-| `archived_at`  | UTC timestamp, nullable                  | Archive time; `null` means active.                                                    |
+| Field          | Type/unknown behavior                    | Meaning                                                                                                    |
+| -------------- | ---------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `id`           | UUID, required                           | Stable profile identifier.                                                                                 |
+| `incident`     | protected incident foreign key, required | Owning incident and authorization boundary.                                                                |
+| `name`         | text, required, maximum 160 characters   | Minimal profile label; not an equipment serial or owner.                                                   |
+| `profile_type` | controlled value, required               | `portable`, `mobile`, `fixed`, `cache`, `gateway`, or `configurable`; no type is operationally preferred. |
+| `description`  | text, blank allowed                      | Minimal synthetic/approved purpose description; blank means unknown/not provided.                          |
+| `created_by`   | protected user foreign key, required     | Creating actor.                                                                                            |
+| `created_at`   | UTC timestamp, required                  | Server-assigned creation time.                                                                             |
+| `updated_at`   | UTC timestamp, required                  | Server-assigned last-change time.                                                                          |
+| `archived_at`  | UTC timestamp, nullable                  | Archive time; `null` means active.                                                                         |
 
 The profile API also exposes `initial_version`, a required write-only first-draft object on create,
 and `versions`, a read-only nested list of its numbered versions. `initial_version` is rejected on
@@ -343,6 +350,28 @@ P2.4 introduces separate talk-out, talk-in, and probable two-way analysis.
 See
 [ADR-0010](../adr/0010-provisional-explainable-coverage-estimates.md) and the
 [coverage-estimate evaluation guide](../operations/coverage-estimates.md).
+
+## `DirectionalCoverageAnalysis`
+
+Each retained directional analysis references one complete approved infrastructure HAAT
+calculation, its exact infrastructure RF input snapshot, and one distinct approved subscriber RF
+input snapshot in the same incident. It stores:
+
+- draft or approved/locked lifecycle and complete, unsupported, or no-overlap calculation state;
+- selected environment and exact engine, preset, and directional-rule versions;
+- separate talk-out and talk-in nominal distances;
+- probable two-way distance derived from the smaller supported nominal path;
+- the explicit limiting path;
+- WGS 84 center and separate deterministic geometry for each supported path;
+- canonical input, model, path-result, warning, exclusion, explanation, and digest evidence; and
+- creator/approver identity and timestamps.
+
+The initial `concentric-minimum-v1-provisional` rule requires cross-matched transmit/receive
+frequencies. It does not average unequal paths or fabricate overlap when either direction is
+unsupported. Manual rings and prior P2.3 estimates remain separate records and layers.
+
+See [ADR-0011](../adr/0011-separate-directional-and-two-way-analysis.md) and the
+[directional evaluation guide](../operations/directional-coverage-analysis.md).
 
 ## `RFAnalysisInputSnapshot`
 

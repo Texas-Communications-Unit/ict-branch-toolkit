@@ -2,6 +2,7 @@ from django.contrib import admin
 
 from .models import (
     CoverageEstimate,
+    DirectionalCoverageAnalysis,
     ElevationSnapshot,
     HAATCalculation,
     RFAnalysisInputSnapshot,
@@ -85,3 +86,30 @@ class CoverageEstimateAdmin(ReadOnlyRFAdmin):
     )
     list_filter = ("environment", "band", "calculation_state", "status", "engine_version")
     search_fields = ("site__name", "rf_input_snapshot__label", "result_sha256")
+
+
+@admin.register(DirectionalCoverageAnalysis)
+class DirectionalCoverageAnalysisAdmin(ReadOnlyRFAdmin):
+    list_display = (
+        "site",
+        "environment",
+        "rule_version",
+        "calculation_state",
+        "limiting_path",
+        "status",
+        "probable_two_way_distance_m",
+        "created_at",
+    )
+    list_filter = (
+        "environment",
+        "calculation_state",
+        "limiting_path",
+        "status",
+        "rule_version",
+    )
+    search_fields = (
+        "site__name",
+        "infrastructure_rf_input_snapshot__label",
+        "subscriber_rf_input_snapshot__label",
+        "result_sha256",
+    )
