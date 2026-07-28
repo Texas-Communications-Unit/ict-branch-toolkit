@@ -523,6 +523,18 @@ footer {
   color: var(--tx-comu-white);
 }
 
+.status.pending {
+  background: #fff5e6;
+  border: 1px solid #dba45d;
+  color: #6c3700;
+}
+
+.status.excluded {
+  background: #f8e9e7;
+  border: 1px solid #c77b72;
+  color: #7d2118;
+}
+
 .assignment-form {
   display: grid;
   gap: 0.65rem;
@@ -942,6 +954,7 @@ footer a {
   border-radius: 1rem;
   box-shadow: 0 0.7rem 1.8rem var(--tx-comu-shadow);
   grid-column: 1 / -1;
+  min-width: 0;
   padding: 1.25rem;
 }
 
@@ -1071,8 +1084,80 @@ footer a {
 .coverage-form h3,
 .coverage-form .form-note,
 .coverage-form > button,
-.coverage-form > .warning-text {
+.coverage-form > .warning-text,
+.coverage-form > .section-heading,
+.coverage-form > .form-grid,
+.coverage-form > fieldset,
+.coverage-form > label,
+.coverage-form > p {
   grid-column: 1 / -1;
+}
+
+.form-grid,
+.checkbox-grid {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+}
+
+.checkbox-grid label {
+  align-items: flex-start;
+  display: flex;
+  gap: 0.5rem;
+}
+
+.checkbox-grid input {
+  margin-top: 0.2rem;
+  width: auto;
+}
+
+.table-wrap {
+  margin-top: 1rem;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+}
+
+.data-table {
+  border-collapse: collapse;
+  min-width: 68rem;
+  width: 100%;
+}
+
+.data-table caption {
+  color: var(--tx-comu-slate);
+  font-size: 0.9rem;
+  font-weight: 700;
+  padding: 0.75rem 0;
+  text-align: left;
+}
+
+.data-table th,
+.data-table td {
+  border-bottom: 1px solid var(--tx-comu-border);
+  padding: 0.75rem;
+  text-align: left;
+  vertical-align: top;
+}
+
+.data-table small {
+  color: var(--tx-comu-slate);
+  display: block;
+  margin-top: 0.35rem;
+}
+
+.data-table details {
+  margin-bottom: 0.55rem;
+}
+
+.evidence-list {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.evidence-list dd {
+  margin: 0.15rem 0 0;
+  overflow-wrap: anywhere;
 }
 
 .table-scroll {

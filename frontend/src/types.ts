@@ -302,6 +302,7 @@ export interface RFAnalysisInputSnapshot {
   input_snapshot: Record<string, unknown>;
   input_sha256: string;
   created_at?: string;
+  archived_at?: string | null;
 }
 
 export interface CreateSubscriberProfilePayload {
@@ -540,4 +541,153 @@ export interface CreateDirectionalCoverageAnalysisPayload {
   subscriber_rf_input_snapshot: string;
   environment: CoverageEstimate["environment"];
   preset: string;
+}
+
+export interface CalibrationStatus {
+  algorithm: string;
+  algorithm_version: string;
+  approved_for_operational_use: boolean;
+  minimum_usable_observations: number;
+  ratio_bounds: {
+    minimum: string;
+    maximum: string;
+  };
+  location_rule: string;
+  promotion_rule: string;
+  disclaimer: string;
+}
+
+export interface FieldObservationReview {
+  id: string;
+  observation: string;
+  decision: "approved" | "excluded";
+  reason: string;
+  evidence_sha256: string;
+  reviewed_by: number;
+  created_at: string;
+}
+
+export interface FieldObservation {
+  id: string;
+  incident: string;
+  infrastructure_rf_input_snapshot: string;
+  infrastructure_label: string;
+  subscriber_rf_input_snapshot: string;
+  subscriber_label: string;
+  coverage_estimate: string | null;
+  directional_analysis: string | null;
+  supersedes: string | null;
+  superseded_by: string | null;
+  classification: "good" | "marginal" | "failed";
+  evidence_type: "measured" | "operator" | "imported" | "modeled";
+  observed_from: string;
+  observed_to: string;
+  location_precision: "exact" | "generalized" | "redacted";
+  coordinate_reference: "EPSG:4326";
+  latitude: string | null;
+  longitude: string | null;
+  location_precision_m: number | null;
+  direction_degrees: string | null;
+  path_distance_m: number | null;
+  observer_source: string;
+  collection_method: string;
+  environment: Record<string, string>;
+  measurements: Record<string, string>;
+  notes: string;
+  quality_flags: string[];
+  source_record_id: string;
+  source_revision: string;
+  input_snapshot: Record<string, unknown>;
+  input_sha256: string;
+  created_by: number;
+  created_at: string;
+  current_review_state: "pending" | "approved" | "excluded";
+  reviews: FieldObservationReview[];
+}
+
+export interface CreateFieldObservationPayload {
+  incident: string;
+  infrastructure_rf_input_snapshot: string;
+  subscriber_rf_input_snapshot: string;
+  coverage_estimate?: string | null;
+  directional_analysis?: string | null;
+  supersedes?: string | null;
+  classification: FieldObservation["classification"];
+  evidence_type: FieldObservation["evidence_type"];
+  observed_from: string;
+  observed_to: string;
+  location_precision: FieldObservation["location_precision"];
+  latitude?: string | null;
+  longitude?: string | null;
+  location_precision_m?: number | null;
+  direction_degrees?: string | null;
+  path_distance_m?: number | null;
+  observer_source: string;
+  collection_method: string;
+  environment: Record<string, string>;
+  measurements: Record<string, string>;
+  notes: string;
+  quality_flags: string[];
+  source_record_id: string;
+  source_revision: string;
+}
+
+export interface CalibrationSet {
+  id: string;
+  incident: string;
+  name: string;
+  version: number;
+  status: "draft" | "approved";
+  calculation_state: "complete" | "insufficient_data";
+  algorithm: string;
+  algorithm_version: string;
+  parameters: Record<string, string | number>;
+  baseline_preset: string;
+  baseline_preset_version: string;
+  observation_ids: string[];
+  observation_snapshot: Record<string, unknown>[];
+  observation_sha256: string;
+  recommended_preset: {
+    schema_version: string;
+    base_preset: string;
+    base_preset_version: string;
+    distance_multiplier: string | null;
+    scope: "incident_local";
+    promotion_state: "not_promoted";
+    organization_default_overwritten: false;
+  };
+  before_after: {
+    before: {
+      mean_absolute_error_m: string;
+      mean_absolute_percentage_error: string;
+    } | null;
+    after: {
+      mean_absolute_error_m: string;
+      mean_absolute_percentage_error: string;
+    } | null;
+  };
+  warnings: string[];
+  exclusions: {
+    observation_id: string;
+    code: string;
+    reason: string;
+  }[];
+  result_snapshot: Record<string, unknown>;
+  result_sha256: string;
+  approved_at: string | null;
+  created_at: string;
+  is_locked: boolean;
+}
+
+export interface CreateCalibrationSetPayload {
+  incident: string;
+  name: string;
+  observations: string[];
+  baseline_preset: string;
+  baseline_preset_version: string;
+  parameters: {
+    minimum_samples: number;
+    minimum_ratio: string;
+    maximum_ratio: string;
+  };
 }
