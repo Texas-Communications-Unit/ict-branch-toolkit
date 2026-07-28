@@ -27,6 +27,12 @@ only.
 - Stale, partial, missing, or out-of-coverage terrain being presented as complete.
 - Vertical-reference or datum conversion being omitted while apparently precise elevations remain.
 - Retry or cache refresh rewriting the source evidence behind an earlier HAAT result.
+- A SOAP/XML response using DTDs, entities, unexpected schema content, excessive
+  size, or invalid numeric fields to consume resources or bypass normalization.
+- A developer key or individual RadioReference credential reaching the browser,
+  logs, build layers, audit payloads, fixtures, exports, or pooled storage.
+- A configuration flag being mistaken for licensing approval or live-provider
+  readiness.
 - Exact coordinates being retained when an operator intended generalization or redaction.
 - Mutable observations, reviews, or fitted sets erasing unfavorable field evidence.
 - Cross-incident RF snapshots or analysis results being attached to an observation.
@@ -67,6 +73,14 @@ policy scopes every HAAT result and its elevation snapshot; audit events identif
 without duplicating coordinates, RF values, or terrain samples in audit detail. Partial and
 unavailable results cannot be approved. See
 [ADR-0009](../adr/0009-source-aware-elevation-and-reproducible-haat.md).
+
+The RadioReference contract remains network-free and unavailable regardless of
+the feature flag. It accepts only bounded, explicitly synthetic SOAP fixtures,
+rejects DTD/entity and unexpected schema content, normalizes allowlisted fields,
+and records a response digest without retaining raw XML or credentials. A live
+adapter, credential exchange, cache, import, or export requires a new reviewed
+implementation after the
+[licensing and security gate](../operations/radioreference-provider.md).
 
 For P2.5, coordinate generalization or redaction occurs before persistence. Observations,
 corrections, review decisions, calibration sets, and set membership are retained as immutable

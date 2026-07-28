@@ -84,6 +84,9 @@ Security and policy settings:
 | `ICT_APPROVED_ELEVATION_SOURCES` | `[]`              | Exact complete source descriptors, including references, terms, coverage, digest, and network mode. Never include credentials.                                                                      |
 | `ICT_ELEVATION_CACHE_TTL_SECONDS` | `604800`          | Maximum reuse period for an exact cached query. Expiration marks retained evidence stale; it does not delete or rewrite it.                                                                          |
 | `ICT_SYNTHETIC_ELEVATION_MODE`   | `flat`            | Applies only to the explicitly selected synthetic fixture provider. It is not actual terrain.                                                                                                        |
+| `RADIOREFERENCE_ENABLED`         | `false`           | Records enablement intent only. The current adapter remains unavailable and makes no live request even when set to `true`.                                                                            |
+| `RADIOREFERENCE_WSDL_URL`        | official HTTPS URL | Non-secret, server-side endpoint metadata. HTTPS is required and embedded credentials are rejected. Follow the [provider safety boundary](radioreference-provider.md).                                |
+| `RADIOREFERENCE_MAX_RESPONSE_BYTES` | `1048576`     | Synthetic SOAP contract input limit. Must remain between 1,024 and 5,242,880 bytes.                                                                                                                   |
 | `ICT_APPROVED_CALIBRATION_METHODS` | `[]`            | Exact incident-local calibration versions that passed security/privacy and qualified RF review. This never authorizes real collection or default-preset promotion.                                  |
 
 The neutral, network-free map is the default. Enabling any external map requires
@@ -146,7 +149,11 @@ results of these checks:
 11. Elevation retrieval reports disabled unless an exact source approval exists;
     if enabled, verify its source references and one explicitly approved test
     through the [elevation/HAAT operations guide](elevation-and-haat.md).
-12. Calibration approval remains disabled unless its separate field-data authority,
+12. RadioReference reports `mode: disabled`, `available: false`, no loaded
+    developer key, no user-credential support, and no cache/import/export
+    support according to the
+    [RadioReference provider procedure](radioreference-provider.md).
+13. Calibration approval remains disabled unless its separate field-data authority,
     privacy, and qualified RF review are recorded. Verify only synthetic observations
     through the [field observation and calibration guide](field-observations-and-calibration.md).
 

@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 from pathlib import Path
+from urllib.parse import urlsplit
 
 import dj_database_url
 
@@ -140,6 +141,26 @@ if not isinstance(ICT_APPROVED_CALIBRATION_METHODS, list) or not all(
     isinstance(method, str) for method in ICT_APPROVED_CALIBRATION_METHODS
 ):
     raise ValueError("ICT_APPROVED_CALIBRATION_METHODS must be a JSON array of strings.")
+RADIOREFERENCE_ENABLED = os.getenv("RADIOREFERENCE_ENABLED", "false").lower() == "true"
+RADIOREFERENCE_WSDL_URL = os.getenv(
+    "RADIOREFERENCE_WSDL_URL",
+    "https://api.radioreference.com/soap2/?wsdl&v=latest",
+).strip()
+_radioreference_wsdl = urlsplit(RADIOREFERENCE_WSDL_URL)
+if (
+    len(RADIOREFERENCE_WSDL_URL) > 500
+    or _radioreference_wsdl.scheme != "https"
+    or not _radioreference_wsdl.hostname
+    or _radioreference_wsdl.username
+    or _radioreference_wsdl.password
+    or _radioreference_wsdl.fragment
+):
+    raise ValueError(
+        "RADIOREFERENCE_WSDL_URL must be an HTTPS URL without embedded credentials or a fragment."
+    )
+RADIOREFERENCE_MAX_RESPONSE_BYTES = int(os.getenv("RADIOREFERENCE_MAX_RESPONSE_BYTES", "1048576"))
+if not 1_024 <= RADIOREFERENCE_MAX_RESPONSE_BYTES <= 5_242_880:
+    raise ValueError("RADIOREFERENCE_MAX_RESPONSE_BYTES must be between 1024 and 5242880 bytes.")
 
 CORS_ALLOWED_ORIGINS = [
     origin.strip()

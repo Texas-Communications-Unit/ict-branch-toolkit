@@ -310,6 +310,21 @@ See [ADR-0011](docs/adr/0011-separate-directional-and-two-way-analysis.md), the
 [directional analysis operations guide](docs/operations/directional-coverage-analysis.md), and the
 [Phase 2 data model](docs/data-model/phase-2.md).
 
+## Optional RadioReference synthetic contract
+
+Issue #33 adds only a disabled, server-side synthetic contract for future
+RadioReference evaluation. It normalizes obviously synthetic agency, frequency,
+trunked-system, site, and talkgroup XML while enforcing response-size, SOAP
+shape, DTD/entity, field, numeric, provenance, and non-retention controls.
+
+There is no live transport, developer-key loading, user-credential handling,
+cache, import, or export. `RADIOREFERENCE_ENABLED=true` records intent but still
+reports the provider unavailable. Live work remains blocked pending written
+licensing clarification, an individual Premium-account security design, secret
+provisioning, and maintainer approval. See
+[ADR-0014](docs/adr/0014-disabled-radioreference-provider-contract.md) and the
+[RadioReference safety boundary](docs/operations/radioreference-provider.md).
+
 ## P2.5 field observations and controlled local calibration
 
 Issue #19 records immutable, incident-scoped good, marginal, and failed-communications

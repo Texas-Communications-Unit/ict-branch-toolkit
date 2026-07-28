@@ -44,6 +44,20 @@ cache may not be committed, exported, or redistributed until its exact permitted
 retention, and redistribution terms are approved. SHA-256 digests identify retained content; they
 do not anonymize the source or incident.
 
+## RadioReference boundary
+
+The public repository may contain only the disabled adapter contract and
+obviously synthetic RadioReference-shaped fixtures. The developer key,
+individual-user credentials, authentication responses, real source data, raw
+SOAP/XML, normalized live records, caches, screenshots, exports, and derived
+datasets are prohibited.
+
+Future RadioReference data inherits the strictest incident, source, credential,
+and licensing classification. A source identifier, response digest, or
+normalization step does not make provider data public or authorize retention.
+Live access requires the separate licensing and security gate in the
+[provider procedure](../operations/radioreference-provider.md).
+
 Field observations and calibration evidence inherit the highest classification of their incident,
 RF input, analysis source, observer/source, location, time, measurements, notes, and collection
 authority. Generalization reduces coordinate precision but is not anonymization; redaction is the
