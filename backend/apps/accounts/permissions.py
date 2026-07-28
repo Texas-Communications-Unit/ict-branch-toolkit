@@ -24,6 +24,7 @@ class PolicyPermission(BasePermission):
             "approve",
             "create_snapshot",
             "retry",
+            "review",
         }:
             return True
         if action == "create" and getattr(view, "basename", None) in {
@@ -31,6 +32,8 @@ class PolicyPermission(BasePermission):
             "incident-membership",
             "subscriber-profile",
             "haat-calculation",
+            "field-observation",
+            "calibration-set",
         }:
             return True
         return required is None or user_has_permission(request.user, required)

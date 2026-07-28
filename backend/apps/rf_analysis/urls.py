@@ -2,12 +2,15 @@ from django.urls import path
 from rest_framework.routers import DefaultRouter
 
 from .views import (
+    CalibrationSetViewSet,
+    CalibrationStatusView,
     CoverageEngineStatusView,
     CoverageEstimateViewSet,
     DirectionalAnalysisStatusView,
     DirectionalCoverageAnalysisViewSet,
     ElevationProviderStatusView,
     ElevationSnapshotViewSet,
+    FieldObservationViewSet,
     HAATCalculationViewSet,
     RFAnalysisInputSnapshotViewSet,
     SubscriberProfileVersionViewSet,
@@ -46,6 +49,16 @@ router.register(
     DirectionalCoverageAnalysisViewSet,
     basename="directional-coverage-analysis",
 )
+router.register(
+    "field-observations",
+    FieldObservationViewSet,
+    basename="field-observation",
+)
+router.register(
+    "calibration-sets",
+    CalibrationSetViewSet,
+    basename="calibration-set",
+)
 
 urlpatterns = [
     path(
@@ -62,6 +75,11 @@ urlpatterns = [
         "directional-analysis-status/",
         DirectionalAnalysisStatusView.as_view(),
         name="directional-analysis-status",
+    ),
+    path(
+        "calibration-status/",
+        CalibrationStatusView.as_view(),
+        name="calibration-status",
     ),
     *router.urls,
 ]

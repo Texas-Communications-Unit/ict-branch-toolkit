@@ -27,6 +27,13 @@ only.
 - Stale, partial, missing, or out-of-coverage terrain being presented as complete.
 - Vertical-reference or datum conversion being omitted while apparently precise elevations remain.
 - Retry or cache refresh rewriting the source evidence behind an earlier HAAT result.
+- Exact coordinates being retained when an operator intended generalization or redaction.
+- Mutable observations, reviews, or fitted sets erasing unfavorable field evidence.
+- Cross-incident RF snapshots or analysis results being attached to an observation.
+- Observer/source text, notes, locations, or measurements leaking through audit detail or exports.
+- Missing values or outliers being silently removed from calibration.
+- An incident-local fit overwriting an organization default or being represented as validated
+  coverage.
 
 ## Design responses
 
@@ -60,4 +67,17 @@ policy scopes every HAAT result and its elevation snapshot; audit events identif
 without duplicating coordinates, RF values, or terrain samples in audit detail. Partial and
 unavailable results cannot be approved. See
 [ADR-0009](../adr/0009-source-aware-elevation-and-reproducible-haat.md).
+
+For P2.5, coordinate generalization or redaction occurs before persistence. Observations,
+corrections, review decisions, calibration sets, and set membership are retained as immutable
+evidence. The backend validates incident scope and exact approved RF/analysis sources. Calibration
+records every selected input, missing/outlier exclusion, parameter, comparison metric, warning,
+and digest while omitting coordinates, observer/source text, and notes from its result snapshot.
+Audit detail contains action metadata and digests rather than field content.
+
+The provisional method remains fail-closed for approval until its exact version is allowlisted.
+Every recommendation remains marked incident-local and not promoted. Non-synthetic collection
+requires separate incident authority, security/privacy review, retention/consent decisions, and
+qualified RF review. See
+[ADR-0012](../adr/0012-field-observations-and-incident-local-calibration.md).
 

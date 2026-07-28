@@ -1,14 +1,20 @@
 import {
   AUTHENTICATION_EXPIRED_EVENT,
+  approveCalibrationSet,
   approveHAATCalculation,
   approveSubscriberProfileVersion,
   archiveSubscriberProfile,
   copySubscriberProfileVersion,
+  createCalibrationSet,
+  createFieldObservation,
   createHAATCalculation,
   createRFAnalysisInputSnapshot,
   createSubscriberProfile,
   getElevationProviderStatus,
+  getCalibrationStatus,
   hasActiveSession,
+  listCalibrationSets,
+  listFieldObservations,
   listHAATCalculations,
   listRFAnalysisInputSnapshots,
   listSubscriberProfiles,
@@ -16,6 +22,7 @@ import {
   login,
   logout,
   retryHAATCalculation,
+  reviewFieldObservation,
   updateSubscriberProfile,
   updateSubscriberProfileVersion,
 } from "../src/api";
@@ -276,5 +283,115 @@ test("uses source-aware elevation and immutable HAAT workflow endpoints", async 
   );
   expect(String(fetchMock.mock.calls[4][0])).toBe(
     "http://localhost:8000/api/haat-calculations/haat-1/approve/",
+  );
+});
+
+test("uses incident-scoped field observation and calibration endpoints", async () => {
+  sessionStorage.setItem("ict-toolkit-token", "synthetic-calibration-token");
+  sessionStorage.setItem(
+    "ict-toolkit-token-expires-at",
+    "2099-07-28T20:00:00Z",
+  );
+  const fetchMock = vi
+    .spyOn(globalThis, "fetch")
+    .mockImplementation(async (input) => {
+      const url = String(input);
+      if (
+        url.includes("/api/field-observations/?") ||
+        url.includes("/api/calibration-sets/?")
+      ) {
+        return new Response(
+          JSON.stringify({
+            count: 0,
+            next: null,
+            previous: null,
+            results: [],
+          }),
+          { status: 200 },
+        );
+      }
+      return new Response(JSON.stringify({ id: "synthetic-result" }), {
+        status: 200,
+      });
+    });
+
+  await getCalibrationStatus();
+  await listFieldObservations("incident / calibration");
+  await createFieldObservation({
+    incident: "incident-1",
+    infrastructure_rf_input_snapshot: "rf-infrastructure",
+    subscriber_rf_input_snapshot: "rf-subscriber",
+    classification: "good",
+    evidence_type: "measured",
+    observed_from: "2026-07-28T14:00:00Z",
+    observed_to: "2026-07-28T14:05:00Z",
+    location_precision: "redacted",
+    latitude: null,
+    longitude: null,
+    location_precision_m: null,
+    observer_source: "Synthetic team",
+    collection_method: "Scripted check",
+    environment: {},
+    measurements: {
+      measured_distance_m: "1000",
+      predicted_distance_m: "900",
+    },
+    notes: "Synthetic only",
+    quality_flags: [],
+    source_record_id: "",
+    source_revision: "synthetic-v1",
+  });
+  await reviewFieldObservation(
+    "observation-1",
+    "approved",
+    "Synthetic review reason",
+  );
+  await listCalibrationSets("incident / calibration");
+  await createCalibrationSet({
+    incident: "incident-1",
+    name: "Synthetic local calibration",
+    observations: ["observation-1"],
+    baseline_preset: "balanced",
+    baseline_preset_version: "balanced-v1-provisional",
+    parameters: {
+      minimum_samples: 3,
+      minimum_ratio: "0.25",
+      maximum_ratio: "4",
+    },
+  });
+  await approveCalibrationSet("calibration-1");
+
+  expect(String(fetchMock.mock.calls[0][0])).toBe(
+    "http://localhost:8000/api/calibration-status/",
+  );
+  expect(String(fetchMock.mock.calls[1][0])).toBe(
+    "http://localhost:8000/api/field-observations/?incident=incident%20%2F%20calibration",
+  );
+  expect(fetchMock.mock.calls[2][1]).toEqual(
+    expect.objectContaining({
+      method: "POST",
+      body: expect.stringContaining('"location_precision":"redacted"'),
+    }),
+  );
+  expect(fetchMock.mock.calls[3][1]).toEqual(
+    expect.objectContaining({
+      method: "POST",
+      body: JSON.stringify({
+        decision: "approved",
+        reason: "Synthetic review reason",
+      }),
+    }),
+  );
+  expect(String(fetchMock.mock.calls[4][0])).toBe(
+    "http://localhost:8000/api/calibration-sets/?incident=incident%20%2F%20calibration",
+  );
+  expect(fetchMock.mock.calls[5][1]).toEqual(
+    expect.objectContaining({
+      method: "POST",
+      body: expect.stringContaining('"observations":["observation-1"]'),
+    }),
+  );
+  expect(String(fetchMock.mock.calls[6][0])).toBe(
+    "http://localhost:8000/api/calibration-sets/calibration-1/approve/",
   );
 });

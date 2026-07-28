@@ -135,6 +135,11 @@ if not isinstance(ICT_APPROVED_DIRECTIONAL_RULES, list) or not all(
     isinstance(rule, str) for rule in ICT_APPROVED_DIRECTIONAL_RULES
 ):
     raise ValueError("ICT_APPROVED_DIRECTIONAL_RULES must be a JSON array of strings.")
+ICT_APPROVED_CALIBRATION_METHODS = json.loads(os.getenv("ICT_APPROVED_CALIBRATION_METHODS", "[]"))
+if not isinstance(ICT_APPROVED_CALIBRATION_METHODS, list) or not all(
+    isinstance(method, str) for method in ICT_APPROVED_CALIBRATION_METHODS
+):
+    raise ValueError("ICT_APPROVED_CALIBRATION_METHODS must be a JSON array of strings.")
 
 CORS_ALLOWED_ORIGINS = [
     origin.strip()

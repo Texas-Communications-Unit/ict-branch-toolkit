@@ -373,6 +373,60 @@ unsupported. Manual rings and prior P2.3 estimates remain separate records and l
 See [ADR-0011](../adr/0011-separate-directional-and-two-way-analysis.md) and the
 [directional evaluation guide](../operations/directional-coverage-analysis.md).
 
+## `FieldObservation` and `FieldObservationReview`
+
+Each immutable observation belongs to one incident and references distinct approved
+infrastructure and subscriber `RFAnalysisInputSnapshot` records. An optional approved
+`CoverageEstimate` or `DirectionalCoverageAnalysis` preserves the modeled comparison source.
+
+The observation stores:
+
+- good, marginal, or failed-communications classification;
+- measured, operator, imported, or modeled evidence type;
+- bounded observation time window;
+- explicit WGS 84 exact, pre-storage generalized, or pre-storage redacted location handling;
+- optional direction and integer-meter path distance;
+- minimized observer/source and collection method;
+- bounded environment and measurement objects, notes, controlled quality flags, source ID and
+  revision;
+- correction linkage through one immutable `supersedes` relationship;
+- exact approved RF and analysis source identities/digests;
+- canonical input snapshot and SHA-256; and
+- creator and creation time.
+
+Generalized coordinates are rounded before the model, snapshot, audit event, or API response is
+created. Redacted observations retain no coordinate or precision value. Raw coordinates are not
+stored as a hidden companion field.
+
+Each `FieldObservationReview` is an immutable append-only approval or exclusion decision with a
+reason, reviewer, timestamp, evidence digest, and prior-review digest in its canonical evidence.
+The latest decision is the effective review state. A correction does not alter the prior record,
+and a superseded record cannot be newly approved.
+
+## `CalibrationSet` and `CalibrationSetObservation`
+
+Each calibration set is an immutable named version within one incident. Membership is preserved
+through immutable links that capture each observation digest and effective review-evidence digest.
+The set records:
+
+- draft or approved/locked lifecycle and complete or insufficient-data state;
+- exact algorithm/version, bounded parameters, baseline preset/version;
+- minimized observation snapshot and aggregate digest;
+- classification distribution, usable count, warnings, and explicit missing/outlier exclusions;
+- incident-local recommended multiplier marked `not_promoted`;
+- before/after mean absolute and percentage error;
+- canonical result snapshot and digest; and
+- creator/approver identity and timestamps.
+
+`observation-envelope-v1-provisional` fits the median of bounded positive
+measured-to-predicted distance ratios and requires at least three usable observations by default.
+It is an explainable prototype, not a scientific propagation-validation method. Approval fails
+unless the exact algorithm is server-allowlisted and all linked observation and review evidence is
+still current. Approval never writes to the coverage engine's organization defaults.
+
+See [ADR-0012](../adr/0012-field-observations-and-incident-local-calibration.md) and the
+[field observation and calibration guide](../operations/field-observations-and-calibration.md).
+
 ## `RFAnalysisInputSnapshot`
 
 This immutable named record copies one approved profile version's canonical snapshot for later
