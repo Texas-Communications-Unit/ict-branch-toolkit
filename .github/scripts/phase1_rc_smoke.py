@@ -49,6 +49,12 @@ IncidentMembership.objects.create(
     role=Role.COMT,
     assigned_by=owner,
 )
+IncidentMembership.objects.create(
+    incident=assigned_incident,
+    user=owner,
+    role=Role.COML,
+    assigned_by=owner,
+)
 assigned_period = OperationalPeriod.objects.create(
     incident=assigned_incident,
     name="Synthetic RC Operational Period",
