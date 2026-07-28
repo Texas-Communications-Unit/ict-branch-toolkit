@@ -85,6 +85,111 @@ paths:
               schema:
                 $ref: '#/components/schemas/TokenSession'
           description: ''
+  /api/calibration-sets/:
+    get:
+      operationId: calibration_sets_list
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - calibration-sets
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedCalibrationSetList'
+          description: ''
+    post:
+      operationId: calibration_sets_create
+      tags:
+      - calibration-sets
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCalibrationSet'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CreateCalibrationSet'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CreateCalibrationSet'
+        required: true
+      security:
+      - tokenAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CalibrationSet'
+          description: ''
+  /api/calibration-sets/{id}/:
+    get:
+      operationId: calibration_sets_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this calibration set.
+        required: true
+      tags:
+      - calibration-sets
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CalibrationSet'
+          description: ''
+  /api/calibration-sets/{id}/approve/:
+    post:
+      operationId: calibration_sets_approve_create
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this calibration set.
+        required: true
+      tags:
+      - calibration-sets
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CalibrationSet'
+          description: ''
+  /api/calibration-status/:
+    get:
+      operationId: calibration_status_retrieve
+      tags:
+      - calibration-status
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
   /api/channel-imports/:
     post:
       operationId: channel_imports_create
@@ -457,6 +562,108 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ElevationSnapshot'
+          description: ''
+  /api/field-observations/:
+    get:
+      operationId: field_observations_list
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - field-observations
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedFieldObservationList'
+          description: ''
+    post:
+      operationId: field_observations_create
+      tags:
+      - field-observations
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateFieldObservation'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CreateFieldObservation'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CreateFieldObservation'
+        required: true
+      security:
+      - tokenAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FieldObservation'
+          description: ''
+  /api/field-observations/{id}/:
+    get:
+      operationId: field_observations_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this field observation.
+        required: true
+      tags:
+      - field-observations
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FieldObservation'
+          description: ''
+  /api/field-observations/{id}/review/:
+    post:
+      operationId: field_observations_review_create
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this field observation.
+        required: true
+      tags:
+      - field-observations
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReviewFieldObservation'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ReviewFieldObservation'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ReviewFieldObservation'
+        required: true
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FieldObservation'
           description: ''
   /api/geocoder/search/:
     post:
@@ -2978,6 +3185,122 @@ components:
     BlankEnum:
       enum:
       - ''
+    CalibrationSet:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        incident:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+          readOnly: true
+        version:
+          type: integer
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/PlanRevisionStatusEnum'
+          readOnly: true
+        calculation_state:
+          allOf:
+          - $ref: '#/components/schemas/CalibrationSetCalculationStateEnum'
+          readOnly: true
+        algorithm:
+          type: string
+          readOnly: true
+        algorithm_version:
+          type: string
+          readOnly: true
+        parameters:
+          readOnly: true
+        baseline_preset:
+          type: string
+          readOnly: true
+        baseline_preset_version:
+          type: string
+          readOnly: true
+        observation_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+          readOnly: true
+        observation_snapshot:
+          readOnly: true
+        observation_sha256:
+          type: string
+          readOnly: true
+        recommended_preset:
+          readOnly: true
+        before_after:
+          readOnly: true
+        warnings:
+          readOnly: true
+        exclusions:
+          readOnly: true
+        result_snapshot:
+          readOnly: true
+        result_sha256:
+          type: string
+          readOnly: true
+        created_by:
+          type: integer
+          readOnly: true
+        approved_by:
+          type: integer
+          readOnly: true
+          nullable: true
+        approved_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        is_locked:
+          type: boolean
+          readOnly: true
+      required:
+      - algorithm
+      - algorithm_version
+      - approved_at
+      - approved_by
+      - baseline_preset
+      - baseline_preset_version
+      - before_after
+      - calculation_state
+      - created_at
+      - created_by
+      - exclusions
+      - id
+      - incident
+      - is_locked
+      - name
+      - observation_ids
+      - observation_sha256
+      - observation_snapshot
+      - parameters
+      - recommended_preset
+      - result_sha256
+      - result_snapshot
+      - status
+      - version
+      - warnings
+    CalibrationSetCalculationStateEnum:
+      enum:
+      - complete
+      - insufficient_data
+      type: string
+      description: |-
+        * `complete` - Complete
+        * `insufficient_data` - Insufficient data
     ChannelImport:
       type: object
       properties:
@@ -3030,6 +3353,16 @@ components:
       - dry_run
       - errors
       - valid
+    ClassificationEnum:
+      enum:
+      - good
+      - marginal
+      - failed
+      type: string
+      description: |-
+        * `good` - Good communications
+        * `marginal` - Marginal communications
+        * `failed` - Failed communications
     ConventionalChannel:
       type: object
       properties:
@@ -3292,6 +3625,33 @@ components:
       description: |-
         * `complete` - Complete
         * `unsupported` - Unsupported
+    CreateCalibrationSet:
+      type: object
+      properties:
+        incident:
+          type: string
+          format: uuid
+        name:
+          type: string
+          maxLength: 160
+        observations:
+          type: array
+          items:
+            type: string
+            format: uuid
+        baseline_preset:
+          type: string
+          maxLength: 80
+        baseline_preset_version:
+          type: string
+          maxLength: 80
+        parameters: {}
+      required:
+      - baseline_preset
+      - baseline_preset_version
+      - incident
+      - name
+      - observations
     CreateCoverageEstimate:
       type: object
       properties:
@@ -3325,6 +3685,103 @@ components:
       required:
       - environment
       - haat_calculation
+      - subscriber_rf_input_snapshot
+    CreateFieldObservation:
+      type: object
+      properties:
+        incident:
+          type: string
+          format: uuid
+        infrastructure_rf_input_snapshot:
+          type: string
+          format: uuid
+        subscriber_rf_input_snapshot:
+          type: string
+          format: uuid
+        coverage_estimate:
+          type: string
+          format: uuid
+          nullable: true
+        directional_analysis:
+          type: string
+          format: uuid
+          nullable: true
+        supersedes:
+          type: string
+          format: uuid
+          nullable: true
+        classification:
+          $ref: '#/components/schemas/ClassificationEnum'
+        evidence_type:
+          $ref: '#/components/schemas/EvidenceTypeEnum'
+        observed_from:
+          type: string
+          format: date-time
+        observed_to:
+          type: string
+          format: date-time
+        location_precision:
+          $ref: '#/components/schemas/LocationPrecisionEnum'
+        latitude:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,6})?$
+          nullable: true
+        longitude:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,6})?$
+          nullable: true
+        location_precision_m:
+          type: integer
+          maximum: 1000000
+          minimum: 1
+          nullable: true
+        direction_degrees:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,3})?$
+          nullable: true
+        path_distance_m:
+          type: integer
+          maximum: 1000000
+          minimum: 1
+          nullable: true
+        observer_source:
+          type: string
+          maxLength: 160
+        collection_method:
+          type: string
+          maxLength: 120
+        environment: {}
+        measurements: {}
+        notes:
+          type: string
+          default: ''
+          maxLength: 2000
+        quality_flags:
+          type: array
+          items:
+            type: string
+            maxLength: 80
+        source_record_id:
+          type: string
+          default: ''
+          maxLength: 160
+        source_revision:
+          type: string
+          maxLength: 160
+      required:
+      - classification
+      - collection_method
+      - evidence_type
+      - incident
+      - infrastructure_rf_input_snapshot
+      - location_precision
+      - observed_from
+      - observed_to
+      - observer_source
+      - source_revision
       - subscriber_rf_input_snapshot
     CreateHAATCalculation:
       type: object
@@ -3401,6 +3858,14 @@ components:
       - permissions
       - role
       - username
+    DecisionEnum:
+      enum:
+      - approved
+      - excluded
+      type: string
+      description: |-
+        * `approved` - Approved
+        * `excluded` - Excluded
     DirectionalCoverageAnalysis:
       type: object
       properties:
@@ -3857,6 +4322,18 @@ components:
         * `unknown` - Unknown
         * `entered` - Entered
         * `calculated` - Calculated
+    EvidenceTypeEnum:
+      enum:
+      - measured
+      - operator
+      - imported
+      - modeled
+      type: string
+      description: |-
+        * `measured` - Measured value
+        * `operator` - Operator judgment
+        * `imported` - Imported record
+        * `modeled` - Modeled value
     ExportDigestVerificationRequest:
       type: object
       properties:
@@ -3867,6 +4344,213 @@ components:
           type: string
           format: uri
           nullable: true
+    FieldObservation:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        incident:
+          type: string
+          format: uuid
+          readOnly: true
+        infrastructure_rf_input_snapshot:
+          type: string
+          format: uuid
+          readOnly: true
+        infrastructure_label:
+          type: string
+          readOnly: true
+        subscriber_rf_input_snapshot:
+          type: string
+          format: uuid
+          readOnly: true
+        subscriber_label:
+          type: string
+          readOnly: true
+        coverage_estimate:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
+        directional_analysis:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
+        supersedes:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
+        superseded_by:
+          type: string
+          format: uuid
+          nullable: true
+          readOnly: true
+        classification:
+          allOf:
+          - $ref: '#/components/schemas/ClassificationEnum'
+          readOnly: true
+        evidence_type:
+          allOf:
+          - $ref: '#/components/schemas/EvidenceTypeEnum'
+          readOnly: true
+        observed_from:
+          type: string
+          format: date-time
+          readOnly: true
+        observed_to:
+          type: string
+          format: date-time
+          readOnly: true
+        location_precision:
+          allOf:
+          - $ref: '#/components/schemas/LocationPrecisionEnum'
+          readOnly: true
+        coordinate_reference:
+          type: string
+          readOnly: true
+        latitude:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,6})?$
+          readOnly: true
+          nullable: true
+        longitude:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,6})?$
+          readOnly: true
+          nullable: true
+        location_precision_m:
+          type: integer
+          readOnly: true
+          nullable: true
+        direction_degrees:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,3})?$
+          readOnly: true
+          nullable: true
+        path_distance_m:
+          type: integer
+          readOnly: true
+          nullable: true
+        observer_source:
+          type: string
+          readOnly: true
+        collection_method:
+          type: string
+          readOnly: true
+        environment:
+          readOnly: true
+        measurements:
+          readOnly: true
+        notes:
+          type: string
+          readOnly: true
+        quality_flags:
+          readOnly: true
+        source_record_id:
+          type: string
+          readOnly: true
+        source_revision:
+          type: string
+          readOnly: true
+        input_snapshot:
+          readOnly: true
+        input_sha256:
+          type: string
+          readOnly: true
+        created_by:
+          type: integer
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        current_review_state:
+          type: string
+          readOnly: true
+        reviews:
+          type: array
+          items:
+            $ref: '#/components/schemas/FieldObservationReview'
+          readOnly: true
+      required:
+      - classification
+      - collection_method
+      - coordinate_reference
+      - coverage_estimate
+      - created_at
+      - created_by
+      - current_review_state
+      - direction_degrees
+      - directional_analysis
+      - environment
+      - evidence_type
+      - id
+      - incident
+      - infrastructure_label
+      - infrastructure_rf_input_snapshot
+      - input_sha256
+      - input_snapshot
+      - latitude
+      - location_precision
+      - location_precision_m
+      - longitude
+      - measurements
+      - notes
+      - observed_from
+      - observed_to
+      - observer_source
+      - path_distance_m
+      - quality_flags
+      - reviews
+      - source_record_id
+      - source_revision
+      - subscriber_label
+      - subscriber_rf_input_snapshot
+      - superseded_by
+      - supersedes
+    FieldObservationReview:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        observation:
+          type: string
+          format: uuid
+          readOnly: true
+        decision:
+          allOf:
+          - $ref: '#/components/schemas/DecisionEnum'
+          readOnly: true
+        reason:
+          type: string
+          readOnly: true
+        evidence_sha256:
+          type: string
+          readOnly: true
+        reviewed_by:
+          type: integer
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - decision
+      - evidence_sha256
+      - id
+      - observation
+      - reason
+      - reviewed_by
     FrequencyBandEnum:
       enum:
       - unknown
@@ -4371,6 +5055,16 @@ components:
         * `talk_in` - Talk-in
         * `equal` - Equal
         * `none` - Not available
+    LocationPrecisionEnum:
+      enum:
+      - exact
+      - generalized
+      - redacted
+      type: string
+      description: |-
+        * `exact` - Exact
+        * `generalized` - Generalized
+        * `redacted` - Redacted
     ManualRing:
       type: object
       properties:
@@ -4501,6 +5195,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Assignment'
+    PaginatedCalibrationSetList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/CalibrationSet'
     PaginatedConventionalChannelList:
       type: object
       required:
@@ -4570,6 +5287,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/DirectionalCoverageAnalysis'
+    PaginatedFieldObservationList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/FieldObservation'
     PaginatedHAATCalculationList:
       type: object
       required:
@@ -5988,6 +6728,17 @@ components:
       - name
       - slug
       - source_type
+    ReviewFieldObservation:
+      type: object
+      properties:
+        decision:
+          $ref: '#/components/schemas/DecisionEnum'
+        reason:
+          type: string
+          maxLength: 1000
+      required:
+      - decision
+      - reason
     RingTypeEnum:
       enum:
       - operational

@@ -33,6 +33,13 @@ only.
   logs, build layers, audit payloads, fixtures, exports, or pooled storage.
 - A configuration flag being mistaken for licensing approval or live-provider
   readiness.
+- Exact coordinates being retained when an operator intended generalization or redaction.
+- Mutable observations, reviews, or fitted sets erasing unfavorable field evidence.
+- Cross-incident RF snapshots or analysis results being attached to an observation.
+- Observer/source text, notes, locations, or measurements leaking through audit detail or exports.
+- Missing values or outliers being silently removed from calibration.
+- An incident-local fit overwriting an organization default or being represented as validated
+  coverage.
 
 ## Design responses
 
@@ -74,4 +81,17 @@ and records a response digest without retaining raw XML or credentials. A live
 adapter, credential exchange, cache, import, or export requires a new reviewed
 implementation after the
 [licensing and security gate](../operations/radioreference-provider.md).
+
+For P2.5, coordinate generalization or redaction occurs before persistence. Observations,
+corrections, review decisions, calibration sets, and set membership are retained as immutable
+evidence. The backend validates incident scope and exact approved RF/analysis sources. Calibration
+records every selected input, missing/outlier exclusion, parameter, comparison metric, warning,
+and digest while omitting coordinates, observer/source text, and notes from its result snapshot.
+Audit detail contains action metadata and digests rather than field content.
+
+The provisional method remains fail-closed for approval until its exact version is allowlisted.
+Every recommendation remains marked incident-local and not promoted. Non-synthetic collection
+requires separate incident authority, security/privacy review, retention/consent decisions, and
+qualified RF review. See
+[ADR-0012](../adr/0012-field-observations-and-incident-local-calibration.md).
 

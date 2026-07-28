@@ -105,6 +105,22 @@ implemented fields, provisional validators, snapshot boundary, and human gate.
 See [ADR-0009](../adr/0009-source-aware-elevation-and-reproducible-haat.md) and the
 [elevation/HAAT operations guide](../operations/elevation-and-haat.md).
 
+## P2.5 field evidence and calibration controls
+
+- `rf.view`, `rf.edit`, and `rf.approve` govern incident-scoped observation, review, calibration
+  creation, and calibration approval. Browser controls are not authorization.
+- Observation create events record field names, source linkage IDs, and the canonical input digest
+  without copying coordinates, measurements, observer/source text, or notes.
+- Approval and exclusion create separate append-only review records and audit events. Correction
+  creates a new observation linked through `supersedes`.
+- Calibration create and approval events retain selected count and observation/result digests
+  without duplicating field evidence.
+- Direct update or deletion of observations, reviews, calibration sets, and membership links is
+  rejected.
+
+See [ADR-0012](../adr/0012-field-observations-and-incident-local-calibration.md) and the
+[field observation and calibration guide](../operations/field-observations-and-calibration.md).
+
 ## P1.6 append-only audit review
 
 The append-only implementation, request transaction boundary, hash-chain verification, protected

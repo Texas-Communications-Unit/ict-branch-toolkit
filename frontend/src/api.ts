@@ -1,4 +1,6 @@
 import type {
+  CalibrationSet,
+  CalibrationStatus,
   CoverageEngineStatus,
   CoverageEstimate,
   CreateDirectionalCoverageAnalysisPayload,
@@ -6,12 +8,15 @@ import type {
   CoordinateParseResult,
   CreateHAATCalculationPayload,
   CreateCoverageEstimatePayload,
+  CreateCalibrationSetPayload,
   CreateSubscriberProfilePayload,
+  CreateFieldObservationPayload,
   DirectionalAnalysisStatus,
   DirectionalCoverageAnalysis,
   CurrentUser,
   EditableRFInputFields,
   ElevationProviderStatus,
+  FieldObservation,
   GeocoderSearchResult,
   HAATCalculation,
   ImportResult,
@@ -570,4 +575,61 @@ export function approveDirectionalCoverageAnalysis(
     `/api/directional-coverage-analyses/${id}/approve/`,
     { method: "POST" },
   );
+}
+
+export function getCalibrationStatus(): Promise<CalibrationStatus> {
+  return request<CalibrationStatus>("/api/calibration-status/");
+}
+
+export async function listFieldObservations(
+  incident: string,
+): Promise<FieldObservation[]> {
+  const result = await request<Paginated<FieldObservation>>(
+    `/api/field-observations/?incident=${encodeURIComponent(incident)}`,
+  );
+  return result.results;
+}
+
+export function createFieldObservation(
+  payload: CreateFieldObservationPayload,
+): Promise<FieldObservation> {
+  return request<FieldObservation>("/api/field-observations/", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function reviewFieldObservation(
+  id: string,
+  decision: "approved" | "excluded",
+  reason: string,
+): Promise<FieldObservation> {
+  return request<FieldObservation>(`/api/field-observations/${id}/review/`, {
+    method: "POST",
+    body: JSON.stringify({ decision, reason }),
+  });
+}
+
+export async function listCalibrationSets(
+  incident: string,
+): Promise<CalibrationSet[]> {
+  const result = await request<Paginated<CalibrationSet>>(
+    `/api/calibration-sets/?incident=${encodeURIComponent(incident)}`,
+  );
+  return result.results;
+}
+
+export function createCalibrationSet(
+  payload: CreateCalibrationSetPayload,
+): Promise<CalibrationSet> {
+  return request<CalibrationSet>("/api/calibration-sets/", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function approveCalibrationSet(id: string): Promise<CalibrationSet> {
+  return request<CalibrationSet>(`/api/calibration-sets/${id}/approve/`, {
+    method: "POST",
+  });
 }

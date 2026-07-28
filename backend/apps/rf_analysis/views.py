@@ -14,6 +14,13 @@ from apps.accounts.permissions import PolicyPermission
 from apps.accounts.policy import RF_APPROVE, RF_EDIT, RF_VIEW, role_for_user, user_has_permission
 from apps.audit.services import record_event
 
+from .calibration import (
+    approve_calibration_set,
+    calibration_status,
+    create_calibration_set,
+    create_field_observation,
+    review_field_observation,
+)
 from .coverage import (
     approve_coverage_estimate,
     coverage_engine_status,
@@ -31,23 +38,30 @@ from .haat import (
     retry_haat_calculation,
 )
 from .models import (
+    CalibrationSet,
     CoverageEstimate,
     DirectionalCoverageAnalysis,
     ElevationSnapshot,
+    FieldObservation,
     HAATCalculation,
     RFAnalysisInputSnapshot,
     SubscriberProfile,
     SubscriberProfileVersion,
 )
 from .serializers import (
+    CalibrationSetSerializer,
     CoverageEstimateSerializer,
+    CreateCalibrationSetSerializer,
     CreateCoverageEstimateSerializer,
     CreateDirectionalCoverageAnalysisSerializer,
+    CreateFieldObservationSerializer,
     CreateHAATCalculationSerializer,
     CreateRFAnalysisInputSnapshotSerializer,
     DirectionalCoverageAnalysisSerializer,
     ElevationSnapshotSerializer,
+    FieldObservationSerializer,
     HAATCalculationSerializer,
+    ReviewFieldObservationSerializer,
     RFAnalysisInputSnapshotSerializer,
     SubscriberProfileSerializer,
     SubscriberProfileVersionSerializer,
@@ -719,3 +733,203 @@ class DirectionalAnalysisStatusView(APIView):
     @extend_schema(responses={200: OpenApiTypes.OBJECT})
     def get(self, request):
         return Response(directional_analysis_status())
+
+
+class FieldObservationViewSet(
+    mixins.ListModelMixin,
+    mixins.RetrieveModelMixin,
+    mixins.CreateModelMixin,
+    viewsets.GenericViewSet,
+):
+    queryset = FieldObservation.objects.none()
+    serializer_class = FieldObservationSerializer
+    permission_classes = [PolicyPermission]
+    policy_actions = {
+        "list": RF_VIEW,
+        "retrieve": RF_VIEW,
+        "create": RF_EDIT,
+        "review": RF_APPROVE,
+    }
+
+    def get_queryset(self):
+        queryset = scoped_to_incidents(
+            FieldObservation.objects.select_related(
+                "incident",
+                "infrastructure_rf_input_snapshot",
+                "subscriber_rf_input_snapshot",
+                "coverage_estimate",
+                "directional_analysis",
+                "supersedes",
+                "created_by",
+            ).prefetch_related("reviews", "superseded_by"),
+            self.request.user,
+        )
+        incident_id = self.request.query_params.get("incident")
+        return queryset.filter(incident_id=incident_id) if incident_id else queryset
+
+    def get_serializer_class(self):
+        if self.action == "create":
+            return CreateFieldObservationSerializer
+        return FieldObservationSerializer
+
+    @extend_schema(
+        request=CreateFieldObservationSerializer,
+        responses={201: FieldObservationSerializer},
+    )
+    def create(self, request, *args, **kwargs):
+        request_serializer = CreateFieldObservationSerializer(data=request.data)
+        request_serializer.is_valid(raise_exception=True)
+        values = request_serializer.validated_data
+        incident = values["incident"]
+        if not user_has_permission(request.user, RF_EDIT, incident):
+            raise PermissionDenied("Your incident role cannot record field observations.")
+        observation = create_field_observation(values=values, actor=request.user)
+        record_event(
+            actor=request.user,
+            action="field_observation.created",
+            target=observation,
+            details={
+                "changed_fields": [
+                    "classification",
+                    "evidence_type",
+                    "input_sha256",
+                    "location_precision",
+                    "source_revision",
+                ],
+                "input_sha256": observation.input_sha256,
+                "supersedes_id": (
+                    str(observation.supersedes_id) if observation.supersedes_id else None
+                ),
+            },
+        )
+        return Response(
+            FieldObservationSerializer(observation).data,
+            status=status.HTTP_201_CREATED,
+        )
+
+    @extend_schema(
+        request=ReviewFieldObservationSerializer,
+        responses={200: FieldObservationSerializer},
+    )
+    @action(detail=True, methods=["post"])
+    def review(self, request, pk=None):
+        observation = self.get_object()
+        request_serializer = ReviewFieldObservationSerializer(data=request.data)
+        request_serializer.is_valid(raise_exception=True)
+        values = request_serializer.validated_data
+        review = review_field_observation(
+            observation,
+            decision=values["decision"],
+            reason=values["reason"],
+            actor=request.user,
+        )
+        record_event(
+            actor=request.user,
+            action=f"field_observation.{review.decision}",
+            target=observation,
+            details={
+                "changed_fields": ["current_review_state"],
+                "review_evidence_sha256": review.evidence_sha256,
+            },
+        )
+        observation = self.get_queryset().get(pk=observation.pk)
+        return Response(FieldObservationSerializer(observation).data)
+
+
+class CalibrationSetViewSet(
+    mixins.ListModelMixin,
+    mixins.RetrieveModelMixin,
+    mixins.CreateModelMixin,
+    viewsets.GenericViewSet,
+):
+    queryset = CalibrationSet.objects.none()
+    serializer_class = CalibrationSetSerializer
+    permission_classes = [PolicyPermission]
+    policy_actions = {
+        "list": RF_VIEW,
+        "retrieve": RF_VIEW,
+        "create": RF_EDIT,
+        "approve": RF_APPROVE,
+    }
+
+    def get_queryset(self):
+        queryset = scoped_to_incidents(
+            CalibrationSet.objects.select_related(
+                "incident",
+                "created_by",
+                "approved_by",
+            ).prefetch_related("observations", "observation_links"),
+            self.request.user,
+        )
+        incident_id = self.request.query_params.get("incident")
+        return queryset.filter(incident_id=incident_id) if incident_id else queryset
+
+    def get_serializer_class(self):
+        if self.action == "create":
+            return CreateCalibrationSetSerializer
+        return CalibrationSetSerializer
+
+    @extend_schema(
+        request=CreateCalibrationSetSerializer,
+        responses={201: CalibrationSetSerializer},
+    )
+    def create(self, request, *args, **kwargs):
+        request_serializer = CreateCalibrationSetSerializer(data=request.data)
+        request_serializer.is_valid(raise_exception=True)
+        values = request_serializer.validated_data
+        incident = values["incident"]
+        if not user_has_permission(request.user, RF_EDIT, incident):
+            raise PermissionDenied("Your incident role cannot create calibration sets.")
+        calibration_set = create_calibration_set(
+            incident=incident,
+            name=values["name"],
+            observations=list(values["observations"]),
+            baseline_preset=values["baseline_preset"],
+            baseline_preset_version=values["baseline_preset_version"],
+            parameters=values["parameters"],
+            actor=request.user,
+        )
+        record_event(
+            actor=request.user,
+            action="calibration_set.created",
+            target=calibration_set,
+            details={
+                "changed_fields": [
+                    "algorithm_version",
+                    "calculation_state",
+                    "observation_sha256",
+                    "result_sha256",
+                    "version",
+                ],
+                "observation_count": len(calibration_set.observation_snapshot),
+                "observation_sha256": calibration_set.observation_sha256,
+                "result_sha256": calibration_set.result_sha256,
+            },
+        )
+        return Response(
+            CalibrationSetSerializer(calibration_set).data,
+            status=status.HTTP_201_CREATED,
+        )
+
+    @extend_schema(request=None, responses={200: CalibrationSetSerializer})
+    @action(detail=True, methods=["post"])
+    def approve(self, request, pk=None):
+        calibration_set = approve_calibration_set(self.get_object(), actor=request.user)
+        record_event(
+            actor=request.user,
+            action="calibration_set.approved",
+            target=calibration_set,
+            details={
+                "changed_fields": ["approved_at", "approved_by", "status"],
+                "result_sha256": calibration_set.result_sha256,
+            },
+        )
+        return Response(CalibrationSetSerializer(calibration_set).data)
+
+
+class CalibrationStatusView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(responses={200: OpenApiTypes.OBJECT})
+    def get(self, request):
+        return Response(calibration_status())

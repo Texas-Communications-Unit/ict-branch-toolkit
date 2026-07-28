@@ -876,3 +876,347 @@ class DirectionalCoverageAnalysis(models.Model):
     @property
     def is_locked(self):
         return self.status == self.Status.APPROVED
+
+
+class FieldObservation(models.Model):
+    class Classification(models.TextChoices):
+        GOOD = "good", "Good communications"
+        MARGINAL = "marginal", "Marginal communications"
+        FAILED = "failed", "Failed communications"
+
+    class EvidenceType(models.TextChoices):
+        MEASURED = "measured", "Measured value"
+        OPERATOR = "operator", "Operator judgment"
+        IMPORTED = "imported", "Imported record"
+        MODELED = "modeled", "Modeled value"
+
+    class LocationPrecision(models.TextChoices):
+        EXACT = "exact", "Exact"
+        GENERALIZED = "generalized", "Generalized"
+        REDACTED = "redacted", "Redacted"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    incident = models.ForeignKey(
+        Incident,
+        related_name="field_observations",
+        on_delete=models.PROTECT,
+    )
+    infrastructure_rf_input_snapshot = models.ForeignKey(
+        RFAnalysisInputSnapshot,
+        related_name="infrastructure_field_observations",
+        on_delete=models.PROTECT,
+    )
+    subscriber_rf_input_snapshot = models.ForeignKey(
+        RFAnalysisInputSnapshot,
+        related_name="subscriber_field_observations",
+        on_delete=models.PROTECT,
+    )
+    coverage_estimate = models.ForeignKey(
+        CoverageEstimate,
+        related_name="field_observations",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+    )
+    directional_analysis = models.ForeignKey(
+        DirectionalCoverageAnalysis,
+        related_name="field_observations",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+    )
+    supersedes = models.OneToOneField(
+        "self",
+        related_name="superseded_by",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+    )
+    classification = models.CharField(max_length=12, choices=Classification.choices)
+    evidence_type = models.CharField(max_length=12, choices=EvidenceType.choices)
+    observed_from = models.DateTimeField()
+    observed_to = models.DateTimeField()
+    location_precision = models.CharField(
+        max_length=12,
+        choices=LocationPrecision.choices,
+    )
+    coordinate_reference = models.CharField(max_length=32, default="EPSG:4326")
+    latitude = models.DecimalField(
+        max_digits=9,
+        decimal_places=6,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(Decimal("-90")), MaxValueValidator(Decimal("90"))],
+    )
+    longitude = models.DecimalField(
+        max_digits=9,
+        decimal_places=6,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(Decimal("-180")), MaxValueValidator(Decimal("180"))],
+    )
+    location_precision_m = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(1), MaxValueValidator(1_000_000)],
+    )
+    direction_degrees = models.DecimalField(
+        max_digits=6,
+        decimal_places=3,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(Decimal("0")), MaxValueValidator(Decimal("359.999"))],
+    )
+    path_distance_m = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(1), MaxValueValidator(1_000_000)],
+    )
+    observer_source = models.CharField(max_length=160)
+    collection_method = models.CharField(max_length=120)
+    environment = models.JSONField(default=dict, blank=True)
+    measurements = models.JSONField(default=dict, blank=True)
+    notes = models.TextField(blank=True)
+    quality_flags = models.JSONField(default=list, blank=True)
+    source_record_id = models.CharField(max_length=160, blank=True)
+    source_revision = models.CharField(max_length=160)
+    input_snapshot = models.JSONField()
+    input_sha256 = models.CharField(max_length=64)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        related_name="created_field_observations",
+        on_delete=models.PROTECT,
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-observed_to", "-created_at"]
+        indexes = [
+            models.Index(
+                fields=["incident", "classification", "evidence_type"],
+                name="rf_obs_inc_class_type_idx",
+            ),
+            models.Index(
+                fields=["incident", "observed_to"],
+                name="rf_obs_inc_observed_idx",
+            ),
+        ]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(observed_to__gte=models.F("observed_from")),
+                name="rf_obs_window_ordered",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    models.Q(
+                        location_precision="redacted",
+                        latitude__isnull=True,
+                        longitude__isnull=True,
+                        location_precision_m__isnull=True,
+                    )
+                    | (
+                        models.Q(
+                            location_precision__in=["exact", "generalized"],
+                            latitude__isnull=False,
+                            longitude__isnull=False,
+                            location_precision_m__isnull=False,
+                        )
+                    )
+                ),
+                name="rf_obs_location_consistent",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.incident}: {self.classification} at {self.observed_to.isoformat()}"
+
+    def save(self, *args, **kwargs):
+        if self.pk and FieldObservation.objects.filter(pk=self.pk).exists():
+            raise ValidationError("Field observations are immutable; create a superseding record.")
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError("Field observations are retained.")
+
+    @property
+    def current_review_state(self):
+        review = self.reviews.order_by("-created_at", "-id").first()
+        return review.decision if review else "pending"
+
+
+class FieldObservationReview(models.Model):
+    class Decision(models.TextChoices):
+        APPROVED = "approved", "Approved"
+        EXCLUDED = "excluded", "Excluded"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    observation = models.ForeignKey(
+        FieldObservation,
+        related_name="reviews",
+        on_delete=models.PROTECT,
+    )
+    decision = models.CharField(max_length=12, choices=Decision.choices)
+    reason = models.TextField()
+    evidence_sha256 = models.CharField(max_length=64)
+    reviewed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        related_name="field_observation_reviews",
+        on_delete=models.PROTECT,
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["observation", "created_at", "id"]
+        indexes = [
+            models.Index(
+                fields=["observation", "created_at"],
+                name="rf_obs_review_history_idx",
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.observation}: {self.decision}"
+
+    def save(self, *args, **kwargs):
+        if self.pk and FieldObservationReview.objects.filter(pk=self.pk).exists():
+            raise ValidationError("Observation review decisions are append-only.")
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError("Observation review decisions are retained.")
+
+
+class CalibrationSet(models.Model):
+    class Status(models.TextChoices):
+        DRAFT = "draft", "Draft"
+        APPROVED = "approved", "Approved"
+
+    class CalculationState(models.TextChoices):
+        COMPLETE = "complete", "Complete"
+        INSUFFICIENT_DATA = "insufficient_data", "Insufficient data"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    incident = models.ForeignKey(
+        Incident,
+        related_name="calibration_sets",
+        on_delete=models.PROTECT,
+    )
+    name = models.CharField(max_length=160)
+    version = models.PositiveIntegerField()
+    status = models.CharField(max_length=12, choices=Status.choices, default=Status.DRAFT)
+    calculation_state = models.CharField(
+        max_length=24,
+        choices=CalculationState.choices,
+    )
+    algorithm = models.CharField(max_length=120)
+    algorithm_version = models.CharField(max_length=120)
+    parameters = models.JSONField()
+    baseline_preset = models.CharField(max_length=80)
+    baseline_preset_version = models.CharField(max_length=80)
+    observation_snapshot = models.JSONField()
+    observation_sha256 = models.CharField(max_length=64)
+    recommended_preset = models.JSONField()
+    before_after = models.JSONField()
+    warnings = models.JSONField(default=list, blank=True)
+    exclusions = models.JSONField(default=list, blank=True)
+    result_snapshot = models.JSONField()
+    result_sha256 = models.CharField(max_length=64)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        related_name="created_calibration_sets",
+        on_delete=models.PROTECT,
+    )
+    approved_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        related_name="approved_calibration_sets",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+    )
+    approved_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    observations = models.ManyToManyField(
+        FieldObservation,
+        related_name="calibration_sets",
+        through="CalibrationSetObservation",
+    )
+
+    class Meta:
+        ordering = ["incident", "name", "-version"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["incident", "name", "version"],
+                name="rf_calibration_name_version_unique",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    models.Q(
+                        status="draft",
+                        approved_by__isnull=True,
+                        approved_at__isnull=True,
+                    )
+                    | models.Q(
+                        status="approved",
+                        approved_by__isnull=False,
+                        approved_at__isnull=False,
+                    )
+                ),
+                name="rf_calibration_approval_consistent",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.incident}: {self.name} v{self.version}"
+
+    def save(self, *args, **kwargs):
+        if self.pk and CalibrationSet.objects.filter(pk=self.pk).exists():
+            raise ValidationError("Calibration sets are immutable after creation.")
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError("Calibration sets are retained.")
+
+    @property
+    def is_locked(self):
+        return self.status == self.Status.APPROVED
+
+
+class CalibrationSetObservation(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    calibration_set = models.ForeignKey(
+        CalibrationSet,
+        related_name="observation_links",
+        on_delete=models.PROTECT,
+    )
+    observation = models.ForeignKey(
+        FieldObservation,
+        related_name="calibration_links",
+        on_delete=models.PROTECT,
+    )
+    observation_sha256 = models.CharField(max_length=64)
+    review_evidence_sha256 = models.CharField(max_length=64)
+    position = models.PositiveIntegerField()
+
+    class Meta:
+        ordering = ["calibration_set", "position"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["calibration_set", "observation"],
+                name="rf_calibration_observation_unique",
+            ),
+            models.UniqueConstraint(
+                fields=["calibration_set", "position"],
+                name="rf_calibration_position_unique",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.calibration_set}: observation {self.position}"
+
+    def save(self, *args, **kwargs):
+        if self.pk and CalibrationSetObservation.objects.filter(pk=self.pk).exists():
+            raise ValidationError("Calibration set membership is immutable.")
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError("Calibration set membership is retained.")

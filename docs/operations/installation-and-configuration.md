@@ -87,6 +87,7 @@ Security and policy settings:
 | `RADIOREFERENCE_ENABLED`         | `false`           | Records enablement intent only. The current adapter remains unavailable and makes no live request even when set to `true`.                                                                            |
 | `RADIOREFERENCE_WSDL_URL`        | official HTTPS URL | Non-secret, server-side endpoint metadata. HTTPS is required and embedded credentials are rejected. Follow the [provider safety boundary](radioreference-provider.md).                                |
 | `RADIOREFERENCE_MAX_RESPONSE_BYTES` | `1048576`     | Synthetic SOAP contract input limit. Must remain between 1,024 and 5,242,880 bytes.                                                                                                                   |
+| `ICT_APPROVED_CALIBRATION_METHODS` | `[]`            | Exact incident-local calibration versions that passed security/privacy and qualified RF review. This never authorizes real collection or default-preset promotion.                                  |
 
 The neutral, network-free map is the default. Enabling any external map requires
 the [map-provider deployment checklist](map-provider-deployment-checklist.md)
@@ -152,6 +153,9 @@ results of these checks:
     developer key, no user-credential support, and no cache/import/export
     support according to the
     [RadioReference provider procedure](radioreference-provider.md).
+13. Calibration approval remains disabled unless its separate field-data authority,
+    privacy, and qualified RF review are recorded. Verify only synthetic observations
+    through the [field observation and calibration guide](field-observations-and-calibration.md).
 
 If any check fails, leave external access disabled, preserve sanitized evidence,
 and return the installation to the maintainer for review. Do not work around a

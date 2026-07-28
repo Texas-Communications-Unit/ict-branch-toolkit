@@ -11,9 +11,11 @@ test("administrator signs in and sees the incident planning workspace", async ({
   let approved = false;
   let rfProfileCreated = false;
   let rfApproved = false;
-  let rfSnapshotCreated = false;
   let haatCreated = false;
   let haatApproved = false;
+  let fieldObservationCreated = false;
+  let fieldObservationApproved = false;
+  let calibrationCreated = false;
   let rfInputs = {
     tx_frequency_hz: null as number | null,
     rx_frequency_hz: null as number | null,
@@ -84,7 +86,123 @@ test("administrator signs in and sees the incident planning workspace", async ({
       inputs: { ...rfInputs },
     },
     input_sha256: "b".repeat(64),
+    archived_at: null,
     created_at: "2026-07-27T22:05:00Z",
+  });
+  const subscriberRFInputSnapshot = () => ({
+    ...rfInputSnapshot(),
+    id: "rf-snapshot-2",
+    label: "Synthetic subscriber baseline",
+    profile_name: "Synthetic portable subscriber",
+    input_sha256: "a".repeat(64),
+    input_snapshot: {
+      ...rfInputSnapshot().input_snapshot,
+      profile: {
+        id: "rf-profile-2",
+        incident: "syn-1",
+        name: "Synthetic portable subscriber",
+        profile_type: "portable",
+      },
+      profile_version: { id: "rf-version-2", number: 1 },
+    },
+  });
+  const fieldObservation = () => ({
+    id: "observation-1",
+    incident: "syn-1",
+    infrastructure_rf_input_snapshot: "rf-snapshot-1",
+    infrastructure_label: "Synthetic RF baseline",
+    subscriber_rf_input_snapshot: "rf-snapshot-2",
+    subscriber_label: "Synthetic subscriber baseline",
+    coverage_estimate: null,
+    directional_analysis: null,
+    supersedes: null,
+    superseded_by: null,
+    classification: "good",
+    evidence_type: "measured",
+    observed_from: "2026-07-28T14:00:00Z",
+    observed_to: "2026-07-28T14:05:00Z",
+    location_precision: "redacted",
+    coordinate_reference: "EPSG:4326",
+    latitude: null,
+    longitude: null,
+    location_precision_m: null,
+    direction_degrees: null,
+    path_distance_m: null,
+    observer_source: "Synthetic exercise team",
+    collection_method: "Scripted field check",
+    environment: {},
+    measurements: {
+      measured_distance_m: "1000",
+      predicted_distance_m: "900",
+    },
+    notes: "",
+    quality_flags: [],
+    source_record_id: "",
+    source_revision: "synthetic-observation-v1",
+    input_snapshot: {},
+    input_sha256: "8".repeat(64),
+    created_by: 1,
+    created_at: "2026-07-28T14:06:00Z",
+    current_review_state: fieldObservationApproved ? "approved" : "pending",
+    reviews: fieldObservationApproved
+      ? [
+          {
+            id: "review-1",
+            observation: "observation-1",
+            decision: "approved",
+            reason: "Synthetic review reason",
+            evidence_sha256: "7".repeat(64),
+            reviewed_by: 1,
+            reviewed_at: "2026-07-28T14:10:00Z",
+          },
+        ]
+      : [],
+  });
+  const calibrationSet = () => ({
+    id: "calibration-set-1",
+    incident: "syn-1",
+    name: "Incident-local field calibration",
+    version: 1,
+    status: "draft",
+    calculation_state: "complete",
+    algorithm: "observation-envelope",
+    algorithm_version: "observation-envelope-v1-provisional",
+    parameters: {
+      minimum_samples: 3,
+      minimum_ratio: "0.25",
+      maximum_ratio: "4",
+    },
+    baseline_preset: "balanced",
+    baseline_preset_version: "balanced-v1-provisional",
+    observation_ids: ["observation-1"],
+    observation_snapshot: [],
+    observation_sha256: "6".repeat(64),
+    recommended_preset: {
+      schema_version: "incident-local-calibration-recommendation-v1",
+      base_preset: "balanced",
+      base_preset_version: "balanced-v1-provisional",
+      distance_multiplier: "1.100",
+      scope: "incident_local",
+      promotion_state: "not_promoted",
+      organization_default_overwritten: false,
+    },
+    before_after: {
+      before: {
+        mean_absolute_error_m: "100.000",
+        mean_absolute_percentage_error: "10.000",
+      },
+      after: {
+        mean_absolute_error_m: "10.000",
+        mean_absolute_percentage_error: "1.000",
+      },
+    },
+    warnings: ["Synthetic fixture only."],
+    exclusions: [],
+    result_snapshot: {},
+    result_sha256: "5".repeat(64),
+    approved_at: null,
+    created_at: "2026-07-28T15:00:00Z",
+    is_locked: false,
   });
   const haatCalculation = () => ({
     id: "haat-1",
@@ -405,7 +523,6 @@ test("administrator signs in and sees the incident planning workspace", async ({
       expect(route.request().postDataJSON()).toEqual({
         label: "Synthetic RF baseline",
       });
-      rfSnapshotCreated = true;
       return route.fulfill({
         json: rfInputSnapshot(),
       });
@@ -414,10 +531,10 @@ test("administrator signs in and sees the incident planning workspace", async ({
   await page.route("**/api/rf-analysis-input-snapshots/?incident=*", (route) =>
     route.fulfill({
       json: {
-        count: rfSnapshotCreated ? 1 : 0,
+        count: 2,
         next: null,
         previous: null,
-        results: rfSnapshotCreated ? [rfInputSnapshot()] : [],
+        results: [rfInputSnapshot(), subscriberRFInputSnapshot()],
       },
     }),
   );
@@ -540,6 +657,92 @@ test("administrator signs in and sees the incident planning workspace", async ({
         json: { count: 0, next: null, previous: null, results: [] },
       }),
   );
+  await page.route("**/api/calibration-status/", (route) =>
+    route.fulfill({
+      json: {
+        algorithm: "observation-envelope",
+        algorithm_version: "observation-envelope-v1-provisional",
+        approved_for_operational_use: false,
+        minimum_usable_observations: 3,
+        ratio_bounds: { minimum: "0.250", maximum: "4.000" },
+        location_rule:
+          "Generalized coordinates are rounded before persistence; redacted coordinates are discarded.",
+        promotion_rule:
+          "A calibrated recommendation remains incident-local and is never promoted automatically.",
+        disclaimer: "Provisional planning decision support only.",
+      },
+    }),
+  );
+  await page.route("**/api/field-observations/?incident=*", (route) =>
+    route.fulfill({
+      json: {
+        count: fieldObservationCreated ? 1 : 0,
+        next: null,
+        previous: null,
+        results: fieldObservationCreated ? [fieldObservation()] : [],
+      },
+    }),
+  );
+  await page.route("**/api/field-observations/", async (route) => {
+    expect(route.request().method()).toBe("POST");
+    expect(route.request().postDataJSON()).toMatchObject({
+      incident: "syn-1",
+      infrastructure_rf_input_snapshot: "rf-snapshot-1",
+      subscriber_rf_input_snapshot: "rf-snapshot-2",
+      classification: "good",
+      evidence_type: "measured",
+      location_precision: "redacted",
+      latitude: null,
+      longitude: null,
+      location_precision_m: null,
+      observer_source: "Synthetic exercise team",
+      collection_method: "Scripted field check",
+      measurements: {
+        measured_distance_m: "1000",
+        predicted_distance_m: "900",
+      },
+    });
+    fieldObservationCreated = true;
+    return route.fulfill({ json: fieldObservation() });
+  });
+  await page.route(
+    "**/api/field-observations/observation-1/review/",
+    async (route) => {
+      expect(route.request().postDataJSON()).toEqual({
+        decision: "approved",
+        reason: "Synthetic review reason",
+      });
+      fieldObservationApproved = true;
+      return route.fulfill({ json: fieldObservation() });
+    },
+  );
+  await page.route("**/api/calibration-sets/?incident=*", (route) =>
+    route.fulfill({
+      json: {
+        count: calibrationCreated ? 1 : 0,
+        next: null,
+        previous: null,
+        results: calibrationCreated ? [calibrationSet()] : [],
+      },
+    }),
+  );
+  await page.route("**/api/calibration-sets/", async (route) => {
+    expect(route.request().method()).toBe("POST");
+    expect(route.request().postDataJSON()).toEqual({
+      incident: "syn-1",
+      name: "Incident-local field calibration",
+      observations: ["observation-1"],
+      baseline_preset: "balanced",
+      baseline_preset_version: "balanced-v1-provisional",
+      parameters: {
+        minimum_samples: 3,
+        minimum_ratio: "0.25",
+        maximum_ratio: "4",
+      },
+    });
+    calibrationCreated = true;
+    return route.fulfill({ json: calibrationSet() });
+  });
   await page.route("**/api/channel-imports/", (route) =>
     route.fulfill({
       json: {
@@ -589,7 +792,7 @@ test("administrator signs in and sees the incident planning workspace", async ({
   await expect(skipLink).toBeFocused();
   await skipLink.press("Enter");
   await expect(page.locator("#main-content")).toBeFocused();
-  await expect(page.getByText(/P2.4 Prototype/)).toBeVisible();
+  await expect(page.getByText(/P2.5 Prototype/)).toBeVisible();
   await expect(page.getByRole("heading", { name: "ICS-205" })).toBeVisible();
   await expect(
     page.getByText("SYN CALL", { exact: true }).first(),
@@ -704,6 +907,56 @@ test("administrator signs in and sees the incident planning workspace", async ({
   await expect(
     haatWorkspace.getByText("approved", { exact: true }),
   ).toBeVisible();
+  const calibrationWorkspace = page.getByRole("region", {
+    name: "Field observations and local calibration",
+  });
+  await expect(
+    calibrationWorkspace.getByText(
+      "Provisional method—RF/privacy review required",
+      { exact: true },
+    ),
+  ).toBeVisible();
+  await calibrationWorkspace
+    .getByLabel("Infrastructure RF snapshot")
+    .selectOption("rf-snapshot-1");
+  await calibrationWorkspace
+    .getByLabel("Subscriber RF snapshot")
+    .selectOption("rf-snapshot-2");
+  await calibrationWorkspace
+    .getByLabel("Location handling")
+    .selectOption("redacted");
+  await calibrationWorkspace
+    .getByLabel("Observer or source")
+    .fill("Synthetic exercise team");
+  await calibrationWorkspace
+    .getByLabel("Collection method")
+    .fill("Scripted field check");
+  await calibrationWorkspace.getByLabel("Measured distance (m)").fill("1000");
+  await calibrationWorkspace.getByLabel("Predicted distance (m)").fill("900");
+  await calibrationWorkspace
+    .getByRole("button", { name: "Record immutable observation" })
+    .click();
+  await expect(
+    calibrationWorkspace.getByRole("table", {
+      name: "Field observation history",
+    }),
+  ).toContainText("pending");
+  page.once("dialog", (dialog) => dialog.accept("Synthetic review reason"));
+  await calibrationWorkspace
+    .getByRole("button", { name: "Approve evidence" })
+    .click();
+  await calibrationWorkspace
+    .getByLabel(/good · 1000 m measured \/ 900 m predicted/i)
+    .check();
+  await calibrationWorkspace
+    .getByRole("button", { name: "Calculate transparent comparison" })
+    .click();
+  const calibrationTable = calibrationWorkspace.getByRole("table", {
+    name: "Calibration set history",
+  });
+  await expect(calibrationTable).toContainText("1.100× distance");
+  await expect(calibrationTable).toContainText("100.0 m → 10.0 m");
+  await expect(calibrationTable).toContainText("Incident-local · not promoted");
   await page
     .getByLabel("Coordinate", { exact: true })
     .fill("33° 12′ 52.20″ N, 97° 07′ 59.16″ W");
@@ -747,7 +1000,7 @@ test("administrator signs in and sees the incident planning workspace", async ({
   await expect(
     page.getByRole("heading", { name: "ICT Branch Toolkit" }),
   ).toBeVisible();
-  await expect(page.getByText(/P2.4 Prototype/)).toBeVisible();
+  await expect(page.getByText(/P2.5 Prototype/)).toBeVisible();
   await expectDocumentReflow(page);
   await expectNoAccessibilityViolations(
     page,

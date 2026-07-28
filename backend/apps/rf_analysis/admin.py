@@ -1,9 +1,13 @@
 from django.contrib import admin
 
 from .models import (
+    CalibrationSet,
+    CalibrationSetObservation,
     CoverageEstimate,
     DirectionalCoverageAnalysis,
     ElevationSnapshot,
+    FieldObservation,
+    FieldObservationReview,
     HAATCalculation,
     RFAnalysisInputSnapshot,
     SubscriberProfile,
@@ -112,4 +116,49 @@ class DirectionalCoverageAnalysisAdmin(ReadOnlyRFAdmin):
         "infrastructure_rf_input_snapshot__label",
         "subscriber_rf_input_snapshot__label",
         "result_sha256",
+    )
+
+
+@admin.register(FieldObservation)
+class FieldObservationAdmin(ReadOnlyRFAdmin):
+    list_display = (
+        "incident",
+        "classification",
+        "evidence_type",
+        "location_precision",
+        "observed_to",
+        "created_by",
+    )
+    list_filter = ("classification", "evidence_type", "location_precision")
+    search_fields = ("incident__name", "source_record_id", "source_revision", "input_sha256")
+
+
+@admin.register(FieldObservationReview)
+class FieldObservationReviewAdmin(ReadOnlyRFAdmin):
+    list_display = ("observation", "decision", "reviewed_by", "created_at")
+    list_filter = ("decision",)
+    search_fields = ("observation__incident__name", "evidence_sha256")
+
+
+@admin.register(CalibrationSet)
+class CalibrationSetAdmin(ReadOnlyRFAdmin):
+    list_display = (
+        "incident",
+        "name",
+        "version",
+        "calculation_state",
+        "status",
+        "created_at",
+    )
+    list_filter = ("calculation_state", "status", "algorithm_version")
+    search_fields = ("incident__name", "name", "observation_sha256", "result_sha256")
+
+
+@admin.register(CalibrationSetObservation)
+class CalibrationSetObservationAdmin(ReadOnlyRFAdmin):
+    list_display = ("calibration_set", "position", "observation")
+    search_fields = (
+        "calibration_set__name",
+        "observation_sha256",
+        "review_evidence_sha256",
     )
