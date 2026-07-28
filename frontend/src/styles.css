@@ -1423,9 +1423,114 @@ footer a {
   border-left: 0.35rem dashed #746000;
 }
 
+.offline-panel {
+  background: var(--tx-comu-white);
+  border: 1px solid var(--tx-comu-border);
+  border-radius: 1rem;
+  box-shadow: 0 0.7rem 1.8rem var(--tx-comu-shadow);
+  display: grid;
+  gap: 1rem;
+  grid-column: 1 / -1;
+  min-width: 0;
+  padding: 1.25rem;
+}
+
+.connectivity-state {
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  padding: 0.25rem 0.65rem;
+}
+
+.connectivity-state.online {
+  color: #146c43;
+}
+
+.connectivity-state.offline {
+  color: #9f1d20;
+}
+
+.offline-status-grid,
+.offline-package-grid,
+.offline-capability-lists {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+}
+
+.offline-builder,
+.offline-vault,
+.offline-maintenance {
+  border-top: 1px solid var(--tx-comu-border);
+  display: grid;
+  gap: 0.85rem;
+  padding-top: 1rem;
+}
+
+.offline-builder fieldset {
+  border: 1px solid var(--tx-comu-border);
+  border-radius: 0.55rem;
+  display: grid;
+  gap: 0.35rem;
+  margin: 0.7rem 0;
+  max-height: 18rem;
+  overflow: auto;
+  padding: 0.75rem;
+}
+
+.offline-builder legend {
+  color: var(--tx-comu-navy);
+  font-weight: 800;
+  padding: 0 0.35rem;
+}
+
+.check-row {
+  align-items: flex-start;
+  display: flex;
+  gap: 0.55rem;
+}
+
+.check-row input {
+  flex: 0 0 auto;
+  margin-top: 0.2rem;
+  width: auto;
+}
+
+.offline-queue {
+  display: grid;
+  gap: 0.75rem;
+  padding-left: 1.5rem;
+}
+
+.offline-queue li {
+  border: 1px solid var(--tx-comu-border);
+  border-radius: 0.55rem;
+  display: grid;
+  gap: 0.45rem;
+  padding: 0.75rem;
+}
+
+.offline-queue span {
+  color: var(--tx-comu-slate);
+  overflow-wrap: anywhere;
+}
+
+.offline-vault .button-row,
+.offline-maintenance .button-row,
+.offline-queue .button-row {
+  flex-wrap: wrap;
+}
+
 @media (max-width: 640px) {
   .haat-result-heading {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .offline-status-grid,
+  .offline-package-grid,
+  .offline-capability-lists {
+    grid-template-columns: 1fr;
   }
 }

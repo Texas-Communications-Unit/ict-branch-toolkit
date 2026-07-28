@@ -1562,6 +1562,247 @@ paths:
               schema:
                 $ref: '#/components/schemas/CurrentUser'
           description: ''
+  /api/offline-packages/:
+    get:
+      operationId: offline_packages_list
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - offline-packages
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedOfflinePackageSummaryList'
+          description: ''
+    post:
+      operationId: offline_packages_create
+      tags:
+      - offline-packages
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateOfflinePackage'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CreateOfflinePackage'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CreateOfflinePackage'
+        required: true
+      security:
+      - tokenAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OfflinePackage'
+          description: ''
+  /api/offline-packages/{id}/:
+    get:
+      operationId: offline_packages_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this offline package.
+        required: true
+      tags:
+      - offline-packages
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OfflinePackage'
+          description: ''
+  /api/offline-packages/{id}/lock/:
+    post:
+      operationId: offline_packages_lock_create
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this offline package.
+        required: true
+      tags:
+      - offline-packages
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OfflinePackage'
+          description: ''
+  /api/offline-packages/{id}/purge/:
+    post:
+      operationId: offline_packages_purge_create
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this offline package.
+        required: true
+      tags:
+      - offline-packages
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OfflinePackage'
+          description: ''
+  /api/offline-packages/{id}/resolve/:
+    post:
+      operationId: offline_packages_resolve_create
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this offline package.
+        required: true
+      tags:
+      - offline-packages
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResolveOfflineConflict'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ResolveOfflineConflict'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ResolveOfflineConflict'
+        required: true
+      security:
+      - tokenAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OfflineConflictResolution'
+          description: ''
+  /api/offline-packages/{id}/support/:
+    get:
+      operationId: offline_packages_support_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this offline package.
+        required: true
+      tags:
+      - offline-packages
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/offline-packages/{id}/synchronize/:
+    post:
+      operationId: offline_packages_synchronize_create
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this offline package.
+        required: true
+      tags:
+      - offline-packages
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SynchronizeOfflinePackage'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SynchronizeOfflinePackage'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SynchronizeOfflinePackage'
+        required: true
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/offline-packages/{id}/unlock/:
+    post:
+      operationId: offline_packages_unlock_create
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this offline package.
+        required: true
+      tags:
+      - offline-packages
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OfflinePackage'
+          description: ''
+  /api/offline-status/:
+    get:
+      operationId: offline_status_retrieve
+      tags:
+      - offline-status
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
   /api/operational-periods/:
     get:
       operationId: operational_periods_list
@@ -4366,6 +4607,26 @@ components:
       required:
       - rf_input_snapshot
       - site
+    CreateOfflinePackage:
+      type: object
+      properties:
+        incident:
+          type: string
+          format: uuid
+        device_id:
+          type: string
+          format: uuid
+        expires_in_hours:
+          type: integer
+          maximum: 72
+          minimum: 1
+          default: 24
+        selection:
+          $ref: '#/components/schemas/OfflinePackageSelection'
+      required:
+      - device_id
+      - incident
+      - selection
     CreatePhase2ValidationBundle:
       type: object
       properties:
@@ -4461,14 +4722,6 @@ components:
       - permissions
       - role
       - username
-    DecisionEnum:
-      enum:
-      - approved
-      - excluded
-      type: string
-      description: |-
-        * `approved` - Approved
-        * `excluded` - Excluded
     DeconflictionAnalysis:
       type: object
       properties:
@@ -5244,7 +5497,7 @@ components:
           readOnly: true
         decision:
           allOf:
-          - $ref: '#/components/schemas/DecisionEnum'
+          - $ref: '#/components/schemas/FieldObservationReviewDecisionEnum'
           readOnly: true
         reason:
           type: string
@@ -5267,6 +5520,14 @@ components:
       - observation
       - reason
       - reviewed_by
+    FieldObservationReviewDecisionEnum:
+      enum:
+      - approved
+      - excluded
+      type: string
+      description: |-
+        * `approved` - Approved
+        * `excluded` - Excluded
     FrequencyBandEnum:
       enum:
       - unknown
@@ -5861,6 +6122,431 @@ components:
         * `tower` - Tower
         * `mast` - Mast
         * `other` - Other
+    OfflineConflictDecisionEnum:
+      enum:
+      - discard
+      - requeue
+      type: string
+      description: |-
+        * `discard` - Discard local change
+        * `requeue` - Refresh and create a replacement change
+    OfflineConflictResolution:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        receipt:
+          type: string
+          format: uuid
+          readOnly: true
+        decision:
+          allOf:
+          - $ref: '#/components/schemas/OfflineConflictDecisionEnum'
+          readOnly: true
+        explanation:
+          type: string
+          readOnly: true
+        resolved_by:
+          type: integer
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - decision
+      - explanation
+      - id
+      - receipt
+      - resolved_by
+    OfflineMutation:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        sequence:
+          type: integer
+          minimum: 1
+        actor_id:
+          type: integer
+          minimum: 1
+        device_id:
+          type: string
+          format: uuid
+        operation:
+          $ref: '#/components/schemas/OperationEnum'
+        object_id:
+          type: string
+          format: uuid
+          nullable: true
+        revision_id:
+          type: string
+          format: uuid
+        previous_hash:
+          type: string
+          pattern: ^[0-9a-f]{64}$
+        payload_sha256:
+          type: string
+          pattern: ^[0-9a-f]{64}$
+        mutation_sha256:
+          type: string
+          pattern: ^[0-9a-f]{64}$
+        payload: {}
+        base_updated_at:
+          type: string
+          format: date-time
+          nullable: true
+        occurred_at_client:
+          type: string
+          format: date-time
+      required:
+      - actor_id
+      - device_id
+      - id
+      - mutation_sha256
+      - occurred_at_client
+      - operation
+      - payload_sha256
+      - previous_hash
+      - revision_id
+      - sequence
+    OfflineMutationReceipt:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        package:
+          type: string
+          format: uuid
+          readOnly: true
+        sequence:
+          type: integer
+          readOnly: true
+        actor_id_snapshot:
+          type: integer
+          readOnly: true
+        device_id:
+          type: string
+          format: uuid
+          readOnly: true
+        operation:
+          type: string
+          readOnly: true
+        object_id:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
+        revision_id:
+          type: string
+          format: uuid
+          readOnly: true
+        previous_hash:
+          type: string
+          readOnly: true
+        payload_sha256:
+          type: string
+          readOnly: true
+        mutation_sha256:
+          type: string
+          readOnly: true
+        base_updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        occurred_at_client:
+          type: string
+          format: date-time
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/OfflineMutationReceiptStatusEnum'
+          readOnly: true
+        result:
+          readOnly: true
+        received_at:
+          type: string
+          format: date-time
+          readOnly: true
+        resolution:
+          allOf:
+          - $ref: '#/components/schemas/OfflineConflictResolution'
+          readOnly: true
+      required:
+      - actor_id_snapshot
+      - base_updated_at
+      - device_id
+      - id
+      - mutation_sha256
+      - object_id
+      - occurred_at_client
+      - operation
+      - package
+      - payload_sha256
+      - previous_hash
+      - received_at
+      - resolution
+      - result
+      - revision_id
+      - sequence
+      - status
+    OfflineMutationReceiptStatusEnum:
+      enum:
+      - applied
+      - conflict
+      - rejected
+      type: string
+      description: |-
+        * `applied` - Applied
+        * `conflict` - Conflict
+        * `rejected` - Rejected
+    OfflinePackage:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        incident:
+          type: string
+          format: uuid
+          readOnly: true
+        requested_by:
+          type: integer
+          readOnly: true
+        device_id:
+          type: string
+          format: uuid
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/OfflinePackageStatusEnum'
+          readOnly: true
+        current_status:
+          type: string
+          readOnly: true
+        scope:
+          readOnly: true
+        payload_snapshot:
+          type: object
+          additionalProperties: {}
+          readOnly: true
+        manifest:
+          readOnly: true
+        manifest_sha256:
+          type: string
+          readOnly: true
+        last_sequence:
+          type: integer
+          readOnly: true
+        last_chain_sha256:
+          type: string
+          readOnly: true
+        expires_at:
+          type: string
+          format: date-time
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+        locked_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        revoked_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        purged_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        receipts:
+          type: array
+          items:
+            $ref: '#/components/schemas/OfflineMutationReceipt'
+          readOnly: true
+      required:
+      - created_at
+      - current_status
+      - device_id
+      - expires_at
+      - id
+      - incident
+      - last_chain_sha256
+      - last_sequence
+      - locked_at
+      - manifest
+      - manifest_sha256
+      - payload_snapshot
+      - purged_at
+      - receipts
+      - requested_by
+      - revoked_at
+      - scope
+      - status
+      - updated_at
+    OfflinePackageSelection:
+      type: object
+      properties:
+        revision_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+          maxItems: 5
+          minItems: 1
+        resource_release_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+          maxItems: 10
+        site_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+          maxItems: 100
+        terrain_analysis_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+          maxItems: 50
+        attachment_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: Attachments are not an offline-capable subsystem in this release.
+          maxItems: 0
+        include_map:
+          type: boolean
+          default: false
+      required:
+      - revision_ids
+    OfflinePackageStatusEnum:
+      enum:
+      - active
+      - locked
+      - expired
+      - revoked
+      - purged
+      type: string
+      description: |-
+        * `active` - Active
+        * `locked` - Locked
+        * `expired` - Expired
+        * `revoked` - Revoked
+        * `purged` - Purged
+    OfflinePackageSummary:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        incident:
+          type: string
+          format: uuid
+          readOnly: true
+        requested_by:
+          type: integer
+          readOnly: true
+        device_id:
+          type: string
+          format: uuid
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/OfflinePackageStatusEnum'
+          readOnly: true
+        current_status:
+          type: string
+          readOnly: true
+        scope:
+          readOnly: true
+        manifest_sha256:
+          type: string
+          readOnly: true
+        last_sequence:
+          type: integer
+          readOnly: true
+        last_chain_sha256:
+          type: string
+          readOnly: true
+        expires_at:
+          type: string
+          format: date-time
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+        locked_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        revoked_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        purged_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+      required:
+      - created_at
+      - current_status
+      - device_id
+      - expires_at
+      - id
+      - incident
+      - last_chain_sha256
+      - last_sequence
+      - locked_at
+      - manifest_sha256
+      - purged_at
+      - requested_by
+      - revoked_at
+      - scope
+      - status
+      - updated_at
+    OperationEnum:
+      enum:
+      - revision.update
+      - assignment.create
+      - assignment.update
+      - assignment.delete
+      type: string
+      description: |-
+        * `revision.update` - revision.update
+        * `assignment.create` - assignment.create
+        * `assignment.update` - assignment.update
+        * `assignment.delete` - assignment.delete
     OperationalPeriod:
       type: object
       properties:
@@ -6155,6 +6841,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ManualRing'
+    PaginatedOfflinePackageSummaryList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/OfflinePackageSummary'
     PaginatedOperationalPeriodList:
       type: object
       required:
@@ -7602,6 +8311,22 @@ components:
         * `remote_base` - Remote Base
         * `link` - Link
         * `patch` - Patch
+    ResolveOfflineConflict:
+      type: object
+      properties:
+        mutation_id:
+          type: string
+          format: uuid
+        decision:
+          $ref: '#/components/schemas/OfflineConflictDecisionEnum'
+        explanation:
+          type: string
+          maxLength: 500
+          minLength: 1
+      required:
+      - decision
+      - explanation
+      - mutation_id
     ResourceRelease:
       type: object
       properties:
@@ -7683,7 +8408,7 @@ components:
       type: object
       properties:
         decision:
-          $ref: '#/components/schemas/DecisionEnum'
+          $ref: '#/components/schemas/FieldObservationReviewDecisionEnum'
         reason:
           type: string
           maxLength: 1000
@@ -8102,6 +8827,19 @@ components:
         notes:
           type: string
           nullable: true
+    SynchronizeOfflinePackage:
+      type: object
+      properties:
+        client_now:
+          type: string
+          format: date-time
+        mutations:
+          type: array
+          items:
+            $ref: '#/components/schemas/OfflineMutation'
+      required:
+      - client_now
+      - mutations
     TerrainAnalysis:
       type: object
       properties:

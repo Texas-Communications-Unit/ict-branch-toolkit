@@ -25,6 +25,14 @@ import type {
   ImportResult,
   Incident,
   ICS205Plan,
+  CreateOfflinePackagePayload,
+  OfflineMutation,
+  OfflineMutationResolution,
+  OfflinePackage,
+  OfflinePackageSummary,
+  OfflineStatus,
+  OfflineSupportBundle,
+  OfflineSynchronizationResult,
   Paginated,
   PlanAssignment,
   PlanRelationship,
@@ -807,4 +815,83 @@ export function approveTerrainAnalysis(id: string): Promise<TerrainAnalysis> {
   return request<TerrainAnalysis>(`/api/terrain-analyses/${id}/approve/`, {
     method: "POST",
   });
+}
+
+export function getOfflineStatus(): Promise<OfflineStatus> {
+  return request<OfflineStatus>("/api/offline-status/");
+}
+
+export async function listOfflinePackages(
+  incident: string,
+): Promise<OfflinePackageSummary[]> {
+  const result = await request<Paginated<OfflinePackageSummary>>(
+    `/api/offline-packages/?incident=${encodeURIComponent(incident)}`,
+  );
+  return result.results;
+}
+
+export function createOfflinePackage(
+  payload: CreateOfflinePackagePayload,
+): Promise<OfflinePackage> {
+  return request<OfflinePackage>("/api/offline-packages/", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function synchronizeOfflinePackage(
+  id: string,
+  mutations: OfflineMutation[],
+): Promise<OfflineSynchronizationResult> {
+  return request<OfflineSynchronizationResult>(
+    `/api/offline-packages/${id}/synchronize/`,
+    {
+      method: "POST",
+      body: JSON.stringify({
+        client_now: new Date().toISOString(),
+        mutations,
+      }),
+    },
+  );
+}
+
+export function lockOfflinePackage(id: string): Promise<OfflinePackage> {
+  return request<OfflinePackage>(`/api/offline-packages/${id}/lock/`, {
+    method: "POST",
+  });
+}
+
+export function unlockOfflinePackage(id: string): Promise<OfflinePackage> {
+  return request<OfflinePackage>(`/api/offline-packages/${id}/unlock/`, {
+    method: "POST",
+  });
+}
+
+export function purgeOfflinePackage(id: string): Promise<OfflinePackage> {
+  return request<OfflinePackage>(`/api/offline-packages/${id}/purge/`, {
+    method: "POST",
+  });
+}
+
+export function resolveOfflineConflict(
+  id: string,
+  payload: {
+    mutation_id: string;
+    decision: "discard" | "requeue";
+    explanation: string;
+  },
+): Promise<OfflineMutationResolution> {
+  return request<OfflineMutationResolution>(
+    `/api/offline-packages/${id}/resolve/`,
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+    },
+  );
+}
+
+export function getOfflineSupportBundle(
+  id: string,
+): Promise<OfflineSupportBundle> {
+  return request<OfflineSupportBundle>(`/api/offline-packages/${id}/support/`);
 }

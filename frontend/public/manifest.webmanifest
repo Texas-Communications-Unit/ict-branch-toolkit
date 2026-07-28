@@ -1,0 +1,19 @@
+{
+  "name": "ICT Branch Toolkit",
+  "short_name": "ICT Toolkit",
+  "description": "Controlled incident communications planning workspace",
+  "id": "/",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f4f7fa",
+  "theme_color": "#10233f",
+  "icons": [
+    {
+      "src": "/brand/tx-comu-app-icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

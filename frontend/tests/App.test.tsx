@@ -135,6 +135,34 @@ test("signs in and lists incidents from the API", async () => {
         { status: 200 },
       );
     }
+    if (url.endsWith("/api/offline-status/")) {
+      return new Response(
+        JSON.stringify({
+          schema_version: "offline-package-v1",
+          enabled: false,
+          approved_for_non_synthetic_use: false,
+          protection: {
+            browser_storage: "AES-256-GCM encrypted IndexedDB envelope",
+            key_derivation: "PBKDF2-SHA-256",
+            key_persistence: "The unlock key remains in memory only.",
+            limitation: "An unlocked browser remains exposed.",
+          },
+          supported_operations: ["revision.update"],
+          unsupported_operations: ["approve or publish a plan revision"],
+          limits: {
+            maximum_package_bytes: 5242880,
+            maximum_queue_items: 500,
+            default_expiration_hours: 24,
+            maximum_expiration_hours: 72,
+            clock_skew_tolerance_seconds: 300,
+          },
+          conflict_policy: "No last-writer-wins behavior.",
+          classification: "Synthetic only",
+          warning: "Human approval is required.",
+        }),
+        { status: 200 },
+      );
+    }
     if (url.endsWith("/api/channel-imports/") && options?.method === "POST") {
       return new Response(
         JSON.stringify({
@@ -205,9 +233,7 @@ test("signs in and lists incidents from the API", async () => {
   await userEvent.click(
     screen.getByRole("button", { name: "Validate dry run" }),
   );
-  expect(await screen.findByRole("status")).toHaveTextContent(
-    "Validation passed",
-  );
+  expect(await screen.findByText("Validation passed.")).toBeInTheDocument();
   await userEvent.click(screen.getByRole("button", { name: "Sign out" }));
   expect(
     await screen.findByRole("button", { name: "Sign in" }),

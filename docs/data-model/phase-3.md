@@ -1,4 +1,4 @@
-# Phase 3 terrain-analysis data model
+# Phase 3 advanced-operations data model
 
 ## Scope and safety
 
@@ -91,3 +91,53 @@ digests; they do not copy the input/result snapshots.
 
 Browser visibility is not the authorization boundary; the backend scopes every
 record to authorized incident memberships.
+
+## P3.2 offline continuity aggregates
+
+P3.2 adds three retained server aggregates. The encrypted browser envelope is
+device-local and is not a fourth server record.
+
+### `OfflinePackage`
+
+| Field group       | Retained evidence                                                                                                                     |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| Identity/scope    | UUID, incident, requesting actor, device UUID, explicit revision/release/site/terrain/attachment selections, and vector-map selection |
+| Manifest          | schema version, selected counts/IDs, package byte size, payload digest, classification, revision-state digests, and manifest SHA-256  |
+| Protected payload | exact selected incident/revision/library/site/terrain snapshot; cleared by controlled purge while the manifest and receipts remain    |
+| Chain state       | last accepted sequence and mutation digest                                                                                            |
+| Lifecycle         | `active`, `locked`, `expired`, `revoked`, or `purged`; expiration and lock/revocation/purge timestamps                                |
+
+The package cannot be hard-deleted through the model. Expiration and revocation
+block synchronization. Purge clears payload and mutable revision state but
+retains the manifest digest and chain evidence.
+
+### `OfflineMutationReceipt`
+
+Each append-only receipt uses the client mutation UUID as its primary key and
+retains package, sequence, actor/device snapshots, supported operation,
+object/revision IDs, previous/payload/mutation hashes, payload snapshot, base
+timestamp, client occurrence time, server receipt time, disposition, and
+bounded result.
+
+The server checks package scope, current permission, device/actor identity,
+sequence, previous hash, canonical payload and mutation digests, revision
+status/digest, and object timestamp before applying content. An exact retry
+returns `duplicate` without creating another receipt. A reused UUID with
+different content is rejected.
+
+### `OfflineConflictResolution`
+
+One append-only resolution may be linked to a conflict receipt. The decision is
+either `discard` or `requeue`, with an explanation, actor, and time.
+`requeue` records intent only; it never applies or merges the old payload.
+
+### Browser envelope
+
+IndexedDB stores minimal unencrypted routing metadata plus an AES-256-GCM
+ciphertext containing the exact package and local queue. Associated data binds
+the package UUID and manifest digest. PBKDF2-SHA-256 uses a per-package salt and
+310,000 iterations; the passphrase and derived key are not persisted.
+
+See [ADR-0018](../adr/0018-controlled-offline-and-intermittent-operation.md)
+and the
+[offline operations guide](../operations/offline-and-intermittent-operation.md).

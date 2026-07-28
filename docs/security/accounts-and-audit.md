@@ -183,3 +183,29 @@ operational disposition in the
 [non-production release-candidate checklist](../releases/non-production-release-candidate.md).
 Security reviewers must accept these limits before any release candidate or hosted use beyond
 synthetic data. A candidate remains synthetic-data-only and is not production authorization.
+
+## P3.2 offline-package controls
+
+- Package creation requires current incident `plan.view`; synchronization and
+  conflict resolution require current incident `plan.edit`.
+- A non-administrator can list and control only packages they created.
+  Revoked users retain the ability to identify, lock, and purge their own
+  package evidence but cannot synchronize or resolve operational content.
+- Package creation records incident/device IDs, counts, expiration, manifest
+  digest, and byte size without copying payload content.
+- Applied mutation events record package/mutation/revision IDs, sequence, and
+  mutation/revision digests without copying the mutation payload.
+- Synchronization records disposition counts and final chain state. Lock,
+  unlock, revocation, purge, conflict decision, and support export are
+  separately audited.
+- Mutation receipts and conflict decisions are append-only. Package hard
+  deletion is rejected; controlled purge preserves manifest and receipt
+  evidence.
+- Browser controls are not authorization. Current membership, role, scope,
+  revision state, object timestamp, and chain integrity are checked by the
+  backend.
+
+See
+[ADR-0018](../adr/0018-controlled-offline-and-intermittent-operation.md) and
+the
+[offline operations guide](../operations/offline-and-intermittent-operation.md).

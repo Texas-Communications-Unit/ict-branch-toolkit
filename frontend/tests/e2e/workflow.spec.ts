@@ -791,6 +791,46 @@ test("administrator signs in and sees the incident planning workspace", async ({
       json: { count: 0, next: null, previous: null, results: [] },
     }),
   );
+  await page.route("**/api/offline-status/", (route) =>
+    route.fulfill({
+      json: {
+        schema_version: "offline-package-v1",
+        enabled: false,
+        approved_for_non_synthetic_use: false,
+        protection: {
+          browser_storage: "AES-256-GCM encrypted IndexedDB envelope",
+          key_derivation:
+            "PBKDF2-SHA-256 with per-package salt and 310000 iterations",
+          key_persistence: "The unlock key remains in memory only.",
+          limitation:
+            "Browser encryption does not protect an unlocked session.",
+        },
+        supported_operations: [
+          "revision.update",
+          "assignment.create",
+          "assignment.update",
+          "assignment.delete",
+        ],
+        unsupported_operations: ["approve or publish a plan revision"],
+        limits: {
+          maximum_package_bytes: 5242880,
+          maximum_queue_items: 500,
+          default_expiration_hours: 24,
+          maximum_expiration_hours: 72,
+          clock_skew_tolerance_seconds: 300,
+        },
+        conflict_policy:
+          "No last-writer-wins behavior. Conflicts require an explicit decision.",
+        classification: "Synthetic only",
+        warning: "Human approval is required.",
+      },
+    }),
+  );
+  await page.route("**/api/offline-packages/?incident=*", (route) =>
+    route.fulfill({
+      json: { count: 0, next: null, previous: null, results: [] },
+    }),
+  );
   await page.route("**/api/field-observations/?incident=*", (route) =>
     route.fulfill({
       json: {
@@ -910,7 +950,7 @@ test("administrator signs in and sees the incident planning workspace", async ({
   await expect(skipLink).toBeFocused();
   await skipLink.press("Enter");
   await expect(page.locator("#main-content")).toBeFocused();
-  await expect(page.getByText(/P3.1 Terrain Prototype/)).toBeVisible();
+  await expect(page.getByText(/P3.2 Offline Prototype/)).toBeVisible();
   await expect(page.getByRole("heading", { name: "ICS-205" })).toBeVisible();
   await expect(
     page.getByText("SYN CALL", { exact: true }).first(),
@@ -1115,6 +1155,95 @@ test("administrator signs in and sees the incident planning workspace", async ({
   await expect(
     terrainWorkspace.getByText(/Core planning remains available/),
   ).toBeVisible();
+  const offlineWorkspace = page.getByRole("region", {
+    name: "Offline and intermittent operation",
+  });
+  await expect(offlineWorkspace).toBeVisible();
+  await expect(
+    offlineWorkspace.getByText("Packaging disabled", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    offlineWorkspace.getByText(/No last-writer-wins behavior/),
+  ).toBeVisible();
+  await expect(page.locator('link[rel="manifest"]')).toHaveAttribute(
+    "href",
+    "/manifest.webmanifest",
+  );
+  await expect
+    .poll(() =>
+      page.evaluate(async () =>
+        Boolean(await navigator.serviceWorker.getRegistration("/")),
+      ),
+    )
+    .toBe(true);
+  await expect
+    .poll(() =>
+      page.evaluate(() => Boolean(navigator.serviceWorker.controller)),
+    )
+    .toBe(true);
+  await expect
+    .poll(async () => {
+      const cachedUrls = await page.evaluate(async () => {
+        const keys = await caches.keys();
+        const requests = await Promise.all(
+          keys.map(async (key) => (await caches.open(key)).keys()),
+        );
+        return requests.flat().map((request) => request.url);
+      });
+      return (
+        cachedUrls.length > 0 &&
+        cachedUrls.some((value) => new URL(value).pathname.endsWith(".js")) &&
+        cachedUrls.some((value) => new URL(value).pathname.endsWith(".css")) &&
+        cachedUrls.every((value) => {
+          const pathname = new URL(value).pathname;
+          return (
+            pathname === "/" ||
+            pathname === "/manifest.webmanifest" ||
+            pathname.startsWith("/assets/") ||
+            pathname.startsWith("/brand/")
+          );
+        })
+      );
+    })
+    .toBe(true);
+  const offlinePageErrors: string[] = [];
+  const failedOfflineShellRequests: string[] = [];
+  page.on("pageerror", (error) => offlinePageErrors.push(error.message));
+  page.on("requestfailed", (request) => {
+    const pathname = new URL(request.url()).pathname;
+    if (pathname === "/" || pathname.startsWith("/assets/")) {
+      failedOfflineShellRequests.push(
+        `${pathname}: ${request.failure()?.errorText ?? "unknown failure"}`,
+      );
+    }
+  });
+  await page.context().setOffline(true);
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await page.screenshot({
+    path: testInfo.outputPath("offline-restart.png"),
+    fullPage: true,
+  });
+  expect(offlinePageErrors).toEqual([]);
+  expect(failedOfflineShellRequests).toEqual([]);
+  await expect(
+    offlineWorkspace.getByText("Offline", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    offlineWorkspace.getByText(/Only encrypted, explicitly packaged work/),
+  ).toBeVisible();
+  await page.context().setOffline(false);
+  await expect(
+    offlineWorkspace.getByText("Connected", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    offlineWorkspace.getByText(/Connection restored. Review pending changes/),
+  ).toBeVisible();
+  await offlineWorkspace
+    .getByRole("button", { name: "Clear runtime caches" })
+    .click();
+  await expect(
+    offlineWorkspace.getByText(/Encrypted incident packages were not touched/),
+  ).toBeVisible();
   await page
     .getByLabel("Coordinate", { exact: true })
     .fill("33° 12′ 52.20″ N, 97° 07′ 59.16″ W");
@@ -1158,7 +1287,7 @@ test("administrator signs in and sees the incident planning workspace", async ({
   await expect(
     page.getByRole("heading", { name: "ICT Branch Toolkit" }),
   ).toBeVisible();
-  await expect(page.getByText(/P3.1 Terrain Prototype/)).toBeVisible();
+  await expect(page.getByText(/P3.2 Offline Prototype/)).toBeVisible();
   await expectDocumentReflow(page);
   await expectNoAccessibilityViolations(
     page,

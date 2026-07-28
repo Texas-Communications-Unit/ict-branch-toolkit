@@ -99,3 +99,21 @@ when the affected process or generated artifact changed.
   files.
 - The current release remains blocked until the required human record and
   generated-content review are complete for the exact candidate commit.
+
+## P3.2 offline workflow
+
+- Connectivity, package state, queue order, conflicts, expiration, revocation,
+  update availability, and purge results are exposed as text and live-region
+  status.
+- Packaging uses native fieldsets, legends, labels, checkboxes, selects,
+  details/summary, and buttons. Every map-dependent selection has a structured
+  text control.
+- Conflict resolution uses explicit named actions; it never depends on color,
+  drag, or a map.
+- Keyboard and screen-reader testing must cover package creation, unlock, queue
+  review, cancellation, reconnect, partial synchronization, conflict
+  decisions, lock, purge, update activation, and support export.
+- Browser automation does not establish that passphrase handling, IndexedDB
+  quota errors, service-worker prompts, reconnect timing, or conflict review
+  are understandable with assistive technology. Those complete processes
+  require human evaluation at the exact candidate commit.

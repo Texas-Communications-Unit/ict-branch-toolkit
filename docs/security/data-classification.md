@@ -147,3 +147,27 @@ installation-owner controls. Tested capacity is limited to the published
 prototype performance evidence. These limitations must be resolved or
 explicitly accepted for a non-production candidate and still do not establish
 production readiness.
+
+## P3.2 offline packages and queues
+
+An offline package and its encrypted queue inherit the highest classification
+of every selected incident, plan revision, library release, site, terrain
+result, map element, and local mutation. Encryption is a protection control;
+it does not declassify the content. Package IDs, manifest and mutation digests,
+device IDs, actor IDs, times, counts, status, and conflict metadata remain
+incident-associated metadata even when values and coordinates are absent.
+
+Only explicitly selected records may enter a package. Authentication tokens,
+keys, passphrases, provider credentials, external map tiles, and unselected
+records are prohibited. The first release has no offline attachment path.
+
+Normal expiration purges local ciphertext during capability refresh.
+Controlled server purge clears the payload and revision state but retains
+manifest, receipt, conflict-resolution, and audit evidence. A legal hold or
+adopted records schedule may require a different operator action; the
+application does not invent that authority.
+
+Support bundles are intentionally minimized but are not automatically public.
+Repository fixtures, screenshots, CI artifacts, GitHub discussion, and test
+packages must remain synthetic. See the
+[offline operations guide](../operations/offline-and-intermittent-operation.md).

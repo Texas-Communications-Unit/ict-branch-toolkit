@@ -36,6 +36,7 @@ INSTALLED_APPS = [
     "apps.sites",
     "apps.rf_analysis",
     "apps.deconfliction",
+    "apps.offline",
 ]
 if ENABLE_GIS:
     INSTALLED_APPS.append("django.contrib.gis")
@@ -189,6 +190,23 @@ if not 1_000 <= ICT_TERRAIN_MAX_DISTANCE_M <= 500_000:
 ICT_TERRAIN_MAX_SAMPLES = int(os.getenv("ICT_TERRAIN_MAX_SAMPLES", "1001"))
 if not 2 <= ICT_TERRAIN_MAX_SAMPLES <= 5001:
     raise ValueError("ICT_TERRAIN_MAX_SAMPLES must be between 2 and 5001.")
+ICT_OFFLINE_ENABLED = os.getenv("ICT_OFFLINE_ENABLED", "false").lower() == "true"
+ICT_OFFLINE_APPROVED_FOR_NON_SYNTHETIC_USE = (
+    os.getenv("ICT_OFFLINE_APPROVED_FOR_NON_SYNTHETIC_USE", "false").lower() == "true"
+)
+ICT_OFFLINE_MAX_PACKAGE_BYTES = int(os.getenv("ICT_OFFLINE_MAX_PACKAGE_BYTES", "5242880"))
+if not 65_536 <= ICT_OFFLINE_MAX_PACKAGE_BYTES <= 52_428_800:
+    raise ValueError("ICT_OFFLINE_MAX_PACKAGE_BYTES must be between 65536 and 52428800.")
+ICT_OFFLINE_MAX_QUEUE_ITEMS = int(os.getenv("ICT_OFFLINE_MAX_QUEUE_ITEMS", "500"))
+if not 1 <= ICT_OFFLINE_MAX_QUEUE_ITEMS <= 5_000:
+    raise ValueError("ICT_OFFLINE_MAX_QUEUE_ITEMS must be between 1 and 5000.")
+ICT_OFFLINE_DEFAULT_TTL_HOURS = int(os.getenv("ICT_OFFLINE_DEFAULT_TTL_HOURS", "24"))
+ICT_OFFLINE_MAX_TTL_HOURS = int(os.getenv("ICT_OFFLINE_MAX_TTL_HOURS", "72"))
+if not 1 <= ICT_OFFLINE_DEFAULT_TTL_HOURS <= ICT_OFFLINE_MAX_TTL_HOURS <= 720:
+    raise ValueError("Offline TTL hours must satisfy 1 <= default <= maximum <= 720.")
+ICT_OFFLINE_CLOCK_SKEW_SECONDS = int(os.getenv("ICT_OFFLINE_CLOCK_SKEW_SECONDS", "300"))
+if not 0 <= ICT_OFFLINE_CLOCK_SKEW_SECONDS <= 86_400:
+    raise ValueError("ICT_OFFLINE_CLOCK_SKEW_SECONDS must be between 0 and 86400.")
 RADIOREFERENCE_ENABLED = os.getenv("RADIOREFERENCE_ENABLED", "false").lower() == "true"
 RADIOREFERENCE_WSDL_URL = os.getenv(
     "RADIOREFERENCE_WSDL_URL",
@@ -264,5 +282,11 @@ SPECTACULAR_SETTINGS = {
     "SERVE_INCLUDE_SCHEMA": False,
     "ENUM_NAME_OVERRIDES": {
         "PlanRevisionStatusEnum": "apps.plans.models.PlanRevision.Status",
+        "OfflinePackageStatusEnum": "apps.offline.models.OfflinePackage.Status",
+        "OfflineMutationReceiptStatusEnum": ("apps.offline.models.OfflineMutationReceipt.Status"),
+        "OfflineConflictDecisionEnum": ("apps.offline.models.OfflineConflictResolution.Decision"),
+        "FieldObservationReviewDecisionEnum": (
+            "apps.rf_analysis.models.FieldObservationReview.Decision"
+        ),
     },
 }

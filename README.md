@@ -400,6 +400,37 @@ authorization, or operational approval. See
 [terrain operations guide](docs/operations/terrain-analysis.md), and the
 [Phase 3 data model](docs/data-model/phase-3.md).
 
+## P3.2 controlled offline and intermittent operation
+
+Issue #22 adds a fail-closed, explicitly scoped continuity workflow. Offline
+packaging is disabled by default. When separately approved for synthetic
+evaluation, an authorized user may select specific plan revisions, reference
+releases, sites/vector-map metadata, and retained terrain results. Attachments,
+external map tiles, credentials, tokens, provider requests, approval, and
+official exports are not packaged.
+
+The browser encrypts the package and ordered local queue in IndexedDB with
+AES-256-GCM and a passphrase-derived key that is never persisted. A service
+worker caches the application shell but excludes API responses and external
+map tiles. Runtime-cache clearing never silently deletes encrypted incident
+packages.
+
+Stable client UUIDs, actor/device context, ordered previous hashes, canonical
+payload and mutation digests, server revision digests, object timestamps,
+current authorization, and clock bounds are verified at synchronization.
+Approved revisions remain read-only. Duplicate submission is idempotent;
+stale, revoked, reordered, altered, partial, or unsupported work never uses
+last-writer-wins behavior and requires an explicit operator decision.
+
+Lock, expiration, revocation, controlled purge, pending review, retry,
+cancellation, and minimized support export are visible controls. The feature
+remains synthetic-only until security, privacy, records-management,
+operations, and maintainer reviewers approve the exact scope and deployment.
+See
+[ADR-0018](docs/adr/0018-controlled-offline-and-intermittent-operation.md) and
+the
+[offline operations guide](docs/operations/offline-and-intermittent-operation.md).
+
 ## Explainable RF deconfliction decision support
 
 Issue #39 evaluates one approved ICS-205 revision and an explicit selection of active

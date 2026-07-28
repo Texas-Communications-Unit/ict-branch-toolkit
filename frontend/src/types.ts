@@ -128,6 +128,8 @@ export interface PlanAssignment {
   phone_numbers: string;
   contact_24_hour: string;
   resource_snapshot: Record<string, unknown>;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface PlanRelationship {
@@ -147,6 +149,8 @@ export interface PlanRevision {
   prepared_by_name: string;
   prepared_by_position: string;
   approved_at: string | null;
+  created_at?: string;
+  updated_at?: string;
   assignments: PlanAssignment[];
   relationships: PlanRelationship[];
 }
@@ -1010,4 +1014,180 @@ export interface CreateDeconflictionAnalysisPayload {
   incident: string;
   approved_revision: string;
   active_resources: string[];
+}
+
+export interface OfflineStatus {
+  schema_version: string;
+  enabled: boolean;
+  approved_for_non_synthetic_use: boolean;
+  protection: {
+    browser_storage: string;
+    key_derivation: string;
+    key_persistence: string;
+    limitation: string;
+  };
+  supported_operations: string[];
+  unsupported_operations: string[];
+  limits: {
+    maximum_package_bytes: number;
+    maximum_queue_items: number;
+    default_expiration_hours: number;
+    maximum_expiration_hours: number;
+    clock_skew_tolerance_seconds: number;
+  };
+  conflict_policy: string;
+  classification: string;
+  warning: string;
+}
+
+export interface OfflineMutationResolution {
+  id: string;
+  receipt: string;
+  decision: "discard" | "requeue";
+  explanation: string;
+  resolved_by: number;
+  created_at: string;
+}
+
+export interface OfflineMutationReceipt {
+  id: string;
+  package: string;
+  sequence: number;
+  actor_id_snapshot: number;
+  device_id: string;
+  operation:
+    | "revision.update"
+    | "assignment.create"
+    | "assignment.update"
+    | "assignment.delete";
+  object_id: string | null;
+  revision_id: string;
+  previous_hash: string;
+  payload_sha256: string;
+  mutation_sha256: string;
+  base_updated_at: string | null;
+  occurred_at_client: string;
+  status: "applied" | "conflict" | "rejected";
+  result: Record<string, unknown>;
+  received_at: string;
+  resolution: OfflineMutationResolution | null;
+}
+
+export interface OfflinePackage {
+  id: string;
+  incident: string;
+  requested_by: number;
+  device_id: string;
+  status: "active" | "locked" | "expired" | "revoked" | "purged";
+  current_status: "active" | "locked" | "expired" | "revoked" | "purged";
+  scope: {
+    revision_ids: string[];
+    resource_release_ids: string[];
+    site_ids: string[];
+    terrain_analysis_ids: string[];
+    attachment_ids: string[];
+    include_map: boolean;
+  };
+  payload_snapshot: {
+    schema_version?: string;
+    generated_at?: string;
+    incident?: Record<string, unknown>;
+    revisions?: PlanRevision[];
+    resource_releases?: Record<string, unknown>[];
+    sites?: Record<string, unknown>[];
+    terrain_analyses?: Record<string, unknown>[];
+    offline_map?: Record<string, unknown> | null;
+    attachments?: Record<string, unknown>[];
+    capabilities?: Record<string, unknown>;
+  };
+  manifest: {
+    schema_version: string;
+    payload_sha256: string;
+    payload_bytes: number;
+    classification: string;
+  } & Record<string, unknown>;
+  manifest_sha256: string;
+  last_sequence: number;
+  last_chain_sha256: string;
+  expires_at: string;
+  created_at: string;
+  updated_at: string;
+  locked_at: string | null;
+  revoked_at: string | null;
+  purged_at: string | null;
+  receipts: OfflineMutationReceipt[];
+}
+
+export type OfflinePackageSummary = Pick<
+  OfflinePackage,
+  | "id"
+  | "incident"
+  | "requested_by"
+  | "device_id"
+  | "status"
+  | "current_status"
+  | "scope"
+  | "manifest_sha256"
+  | "last_sequence"
+  | "last_chain_sha256"
+  | "expires_at"
+  | "created_at"
+  | "updated_at"
+  | "locked_at"
+  | "revoked_at"
+  | "purged_at"
+>;
+
+export interface CreateOfflinePackagePayload {
+  incident: string;
+  device_id: string;
+  expires_in_hours: number;
+  selection: {
+    revision_ids: string[];
+    resource_release_ids: string[];
+    site_ids: string[];
+    terrain_analysis_ids: string[];
+    attachment_ids: string[];
+    include_map: boolean;
+  };
+}
+
+export interface OfflineMutation {
+  id: string;
+  sequence: number;
+  actor_id: number;
+  device_id: string;
+  operation: OfflineMutationReceipt["operation"];
+  object_id: string | null;
+  revision_id: string;
+  previous_hash: string;
+  payload_sha256: string;
+  mutation_sha256: string;
+  payload: Record<string, unknown>;
+  base_updated_at: string | null;
+  occurred_at_client: string;
+  sync_status?: "conflict" | "rejected";
+  sync_result?: Record<string, unknown>;
+}
+
+export interface OfflineSynchronizationResult {
+  package_id: string;
+  status: OfflinePackage["status"];
+  partial: boolean;
+  results: {
+    id: string;
+    sequence: number;
+    status: "applied" | "conflict" | "rejected" | "duplicate";
+    result: Record<string, unknown>;
+  }[];
+  last_sequence: number;
+  last_chain_sha256: string;
+}
+
+export interface OfflineSupportBundle {
+  schema_version: string;
+  generated_at: string;
+  package: Record<string, unknown>;
+  receipt_summary: Record<string, unknown>[];
+  excluded: string[];
 }

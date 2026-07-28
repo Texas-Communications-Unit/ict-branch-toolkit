@@ -21,6 +21,7 @@ import { DirectionalCoverageWorkspace } from "./DirectionalCoverageWorkspace";
 import { DeconflictionWorkspace } from "./DeconflictionWorkspace";
 import { FieldCalibrationWorkspace } from "./FieldCalibrationWorkspace";
 import { MapShell } from "./MapShell";
+import { OfflineWorkspace } from "./OfflineWorkspace";
 import { PlanWorkspace } from "./PlanWorkspace";
 import { Phase2ValidationWorkspace } from "./Phase2ValidationWorkspace";
 import { RFProfileWorkspace } from "./RFProfileWorkspace";
@@ -367,7 +368,7 @@ export default function App() {
         <div className="identity-summary">
           <span>{currentUser?.display_name}</span>
           <div className="prototype-badge">
-            P3.1 Terrain Prototype · {currentUser?.role}
+            P3.2 Offline Prototype · {currentUser?.role}
           </div>
           <button
             className="sign-out-button"
@@ -504,6 +505,7 @@ export default function App() {
         <FieldCalibrationWorkspace incident={selected} />
         <Phase2ValidationWorkspace incident={selected} />
         <TerrainAnalysisWorkspace incident={selected} />
+        <OfflineWorkspace incident={selected} />
         <MapShell incident={selected} />
         <section className="library-panel" aria-labelledby="library-heading">
           <div className="section-heading">

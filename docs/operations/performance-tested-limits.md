@@ -136,3 +136,29 @@ latency/timeouts/rate limits, concurrent requests, cancellation behavior, audit
 growth, and recovery under failure. Use synthetic data for load testing. A
 successful 1,001-sample fixture does not validate terrain accuracy or authorize
 operational use.
+
+## Offline package and synchronization workload
+
+P3.2 defaults to a 5 MiB canonical package, 500 queued mutations, 24-hour
+expiration, 72-hour maximum expiration, and 300-second client/server clock-skew
+tolerance. Package selection also limits five revisions, ten releases, 100
+sites, and 50 terrain analyses. These are defensive ceilings, not validated
+device capacity or operational service levels.
+
+Server creation serializes and hashes only explicit selections. List responses
+omit payloads and mutation content. Synchronization verifies and applies an
+ordered batch inside a database transaction; a large queue can therefore hold
+locks and grow append-only audit/receipt storage. Browser PBKDF2 uses 310,000
+iterations and every vault update rewrites one AES-GCM envelope.
+
+Deterministic tests cover the default small synthetic package, chain
+verification, duplicate replay, stale conflict, revocation, quota failure, and
+encryption round trip. They do not establish performance on low-power field
+devices, very large reference releases, maximum terrain payloads, 500-item
+queues, concurrent packages, or constrained storage.
+
+Before changing limits or approving a device class, measure canonical and
+ciphertext bytes, PBKDF2/encryption/unlock time, IndexedDB quota behavior,
+server serialization and transaction time, database locks, concurrent
+synchronization, receipt/audit growth, memory, recovery, and purge. Use
+synthetic data and record browser, device, OS, database, and commit versions.

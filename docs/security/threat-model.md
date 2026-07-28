@@ -152,3 +152,34 @@ states, and digests rather than coordinates, samples, RF values, or
 credentials. General throttling and profile bounds reduce but do not eliminate
 synchronous denial-of-service risk. See
 [ADR-0017](../adr/0017-optional-source-aware-terrain-analysis.md).
+
+## P3.2 offline continuity threats and controls
+
+The main threats are an over-broad incident copy, plaintext or recoverable-key
+browser storage, shared or stolen devices, stale authorization, silent
+overwrite, reordered or altered queues, duplicate replay, clock skew,
+service-worker cache leakage, excessive retention, and support exports that
+copy protected content.
+
+The server defaults offline packaging to disabled, requires explicit
+record-level scope, excludes API responses/external tiles/attachments/secrets,
+bounds bytes/queue/expiration/skew, and rechecks incident edit permission at
+synchronization. The browser encrypts the package and queue at rest with
+AES-256-GCM and a non-persisted passphrase-derived key. Mutations bind stable
+UUID, actor/device, sequence, previous hash, payload digest, revision, object,
+and client time. The server also compares current revision and object state.
+Approved revisions are never mutable; no conflict uses last-writer-wins.
+
+Expiration and revocation block synchronization. Lock removes usable browser
+key material. Controlled purge removes payload/ciphertext while retaining
+manifest, receipts, resolutions, and audit evidence. Runtime cache clearing is
+separate and cannot delete IndexedDB packages. Support bundles omit tokens,
+keys, passphrases, ciphertext, incident/mutation content, frequencies,
+coordinates, names, and notes.
+
+Residual risk remains for an unlocked or compromised browser/device,
+passphrase disclosure, malicious browser extensions, privileged database
+administrators, metadata disclosure, denial of service, and the lack of
+hardware-backed keys or remote wipe in the application. Deployment controls
+and the documented human gate must address those risks. See
+[ADR-0018](../adr/0018-controlled-offline-and-intermittent-operation.md).

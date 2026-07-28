@@ -87,3 +87,18 @@ evidence is preserved.
   management integration, or adopted incident-data retention schedule is implemented.
 - Security and operational acceptance, maintainer review, and synthetic-data-only restrictions
   remain mandatory before any hosted test uses non-synthetic data.
+
+## P3.2 offline-operation extension
+
+Offline package, synchronization, conflict, lock, purge, and support events use
+the existing append-only chain and request transaction boundary.
+
+| Abuse case                                                | Expected control                                                                                     | Automated evidence                                                      |
+| --------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| Client reorders or alters an encrypted local queue        | Sequence, previous hash, payload digest, and mutation digest fail before any content change          | `test_broken_chain_reordered_queue_and_clock_skew_fail_without_changes` |
+| Client retries the exact accepted mutation                | Server returns duplicate and creates no second receipt or applied event                              | `test_ordered_tamper_evident_update_and_duplicate_are_idempotent`       |
+| Server record changes while the device is offline         | Revision digest mismatch creates retained conflict; later ordered changes do not apply automatically | `test_stale_base_requires_explicit_resolution_and_blocks_later_changes` |
+| Client attempts to rewrite an approved revision           | Read-only revision creates conflict and assignment content remains unchanged                         | `test_approved_revision_is_read_only_and_never_rewritten`               |
+| Incident membership is revoked before reconnect           | Package is marked revoked; synchronization is unavailable; controlled purge remains possible         | `test_revocation_lock_unlock_purge_and_minimized_support_bundle`        |
+| Support request could copy plan or queue content          | Export contains metadata/digests only and explicitly lists excluded content                          | `test_revocation_lock_unlock_purge_and_minimized_support_bundle`        |
+| Application code tries to rewrite/delete receipt evidence | Append-only receipt/resolution and retained-package guards reject supported ORM mutation paths       | `test_receipt_and_resolution_evidence_is_append_only`                   |
