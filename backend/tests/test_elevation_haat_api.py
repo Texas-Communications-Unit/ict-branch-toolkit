@@ -92,9 +92,7 @@ def source_approval(mode):
         "provider": descriptor["provider"],
         "dataset_product": descriptor["dataset_product"],
         "horizontal_crs": "EPSG:4326",
-        "vertical_crs": (
-            "SYNTHETIC:LOCAL-OFFSET" if mode == "datum" else "SYNTHETIC:LOCAL"
-        ),
+        "vertical_crs": ("SYNTHETIC:LOCAL-OFFSET" if mode == "datum" else "SYNTHETIC:LOCAL"),
         "target_vertical_crs": "SYNTHETIC:LOCAL",
         "resolution_m": "30.000",
         "source_version": descriptor["source_version"],

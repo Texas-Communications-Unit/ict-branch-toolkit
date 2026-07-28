@@ -240,8 +240,7 @@ def _validate_batch(query: dict, batch) -> None:
                         "The elevation provider returned an elevation outside defensive limits."
                     )
         elif any(
-            sample.get(field) is not None
-            for field in ("elevation_m", "transformed_elevation_m")
+            sample.get(field) is not None for field in ("elevation_m", "transformed_elevation_m")
         ):
             raise ValidationError(
                 "The elevation provider attached values to a non-complete sample."
@@ -313,9 +312,7 @@ def acquire_elevation_snapshot(site, query: dict, *, actor, force_refresh: bool)
         )
     _validate_batch(query, batch)
     sample_sha256 = canonical_digest(batch.samples)
-    stale_at = batch.retrieved_at + timedelta(
-        seconds=settings.ICT_ELEVATION_CACHE_TTL_SECONDS
-    )
+    stale_at = batch.retrieved_at + timedelta(seconds=settings.ICT_ELEVATION_CACHE_TTL_SECONDS)
     source = batch.source
     snapshot = ElevationSnapshot.objects.create(
         incident=site.incident,
