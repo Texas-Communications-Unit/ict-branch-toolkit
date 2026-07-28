@@ -113,13 +113,24 @@ jobs:
             echo 'Referrer-Policy: same-origin'
           } > evaluation-evidence/security-headers.txt
 
+      - name: Exercise incident scope, export, and audit integrity
+        shell: bash
+        run: |
+          docker compose \
+            --env-file "$DEPLOY_ENV" \
+            -f compose.production.yaml \
+            exec -T backend \
+            python manage.py shell \
+            < .github/scripts/phase1_rc_smoke.py \
+            | tee evaluation-evidence/application-smoke.txt
+
       - name: Exercise public sign-in and token revocation
         shell: bash
         run: |
           token_response="$(
             curl --fail --silent --show-error \
               --header 'Content-Type: application/json' \
-              --data '{"username":"synthetic-rc-admin","password":"synthetic-rc-admin-password"}' \
+              --data '{"username":"egildersleeve","password":"synthetic-evaluation-password"}' \
               http://127.0.0.1:8088/api/auth/token/
           )"
           token="$(
@@ -142,19 +153,8 @@ jobs:
               http://127.0.0.1:8088/api/me/
           )"
           test "$revoked_status" = '401'
-          echo 'Public sign-in succeeded; logout revoked the evaluated token.' \
+          echo 'The egildersleeve test account signed in; logout revoked its evaluated token.' \
             > evaluation-evidence/token-lifecycle.txt
-
-      - name: Exercise incident scope, export, and audit integrity
-        shell: bash
-        run: |
-          docker compose \
-            --env-file "$DEPLOY_ENV" \
-            -f compose.production.yaml \
-            exec -T backend \
-            python manage.py shell \
-            < .github/scripts/phase1_rc_smoke.py \
-            | tee evaluation-evidence/application-smoke.txt
 
       - name: Verify backup and isolated restore
         shell: bash
