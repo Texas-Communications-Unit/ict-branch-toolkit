@@ -4,6 +4,7 @@ from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
 from apps.incidents.models import Incident
+from apps.plans.models import PlanRevision
 from apps.sites.models import RadioSite
 
 from .models import (
@@ -14,10 +15,12 @@ from .models import (
     FieldObservation,
     FieldObservationReview,
     HAATCalculation,
+    Phase2ValidationBundle,
     RFAnalysisInputSnapshot,
     SubscriberProfile,
     SubscriberProfileVersion,
 )
+from .phase2_validation import stale_reasons
 from .services import VERSION_EDITABLE_FIELDS, normalize_version_attrs
 
 
@@ -717,3 +720,105 @@ class CreateCalibrationSetSerializer(serializers.Serializer):
     baseline_preset = serializers.CharField(max_length=80, trim_whitespace=True)
     baseline_preset_version = serializers.CharField(max_length=80, trim_whitespace=True)
     parameters = serializers.JSONField(default=dict)
+
+
+class Phase2ValidationBundleSerializer(serializers.ModelSerializer):
+    is_locked = serializers.BooleanField(read_only=True)
+    is_stale = serializers.SerializerMethodField()
+    stale_reasons = serializers.SerializerMethodField()
+    approval_eligible = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Phase2ValidationBundle
+        fields = [
+            "id",
+            "incident",
+            "approved_revision",
+            "haat_calculation",
+            "coverage_estimate",
+            "directional_analysis",
+            "calibration_set",
+            "supersedes",
+            "validation_profile_id",
+            "validation_profile_version",
+            "app_version",
+            "job_state",
+            "progress_step",
+            "progress_percent",
+            "status",
+            "input_snapshot",
+            "input_sha256",
+            "result_snapshot",
+            "result_sha256",
+            "failure_code",
+            "failure_message",
+            "created_by",
+            "approved_by",
+            "created_at",
+            "started_at",
+            "completed_at",
+            "approved_at",
+            "updated_at",
+            "is_locked",
+            "is_stale",
+            "stale_reasons",
+            "approval_eligible",
+        ]
+        read_only_fields = fields
+
+    @extend_schema_field(serializers.BooleanField())
+    def get_is_stale(self, obj: Phase2ValidationBundle) -> bool:
+        return bool(stale_reasons(obj))
+
+    @extend_schema_field(serializers.ListField(child=serializers.CharField()))
+    def get_stale_reasons(self, obj: Phase2ValidationBundle) -> list[str]:
+        return stale_reasons(obj)
+
+    @extend_schema_field(serializers.BooleanField())
+    def get_approval_eligible(self, obj: Phase2ValidationBundle) -> bool:
+        from django.conf import settings
+
+        return (
+            obj.job_state == Phase2ValidationBundle.JobState.COMPLETE
+            and obj.status == Phase2ValidationBundle.Status.DRAFT
+            and not stale_reasons(obj)
+            and obj.validation_profile_version
+            in getattr(settings, "ICT_APPROVED_PHASE2_VALIDATION_PROFILES", [])
+        )
+
+
+class CreatePhase2ValidationBundleSerializer(serializers.Serializer):
+    incident = serializers.PrimaryKeyRelatedField(queryset=Incident.objects.all())
+    approved_revision = serializers.PrimaryKeyRelatedField(
+        queryset=PlanRevision.objects.select_related("plan__incident", "plan__operational_period")
+    )
+    haat_calculation = serializers.PrimaryKeyRelatedField(
+        queryset=HAATCalculation.objects.select_related(
+            "incident",
+            "elevation_snapshot",
+            "rf_input_snapshot",
+        )
+    )
+    coverage_estimate = serializers.PrimaryKeyRelatedField(
+        queryset=CoverageEstimate.objects.select_related(
+            "incident",
+            "haat_calculation",
+            "rf_input_snapshot",
+        )
+    )
+    directional_analysis = serializers.PrimaryKeyRelatedField(
+        queryset=DirectionalCoverageAnalysis.objects.select_related(
+            "incident",
+            "haat_calculation",
+            "infrastructure_rf_input_snapshot",
+            "subscriber_rf_input_snapshot",
+        )
+    )
+    calibration_set = serializers.PrimaryKeyRelatedField(
+        queryset=CalibrationSet.objects.select_related("incident")
+    )
+    supersedes = serializers.PrimaryKeyRelatedField(
+        queryset=Phase2ValidationBundle.objects.all(),
+        required=False,
+        allow_null=True,
+    )

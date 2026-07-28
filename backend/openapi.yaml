@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: ICT Branch Toolkit API
-  version: 0.1.0-rc.1
+  version: 0.2.0-rc.1
   description: Incident communications planning prototype API.
 paths:
   /api/audit/revisions/{revision_id}/exports/{export_format}/verify/:
@@ -1745,6 +1745,231 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/OperationalPeriod'
+          description: ''
+  /api/phase2-validation-bundles/:
+    get:
+      operationId: phase2_validation_bundles_list
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - phase2-validation-bundles
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedPhase2ValidationBundleList'
+          description: ''
+    post:
+      operationId: phase2_validation_bundles_create
+      tags:
+      - phase2-validation-bundles
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePhase2ValidationBundle'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CreatePhase2ValidationBundle'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CreatePhase2ValidationBundle'
+        required: true
+      security:
+      - tokenAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Phase2ValidationBundle'
+          description: ''
+  /api/phase2-validation-bundles/{id}/:
+    get:
+      operationId: phase2_validation_bundles_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this phase2 validation bundle.
+        required: true
+      tags:
+      - phase2-validation-bundles
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Phase2ValidationBundle'
+          description: ''
+  /api/phase2-validation-bundles/{id}/approve/:
+    post:
+      operationId: phase2_validation_bundles_approve_create
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this phase2 validation bundle.
+        required: true
+      tags:
+      - phase2-validation-bundles
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Phase2ValidationBundle'
+          description: ''
+  /api/phase2-validation-bundles/{id}/cancel/:
+    post:
+      operationId: phase2_validation_bundles_cancel_create
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this phase2 validation bundle.
+        required: true
+      tags:
+      - phase2-validation-bundles
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Phase2ValidationBundle'
+          description: ''
+  /api/phase2-validation-bundles/{id}/export/:
+    get:
+      operationId: phase2_validation_bundles_export_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this phase2 validation bundle.
+        required: true
+      tags:
+      - phase2-validation-bundles
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: string
+                format: binary
+          description: ''
+  /api/phase2-validation-bundles/{id}/retry/:
+    post:
+      operationId: phase2_validation_bundles_retry_create
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this phase2 validation bundle.
+        required: true
+      tags:
+      - phase2-validation-bundles
+      security:
+      - tokenAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Phase2ValidationBundle'
+          description: ''
+  /api/phase2-validation-bundles/{id}/run/:
+    post:
+      operationId: phase2_validation_bundles_run_create
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this phase2 validation bundle.
+        required: true
+      tags:
+      - phase2-validation-bundles
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Phase2ValidationBundle'
+          description: ''
+  /api/phase2-validation-bundles/{id}/verify/:
+    post:
+      operationId: phase2_validation_bundles_verify_create
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this phase2 validation bundle.
+        required: true
+      tags:
+      - phase2-validation-bundles
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExportDigestVerificationRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ExportDigestVerificationRequest'
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/phase2-validation-status/:
+    get:
+      operationId: phase2_validation_status_retrieve
+      tags:
+      - phase2-validation-status
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
           description: ''
   /api/plan-assignments/:
     get:
@@ -3955,6 +4180,38 @@ components:
       required:
       - rf_input_snapshot
       - site
+    CreatePhase2ValidationBundle:
+      type: object
+      properties:
+        incident:
+          type: string
+          format: uuid
+        approved_revision:
+          type: string
+          format: uuid
+        haat_calculation:
+          type: string
+          format: uuid
+        coverage_estimate:
+          type: string
+          format: uuid
+        directional_analysis:
+          type: string
+          format: uuid
+        calibration_set:
+          type: string
+          format: uuid
+        supersedes:
+          type: string
+          format: uuid
+          nullable: true
+      required:
+      - approved_revision
+      - calibration_set
+      - coverage_estimate
+      - directional_analysis
+      - haat_calculation
+      - incident
     CreateRFAnalysisInputSnapshot:
       type: object
       properties:
@@ -5283,6 +5540,20 @@ components:
         * `recorded_fact` - Recorded fact
         * `modeled_assumption` - Modeled assumption
         * `mixed` - Mixed
+    JobStateEnum:
+      enum:
+      - queued
+      - running
+      - complete
+      - failed
+      - cancelled
+      type: string
+      description: |-
+        * `queued` - Queued
+        * `running` - Running
+        * `complete` - Complete
+        * `failed` - Failed
+        * `cancelled` - Cancelled
     LimitingPathEnum:
       enum:
       - talk_out
@@ -5688,6 +5959,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/OperationalPeriod'
+    PaginatedPhase2ValidationBundleList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Phase2ValidationBundle'
     PaginatedPlanList:
       type: object
       required:
@@ -6520,6 +6814,158 @@ components:
         is_locked:
           type: boolean
           readOnly: true
+    Phase2ValidationBundle:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        incident:
+          type: string
+          format: uuid
+          readOnly: true
+        approved_revision:
+          type: string
+          format: uuid
+          readOnly: true
+        haat_calculation:
+          type: string
+          format: uuid
+          readOnly: true
+        coverage_estimate:
+          type: string
+          format: uuid
+          readOnly: true
+        directional_analysis:
+          type: string
+          format: uuid
+          readOnly: true
+        calibration_set:
+          type: string
+          format: uuid
+          readOnly: true
+        supersedes:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
+        validation_profile_id:
+          type: string
+          readOnly: true
+        validation_profile_version:
+          type: string
+          readOnly: true
+        app_version:
+          type: string
+          readOnly: true
+        job_state:
+          allOf:
+          - $ref: '#/components/schemas/JobStateEnum'
+          readOnly: true
+        progress_step:
+          type: string
+          readOnly: true
+        progress_percent:
+          type: integer
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/PlanRevisionStatusEnum'
+          readOnly: true
+        input_snapshot:
+          readOnly: true
+        input_sha256:
+          type: string
+          readOnly: true
+        result_snapshot:
+          readOnly: true
+        result_sha256:
+          type: string
+          readOnly: true
+        failure_code:
+          type: string
+          readOnly: true
+        failure_message:
+          type: string
+          readOnly: true
+        created_by:
+          type: integer
+          readOnly: true
+        approved_by:
+          type: integer
+          readOnly: true
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        started_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        completed_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        approved_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+        is_locked:
+          type: boolean
+          readOnly: true
+        is_stale:
+          type: boolean
+          readOnly: true
+        stale_reasons:
+          type: array
+          items:
+            type: string
+          readOnly: true
+        approval_eligible:
+          type: boolean
+          readOnly: true
+      required:
+      - app_version
+      - approval_eligible
+      - approved_at
+      - approved_by
+      - approved_revision
+      - calibration_set
+      - completed_at
+      - coverage_estimate
+      - created_at
+      - created_by
+      - directional_analysis
+      - failure_code
+      - failure_message
+      - haat_calculation
+      - id
+      - incident
+      - input_sha256
+      - input_snapshot
+      - is_locked
+      - is_stale
+      - job_state
+      - progress_percent
+      - progress_step
+      - result_sha256
+      - result_snapshot
+      - stale_reasons
+      - started_at
+      - status
+      - supersedes
+      - updated_at
+      - validation_profile_id
+      - validation_profile_version
     Plan:
       type: object
       properties:

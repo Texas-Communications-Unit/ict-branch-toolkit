@@ -88,6 +88,7 @@ Security and policy settings:
 | `RADIOREFERENCE_WSDL_URL`        | official HTTPS URL | Non-secret, server-side endpoint metadata. HTTPS is required and embedded credentials are rejected. Follow the [provider safety boundary](radioreference-provider.md).                                |
 | `RADIOREFERENCE_MAX_RESPONSE_BYTES` | `1048576`     | Synthetic SOAP contract input limit. Must remain between 1,024 and 5,242,880 bytes.                                                                                                                   |
 | `ICT_APPROVED_CALIBRATION_METHODS` | `[]`            | Exact incident-local calibration versions that passed security/privacy and qualified RF review. This never authorizes real collection or default-preset promotion.                                  |
+| `ICT_APPROVED_PHASE2_VALIDATION_PROFILES` | `[]`    | Exact P2.6 evidence profile accepted by qualified RF/GIS, security/privacy, accessibility, operations, and maintainer review. Empty fails closed; enabling it does not authorize deployment or real data. |
 | `ICT_APPROVED_DECONFLICTION_RULESETS` | `[]`         | Exact RF deconfliction rule-set versions that passed the [qualified practitioner gate](rf-deconfliction.md). Draft synthetic analysis remains available; approval fails closed.                      |
 
 The neutral, network-free map is the default. Enabling any external map requires

@@ -9,6 +9,7 @@ from .models import (
     FieldObservation,
     FieldObservationReview,
     HAATCalculation,
+    Phase2ValidationBundle,
     RFAnalysisInputSnapshot,
     SubscriberProfile,
     SubscriberProfileVersion,
@@ -161,4 +162,23 @@ class CalibrationSetObservationAdmin(ReadOnlyRFAdmin):
         "calibration_set__name",
         "observation_sha256",
         "review_evidence_sha256",
+    )
+
+
+@admin.register(Phase2ValidationBundle)
+class Phase2ValidationBundleAdmin(ReadOnlyRFAdmin):
+    list_display = (
+        "incident",
+        "validation_profile_version",
+        "job_state",
+        "status",
+        "created_by",
+        "created_at",
+    )
+    list_filter = ("job_state", "status", "validation_profile_version", "app_version")
+    search_fields = (
+        "incident__name",
+        "incident__incident_number",
+        "input_sha256",
+        "result_sha256",
     )

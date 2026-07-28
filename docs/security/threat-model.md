@@ -102,6 +102,23 @@ requires separate incident authority, security/privacy review, retention/consent
 qualified RF review. See
 [ADR-0012](../adr/0012-field-observations-and-incident-local-calibration.md).
 
+For P2.6, the backend rejects cross-incident or internally inconsistent source
+chains and recalculates retained digests before approval/export. Append-only
+review changes and elevation expiration mark completed evidence stale rather
+than silently recalculating it. Approval uses an exact-version server
+allowlist; export requires both RF approval and plan-export authority. Export
+audit details contain digest, size, version, and action metadata rather than
+plan contacts, observation locations, source text, or notes.
+
+Residual risks include database administrators bypassing model-level
+immutability, denial of service through repeated synchronous work, protected
+information remaining in minimized model/dataset evidence, local bearer-token
+limits, and the absence of external audit anchoring. General API throttling,
+incident scope, bounded upload verification, protected database access,
+backup/recovery controls, and human gates reduce but do not eliminate these
+risks. See
+[ADR-0016](../adr/0016-phase-2-validation-evidence-bundles.md).
+
 For RF deconfliction, versioned rules run only on the backend against an approved incident-scoped
 ICS-205 revision, frozen approved areas, and an explicit active-resource selection. The service
 never invents a missing location and never uses a squelch difference to suppress a frequency

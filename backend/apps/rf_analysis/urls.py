@@ -12,6 +12,8 @@ from .views import (
     ElevationSnapshotViewSet,
     FieldObservationViewSet,
     HAATCalculationViewSet,
+    Phase2ValidationBundleViewSet,
+    Phase2ValidationStatusView,
     RFAnalysisInputSnapshotViewSet,
     SubscriberProfileVersionViewSet,
     SubscriberProfileViewSet,
@@ -59,6 +61,11 @@ router.register(
     CalibrationSetViewSet,
     basename="calibration-set",
 )
+router.register(
+    "phase2-validation-bundles",
+    Phase2ValidationBundleViewSet,
+    basename="phase2-validation-bundle",
+)
 
 urlpatterns = [
     path(
@@ -80,6 +87,11 @@ urlpatterns = [
         "calibration-status/",
         CalibrationStatusView.as_view(),
         name="calibration-status",
+    ),
+    path(
+        "phase2-validation-status/",
+        Phase2ValidationStatusView.as_view(),
+        name="phase2-validation-status",
     ),
     *router.urls,
 ]

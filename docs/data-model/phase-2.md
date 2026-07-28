@@ -429,6 +429,41 @@ still current. Approval never writes to the coverage engine's organization defau
 See [ADR-0012](../adr/0012-field-observations-and-incident-local-calibration.md) and the
 [field observation and calibration guide](../operations/field-observations-and-calibration.md).
 
+## `Phase2ValidationBundle`
+
+Each retained bundle belongs to one incident and references exactly one
+approved plan revision, HAAT calculation, coverage estimate, directional
+analysis, and calibration set. The backend requires one consistent
+RF/HAAT/coverage/directional chain and requires every calibration observation
+to use the selected infrastructure/subscriber RF pair.
+
+The record stores:
+
+- immutable source selections, validation profile/application versions, input
+  snapshot, and input SHA-256;
+- queued, running, complete, failed, or cancelled job state with step,
+  percentage, timestamps, and bounded failure/recovery text;
+- deterministic result snapshot and SHA-256;
+- screening-only confidence, supported/unsupported conditions, tested limits,
+  sensitivity, and measured-versus-predicted synthetic comparison;
+- minimized source, dataset, model, input, calibration, approval, actor, and
+  timestamp evidence;
+- retry lineage through `supersedes`; and
+- draft/approved lifecycle with approver and approval timestamp.
+
+Input and completed result evidence is immutable. Contact fields, assignment
+remarks, raw observation coordinates, observer/source text, and notes are
+excluded. The current plan/source/calibration digests, elevation freshness, and
+observation/review evidence are checked before approval and export.
+
+Approval requires the exact validation profile in
+`ICT_APPROVED_PHASE2_VALIDATION_PROFILES`. Controlled export additionally
+requires `plan.export`, records exact-byte SHA-256 and size in the append-only
+audit chain, and supports authorized digest verification.
+
+See [ADR-0016](../adr/0016-phase-2-validation-evidence-bundles.md) and the
+[P2.6 operations guide](../operations/phase-2-validation-and-rc-evaluation.md).
+
 ## `DeconflictionAnalysis`
 
 Each retained analysis belongs to one active incident and references one approved ICS-205

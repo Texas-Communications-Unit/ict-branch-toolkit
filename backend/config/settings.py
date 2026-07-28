@@ -142,6 +142,13 @@ if not isinstance(ICT_APPROVED_CALIBRATION_METHODS, list) or not all(
     isinstance(method, str) for method in ICT_APPROVED_CALIBRATION_METHODS
 ):
     raise ValueError("ICT_APPROVED_CALIBRATION_METHODS must be a JSON array of strings.")
+ICT_APPROVED_PHASE2_VALIDATION_PROFILES = json.loads(
+    os.getenv("ICT_APPROVED_PHASE2_VALIDATION_PROFILES", "[]")
+)
+if not isinstance(ICT_APPROVED_PHASE2_VALIDATION_PROFILES, list) or not all(
+    isinstance(profile, str) for profile in ICT_APPROVED_PHASE2_VALIDATION_PROFILES
+):
+    raise ValueError("ICT_APPROVED_PHASE2_VALIDATION_PROFILES must be a JSON array of strings.")
 ICT_APPROVED_DECONFLICTION_RULESETS = json.loads(
     os.getenv("ICT_APPROVED_DECONFLICTION_RULESETS", "[]")
 )
@@ -215,7 +222,7 @@ if DJANGO_FORCE_HTTPS:
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SECURE_HSTS_PRELOAD = True
 
-APP_VERSION = "0.1.0-rc.1"
+APP_VERSION = "0.2.0-rc.1"
 
 SPECTACULAR_SETTINGS = {
     "TITLE": "ICT Branch Toolkit API",

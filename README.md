@@ -344,6 +344,30 @@ See [ADR-0012](docs/adr/0012-field-observations-and-incident-local-calibration.m
 [field observation and calibration guide](docs/operations/field-observations-and-calibration.md),
 and the [Phase 2 data model](docs/data-model/phase-2.md).
 
+## P2.6 retained validation evidence and release-candidate preparation
+
+Issue #20 adds an incident-scoped, retained validation chain from one approved
+ICS 205 revision through exact approved HAAT, coverage, directional, field
+observation, and calibration evidence. Queue, explicit run, pre-run
+cancellation, failed/cancelled retry, progress, stale-source detection,
+screening-only confidence, supported/unsupported conditions, tested limits,
+sensitivity, and deterministic synthetic comparisons are visible in the
+interface.
+
+Completed evidence is immutable. Approval fails closed until
+`phase-2-validation-v1-provisional` passes qualified RF/GIS, security/privacy,
+accessibility, operations, and maintainer review and is explicitly allowlisted.
+Approved/current deterministic JSON export requires both `rf.approve` and
+`plan.export`; its exact bytes are SHA-256 recorded and can be verified against
+the append-only audit history.
+
+P2.6 remains synthetic-only decision support. It is not field/scientific
+validation, a propagation study, frequency coordination, spectrum
+authorization, a coverage guarantee, deployment approval, or a production
+release. See [ADR-0016](docs/adr/0016-phase-2-validation-evidence-bundles.md),
+the [P2.6 operations guide](docs/operations/phase-2-validation-and-rc-evaluation.md),
+and the [v0.2.0-rc.1 evidence checklist](docs/releases/v0.2.0-rc.1-evidence.md).
+
 ## Explainable RF deconfliction decision support
 
 Issue #39 evaluates one approved ICS-205 revision and an explicit selection of active
