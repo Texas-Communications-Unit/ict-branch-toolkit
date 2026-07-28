@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: ICT Branch Toolkit API
-  version: 0.2.0
+  version: 0.1.0-rc.1
   description: Incident communications planning prototype API.
 paths:
   /api/audit/revisions/{revision_id}/exports/{export_format}/verify/:
