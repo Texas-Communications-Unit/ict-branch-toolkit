@@ -170,7 +170,7 @@ def create_deconfliction_analysis(
         raise ValidationError({"incident": "Archived incidents cannot be analyzed."})
     revision = (
         PlanRevision.objects.select_for_update()
-        .select_related("plan__incident", "approved_by")
+        .select_related("plan__incident")
         .get(pk=approved_revision.pk)
     )
     if revision.plan.incident_id != incident.id:
