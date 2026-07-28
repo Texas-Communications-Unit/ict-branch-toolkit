@@ -1,13 +1,18 @@
 from decimal import Decimal
 
+from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
+from apps.incidents.models import Incident
 from apps.sites.models import RadioSite
 
 from .models import (
+    CalibrationSet,
     CoverageEstimate,
     DirectionalCoverageAnalysis,
     ElevationSnapshot,
+    FieldObservation,
+    FieldObservationReview,
     HAATCalculation,
     RFAnalysisInputSnapshot,
     SubscriberProfile,
@@ -489,3 +494,226 @@ class CreateDirectionalCoverageAnalysisSerializer(serializers.Serializer):
                 "HAAT and subscriber RF snapshots must belong to the same incident."
             )
         return attrs
+
+
+class FieldObservationReviewSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = FieldObservationReview
+        fields = [
+            "id",
+            "observation",
+            "decision",
+            "reason",
+            "evidence_sha256",
+            "reviewed_by",
+            "created_at",
+        ]
+        read_only_fields = fields
+
+
+class FieldObservationSerializer(serializers.ModelSerializer):
+    reviews = FieldObservationReviewSerializer(many=True, read_only=True)
+    current_review_state = serializers.CharField(read_only=True)
+    superseded_by = serializers.SerializerMethodField()
+    infrastructure_label = serializers.CharField(
+        source="infrastructure_rf_input_snapshot.label",
+        read_only=True,
+    )
+    subscriber_label = serializers.CharField(
+        source="subscriber_rf_input_snapshot.label",
+        read_only=True,
+    )
+
+    class Meta:
+        model = FieldObservation
+        fields = [
+            "id",
+            "incident",
+            "infrastructure_rf_input_snapshot",
+            "infrastructure_label",
+            "subscriber_rf_input_snapshot",
+            "subscriber_label",
+            "coverage_estimate",
+            "directional_analysis",
+            "supersedes",
+            "superseded_by",
+            "classification",
+            "evidence_type",
+            "observed_from",
+            "observed_to",
+            "location_precision",
+            "coordinate_reference",
+            "latitude",
+            "longitude",
+            "location_precision_m",
+            "direction_degrees",
+            "path_distance_m",
+            "observer_source",
+            "collection_method",
+            "environment",
+            "measurements",
+            "notes",
+            "quality_flags",
+            "source_record_id",
+            "source_revision",
+            "input_snapshot",
+            "input_sha256",
+            "created_by",
+            "created_at",
+            "current_review_state",
+            "reviews",
+        ]
+        read_only_fields = fields
+
+    @extend_schema_field(serializers.UUIDField(allow_null=True))
+    def get_superseded_by(self, obj: FieldObservation) -> str | None:
+        superseding_observation = getattr(obj, "superseded_by", None)
+        return str(superseding_observation.id) if superseding_observation else None
+
+
+class CreateFieldObservationSerializer(serializers.Serializer):
+    incident = serializers.PrimaryKeyRelatedField(queryset=Incident.objects.all())
+    infrastructure_rf_input_snapshot = serializers.PrimaryKeyRelatedField(
+        queryset=RFAnalysisInputSnapshot.objects.select_related("incident")
+    )
+    subscriber_rf_input_snapshot = serializers.PrimaryKeyRelatedField(
+        queryset=RFAnalysisInputSnapshot.objects.select_related("incident")
+    )
+    coverage_estimate = serializers.PrimaryKeyRelatedField(
+        queryset=CoverageEstimate.objects.select_related("incident", "rf_input_snapshot"),
+        required=False,
+        allow_null=True,
+    )
+    directional_analysis = serializers.PrimaryKeyRelatedField(
+        queryset=DirectionalCoverageAnalysis.objects.select_related(
+            "incident",
+            "infrastructure_rf_input_snapshot",
+            "subscriber_rf_input_snapshot",
+        ),
+        required=False,
+        allow_null=True,
+    )
+    supersedes = serializers.PrimaryKeyRelatedField(
+        queryset=FieldObservation.objects.select_related("incident"),
+        required=False,
+        allow_null=True,
+    )
+    classification = serializers.ChoiceField(choices=FieldObservation.Classification.choices)
+    evidence_type = serializers.ChoiceField(choices=FieldObservation.EvidenceType.choices)
+    observed_from = serializers.DateTimeField()
+    observed_to = serializers.DateTimeField()
+    location_precision = serializers.ChoiceField(choices=FieldObservation.LocationPrecision.choices)
+    latitude = serializers.DecimalField(
+        max_digits=9,
+        decimal_places=6,
+        min_value=Decimal("-90"),
+        max_value=Decimal("90"),
+        required=False,
+        allow_null=True,
+    )
+    longitude = serializers.DecimalField(
+        max_digits=9,
+        decimal_places=6,
+        min_value=Decimal("-180"),
+        max_value=Decimal("180"),
+        required=False,
+        allow_null=True,
+    )
+    location_precision_m = serializers.IntegerField(
+        min_value=1,
+        max_value=1_000_000,
+        required=False,
+        allow_null=True,
+    )
+    direction_degrees = serializers.DecimalField(
+        max_digits=6,
+        decimal_places=3,
+        min_value=Decimal("0"),
+        max_value=Decimal("359.999"),
+        required=False,
+        allow_null=True,
+    )
+    path_distance_m = serializers.IntegerField(
+        min_value=1,
+        max_value=1_000_000,
+        required=False,
+        allow_null=True,
+    )
+    observer_source = serializers.CharField(max_length=160, trim_whitespace=True)
+    collection_method = serializers.CharField(max_length=120, trim_whitespace=True)
+    environment = serializers.JSONField(default=dict)
+    measurements = serializers.JSONField(default=dict)
+    notes = serializers.CharField(
+        max_length=2_000,
+        allow_blank=True,
+        trim_whitespace=True,
+        default="",
+    )
+    quality_flags = serializers.ListField(
+        child=serializers.CharField(max_length=80),
+        default=list,
+    )
+    source_record_id = serializers.CharField(
+        max_length=160,
+        allow_blank=True,
+        trim_whitespace=True,
+        default="",
+    )
+    source_revision = serializers.CharField(max_length=160, trim_whitespace=True)
+
+
+class ReviewFieldObservationSerializer(serializers.Serializer):
+    decision = serializers.ChoiceField(choices=FieldObservationReview.Decision.choices)
+    reason = serializers.CharField(max_length=1_000, trim_whitespace=True)
+
+
+class CalibrationSetSerializer(serializers.ModelSerializer):
+    is_locked = serializers.BooleanField(read_only=True)
+    observation_ids = serializers.SerializerMethodField()
+
+    class Meta:
+        model = CalibrationSet
+        fields = [
+            "id",
+            "incident",
+            "name",
+            "version",
+            "status",
+            "calculation_state",
+            "algorithm",
+            "algorithm_version",
+            "parameters",
+            "baseline_preset",
+            "baseline_preset_version",
+            "observation_ids",
+            "observation_snapshot",
+            "observation_sha256",
+            "recommended_preset",
+            "before_after",
+            "warnings",
+            "exclusions",
+            "result_snapshot",
+            "result_sha256",
+            "created_by",
+            "approved_by",
+            "approved_at",
+            "created_at",
+            "is_locked",
+        ]
+        read_only_fields = fields
+
+    @extend_schema_field(serializers.ListField(child=serializers.UUIDField()))
+    def get_observation_ids(self, obj: CalibrationSet) -> list[str]:
+        return [str(value) for value in obj.observations.values_list("id", flat=True)]
+
+
+class CreateCalibrationSetSerializer(serializers.Serializer):
+    incident = serializers.PrimaryKeyRelatedField(queryset=Incident.objects.all())
+    name = serializers.CharField(max_length=160, trim_whitespace=True)
+    observations = serializers.PrimaryKeyRelatedField(
+        queryset=FieldObservation.objects.select_related("incident"),
+        many=True,
+    )
+    baseline_preset = serializers.CharField(max_length=80, trim_whitespace=True)
+    baseline_preset_version = serializers.CharField(max_length=80, trim_whitespace=True)
+    parameters = serializers.JSONField(default=dict)
