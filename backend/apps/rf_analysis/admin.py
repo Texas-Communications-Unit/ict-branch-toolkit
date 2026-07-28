@@ -1,6 +1,7 @@
 from django.contrib import admin
 
 from .models import (
+    CoverageEstimate,
     ElevationSnapshot,
     HAATCalculation,
     RFAnalysisInputSnapshot,
@@ -68,3 +69,19 @@ class HAATCalculationAdmin(ReadOnlyRFAdmin):
     )
     list_filter = ("calculation_state", "status", "method_version")
     search_fields = ("site__name", "profile_version__profile__name", "result_sha256")
+
+
+@admin.register(CoverageEstimate)
+class CoverageEstimateAdmin(ReadOnlyRFAdmin):
+    list_display = (
+        "site",
+        "environment",
+        "band",
+        "engine_version",
+        "calculation_state",
+        "status",
+        "nominal_distance_m",
+        "created_at",
+    )
+    list_filter = ("environment", "band", "calculation_state", "status", "engine_version")
+    search_fields = ("site__name", "rf_input_snapshot__label", "result_sha256")

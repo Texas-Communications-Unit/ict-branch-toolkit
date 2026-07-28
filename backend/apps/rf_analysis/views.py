@@ -14,6 +14,11 @@ from apps.accounts.permissions import PolicyPermission
 from apps.accounts.policy import RF_APPROVE, RF_EDIT, RF_VIEW, role_for_user, user_has_permission
 from apps.audit.services import record_event
 
+from .coverage import (
+    approve_coverage_estimate,
+    coverage_engine_status,
+    create_coverage_estimate,
+)
 from .elevation import provider_status
 from .haat import (
     approve_haat_calculation,
@@ -21,6 +26,7 @@ from .haat import (
     retry_haat_calculation,
 )
 from .models import (
+    CoverageEstimate,
     ElevationSnapshot,
     HAATCalculation,
     RFAnalysisInputSnapshot,
@@ -28,6 +34,8 @@ from .models import (
     SubscriberProfileVersion,
 )
 from .serializers import (
+    CoverageEstimateSerializer,
+    CreateCoverageEstimateSerializer,
     CreateHAATCalculationSerializer,
     CreateRFAnalysisInputSnapshotSerializer,
     ElevationSnapshotSerializer,
@@ -349,6 +357,14 @@ class ElevationProviderStatusView(APIView):
         return Response(provider_status())
 
 
+class CoverageEngineStatusView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(responses={200: OpenApiTypes.OBJECT})
+    def get(self, request):
+        return Response(coverage_engine_status())
+
+
 class ElevationSnapshotViewSet(
     mixins.RetrieveModelMixin,
     viewsets.GenericViewSet,
@@ -492,3 +508,96 @@ class HAATCalculationViewSet(
             },
         )
         return Response(HAATCalculationSerializer(calculation).data)
+
+
+class CoverageEstimateViewSet(
+    mixins.ListModelMixin,
+    mixins.RetrieveModelMixin,
+    mixins.CreateModelMixin,
+    viewsets.GenericViewSet,
+):
+    queryset = CoverageEstimate.objects.none()
+    serializer_class = CoverageEstimateSerializer
+    permission_classes = [PolicyPermission]
+    policy_actions = {
+        "list": RF_VIEW,
+        "retrieve": RF_VIEW,
+        "create": RF_EDIT,
+        "approve": RF_APPROVE,
+    }
+
+    def get_queryset(self):
+        queryset = scoped_to_incidents(
+            CoverageEstimate.objects.select_related(
+                "incident",
+                "site",
+                "rf_input_snapshot",
+                "haat_calculation",
+                "created_by",
+                "approved_by",
+            ),
+            self.request.user,
+        )
+        incident_id = self.request.query_params.get("incident")
+        return queryset.filter(incident_id=incident_id) if incident_id else queryset
+
+    def get_serializer_class(self):
+        if self.action == "create":
+            return CreateCoverageEstimateSerializer
+        return CoverageEstimateSerializer
+
+    @extend_schema(
+        request=CreateCoverageEstimateSerializer,
+        responses={201: CoverageEstimateSerializer},
+    )
+    def create(self, request, *args, **kwargs):
+        request_serializer = CreateCoverageEstimateSerializer(data=request.data)
+        request_serializer.is_valid(raise_exception=True)
+        values = request_serializer.validated_data
+        haat_calculation = values["haat_calculation"]
+        if not user_has_permission(request.user, RF_EDIT, haat_calculation.incident):
+            raise PermissionDenied("Your incident role cannot create coverage estimates.")
+        estimate = create_coverage_estimate(
+            haat_calculation=haat_calculation,
+            environment=values["environment"],
+            preset=values["preset"],
+            actor=request.user,
+        )
+        record_event(
+            actor=request.user,
+            action="coverage_estimate.created",
+            target=estimate,
+            details={
+                "changed_fields": [
+                    "calculation_state",
+                    "engine_version",
+                    "environment",
+                    "input_sha256",
+                    "model_snapshot",
+                    "preset_version",
+                    "result_sha256",
+                    "result_snapshot",
+                ],
+                "source_rf_input_sha256": estimate.rf_input_snapshot.input_sha256,
+                "source_haat_result_sha256": estimate.haat_calculation.result_sha256,
+            },
+        )
+        return Response(
+            CoverageEstimateSerializer(estimate).data,
+            status=status.HTTP_201_CREATED,
+        )
+
+    @extend_schema(request=None, responses={200: CoverageEstimateSerializer})
+    @action(detail=True, methods=["post"])
+    def approve(self, request, pk=None):
+        estimate = approve_coverage_estimate(self.get_object(), actor=request.user)
+        record_event(
+            actor=request.user,
+            action="coverage_estimate.approved",
+            target=estimate,
+            details={
+                "changed_fields": ["approved_at", "approved_by", "status"],
+                "result_sha256": estimate.result_sha256,
+            },
+        )
+        return Response(CoverageEstimateSerializer(estimate).data)

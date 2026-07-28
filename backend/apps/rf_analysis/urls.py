@@ -2,6 +2,8 @@ from django.urls import path
 from rest_framework.routers import DefaultRouter
 
 from .views import (
+    CoverageEngineStatusView,
+    CoverageEstimateViewSet,
     ElevationProviderStatusView,
     ElevationSnapshotViewSet,
     HAATCalculationViewSet,
@@ -32,12 +34,22 @@ router.register(
     ElevationSnapshotViewSet,
     basename="elevation-snapshot",
 )
+router.register(
+    "coverage-estimates",
+    CoverageEstimateViewSet,
+    basename="coverage-estimate",
+)
 
 urlpatterns = [
     path(
         "elevation-provider/",
         ElevationProviderStatusView.as_view(),
         name="elevation-provider-status",
+    ),
+    path(
+        "coverage-engine/",
+        CoverageEngineStatusView.as_view(),
+        name="coverage-engine-status",
     ),
     *router.urls,
 ]

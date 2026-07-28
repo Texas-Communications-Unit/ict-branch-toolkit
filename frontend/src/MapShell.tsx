@@ -19,6 +19,7 @@ import {
   createRadioSite,
   createSiteAssignment,
   downloadSpatialExport,
+  listCoverageEstimates,
   listPlans,
   listRadioSites,
   listSiteAssignments,
@@ -28,6 +29,7 @@ import {
 } from "./api";
 import { resolveMapProvider } from "./mapProvider";
 import type {
+  CoverageEstimate,
   CoordinateParseResult,
   ICS205Plan,
   Incident,
@@ -101,6 +103,9 @@ export function MapShell({ incident }: { incident?: Incident }) {
   const [sites, setSites] = useState<RadioSite[]>([]);
   const [plans, setPlans] = useState<ICS205Plan[]>([]);
   const [links, setLinks] = useState<SiteAssignment[]>([]);
+  const [coverageEstimates, setCoverageEstimates] = useState<
+    CoverageEstimate[]
+  >([]);
   const [coordinateText, setCoordinateText] = useState("");
   const [parsed, setParsed] = useState<CoordinateParseResult>();
   const [message, setMessage] = useState("");
@@ -152,14 +157,17 @@ export function MapShell({ incident }: { incident?: Incident }) {
       setSites([]);
       setPlans([]);
       setLinks([]);
+      setCoverageEstimates([]);
       return;
     }
-    const [nextSites, nextPlans] = await Promise.all([
+    const [nextSites, nextPlans, nextCoverageEstimates] = await Promise.all([
       listRadioSites(incident.id),
       listPlans(),
+      listCoverageEstimates(incident.id),
     ]);
     setSites(nextSites);
     setPlans(nextPlans);
+    setCoverageEstimates(nextCoverageEstimates);
     const incidentPlan = nextPlans.find(
       (item) => item.incident === incident.id,
     );
@@ -174,11 +182,16 @@ export function MapShell({ incident }: { incident?: Incident }) {
   useEffect(() => {
     if (!incident) return;
     let active = true;
-    void Promise.all([listRadioSites(incident.id), listPlans()])
-      .then(async ([nextSites, nextPlans]) => {
+    void Promise.all([
+      listRadioSites(incident.id),
+      listPlans(),
+      listCoverageEstimates(incident.id),
+    ])
+      .then(async ([nextSites, nextPlans, nextCoverageEstimates]) => {
         if (!active) return;
         setSites(nextSites);
         setPlans(nextPlans);
+        setCoverageEstimates(nextCoverageEstimates);
         const incidentPlan = nextPlans.find(
           (item) => item.incident === incident.id,
         );
@@ -197,6 +210,21 @@ export function MapShell({ incident }: { incident?: Incident }) {
       active = false;
     };
   }, [incident]);
+
+  useEffect(() => {
+    const handleCoverageUpdate = () => {
+      void refresh().catch((error: Error) => setMessage(error.message));
+    };
+    window.addEventListener(
+      "ict-coverage-estimates-updated",
+      handleCoverageUpdate,
+    );
+    return () =>
+      window.removeEventListener(
+        "ict-coverage-estimates-updated",
+        handleCoverageUpdate,
+      );
+  }, [refresh]);
 
   useEffect(() => {
     const handlePlanUpdate = () => {
@@ -350,6 +378,64 @@ export function MapShell({ incident }: { incident?: Incident }) {
           },
         });
       }
+      const coverageFeatures = coverageEstimates.flatMap((estimate) => {
+        if (
+          estimate.calculation_state !== "complete" ||
+          estimate.nominal_distance_m === null
+        )
+          return [];
+        const site = sites.find((candidate) => candidate.id === estimate.site);
+        if (!site) return [];
+        return [
+          {
+            type: "Feature" as const,
+            properties: {
+              site: estimate.site_name,
+              environment: estimate.environment,
+              band: estimate.band,
+              status: estimate.status,
+              resultDigest: estimate.result_sha256,
+            },
+            geometry: {
+              type: "Polygon" as const,
+              coordinates: [ringPolygon(site, estimate.nominal_distance_m)],
+            },
+          },
+        ];
+      });
+      const coverageData = {
+        type: "FeatureCollection" as const,
+        features: coverageFeatures,
+      };
+      const coverageSource = map.getSource("calculated-coverage-estimates") as
+        GeoJSONSource | undefined;
+      if (coverageSource) {
+        coverageSource.setData(coverageData);
+      } else {
+        map.addSource("calculated-coverage-estimates", {
+          type: "geojson",
+          data: coverageData,
+        });
+        map.addLayer({
+          id: "calculated-coverage-fill",
+          type: "fill",
+          source: "calculated-coverage-estimates",
+          paint: {
+            "fill-color": colors.blue,
+            "fill-opacity": 0.06,
+          },
+        });
+        map.addLayer({
+          id: "calculated-coverage-line",
+          type: "line",
+          source: "calculated-coverage-estimates",
+          paint: {
+            "line-color": colors.blue,
+            "line-width": 3,
+            "line-dasharray": [2, 2],
+          },
+        });
+      }
       if (sites.length) {
         const bounds = new maplibregl.LngLatBounds();
         sites.forEach((site) =>
@@ -360,7 +446,7 @@ export function MapShell({ incident }: { incident?: Incident }) {
     };
     if (map.loaded()) render();
     else map.once("load", render);
-  }, [canEdit, refresh, sites]);
+  }, [canEdit, coverageEstimates, refresh, sites]);
 
   async function handleParse() {
     try {
@@ -572,6 +658,9 @@ export function MapShell({ incident }: { incident?: Incident }) {
         map clicking and marker dragging are optional. Site coordinates are
         previewed with a red marker. Coordinates and manual rings remain
         available when an external basemap is disabled or unavailable.
+        Calculated nominal estimates use a separate dashed layer and never
+        replace operator-entered manual rings; the estimate table is the
+        accessible non-map presentation.
       </p>
       {!incident ? (
         <p className="empty">Select an incident to manage its radio sites.</p>

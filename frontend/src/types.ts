@@ -414,3 +414,72 @@ export interface CreateHAATCalculationPayload {
   rounding_m: string;
   force_refresh: boolean;
 }
+
+export interface CoverageEngineStatus {
+  engine: string;
+  engine_version: string;
+  approved_for_operational_use: boolean;
+  approved_presets: { preset: string; preset_version: string }[];
+  disclaimer: string;
+  supported_band_groups: {
+    name: string;
+    lower_hz: number;
+    upper_hz: number;
+  }[];
+  environments: {
+    name: string;
+    additional_margin_db: string;
+  }[];
+  presets: Record<
+    string,
+    {
+      version: string;
+      fade_margin_db: string;
+      uncertainty_db: string;
+      receiver_height_m: string;
+      maximum_distance_m: number;
+      distance_rounding_m: number;
+    }
+  >;
+}
+
+export interface CoverageEstimate {
+  id: string;
+  incident: string;
+  site: string;
+  site_name: string;
+  rf_input_snapshot: string;
+  rf_input_label: string;
+  haat_calculation: string;
+  haat_result_sha256: string;
+  status: "draft" | "approved";
+  calculation_state: "complete" | "unsupported";
+  environment: "open" | "rural" | "suburban" | "urban" | "dense_urban";
+  band: string;
+  engine: string;
+  engine_version: string;
+  preset: string;
+  preset_version: string;
+  center_latitude: string;
+  center_longitude: string;
+  nominal_distance_m: number | null;
+  conservative_distance_m: number | null;
+  optimistic_distance_m: number | null;
+  input_snapshot: Record<string, unknown>;
+  input_sha256: string;
+  model_snapshot: Record<string, unknown>;
+  warnings: string[];
+  exclusions: { code: string; reason: string }[];
+  explanation: string;
+  result_snapshot: Record<string, unknown>;
+  result_sha256: string;
+  approved_at: string | null;
+  created_at: string;
+  is_locked: boolean;
+}
+
+export interface CreateCoverageEstimatePayload {
+  haat_calculation: string;
+  environment: CoverageEstimate["environment"];
+  preset: string;
+}

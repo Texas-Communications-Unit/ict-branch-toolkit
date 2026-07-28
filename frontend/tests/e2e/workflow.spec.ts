@@ -478,6 +478,44 @@ test("administrator signs in and sees the incident planning workspace", async ({
     haatApproved = true;
     return route.fulfill({ json: haatCalculation() });
   });
+  await page.route("**/api/coverage-engine/", (route) =>
+    route.fulfill({
+      json: {
+        engine: "provisional_fspl_horizon",
+        engine_version: "fspl-horizon-v1-provisional",
+        approved_for_operational_use: false,
+        approved_presets: [],
+        disclaimer:
+          "Provisional planning estimate only—not a propagation study, frequency-coordination decision, spectrum authorization, or coverage guarantee.",
+        supported_band_groups: [
+          {
+            name: "vhf_high",
+            lower_hz: 136000000,
+            upper_hz: 174000000,
+          },
+        ],
+        environments: [
+          { name: "open", additional_margin_db: "6" },
+          { name: "suburban", additional_margin_db: "16" },
+        ],
+        presets: {
+          balanced: {
+            version: "balanced-v1-provisional",
+            fade_margin_db: "12",
+            uncertainty_db: "6",
+            receiver_height_m: "1.5",
+            maximum_distance_m: 100000,
+            distance_rounding_m: 100,
+          },
+        },
+      },
+    }),
+  );
+  await page.route("**/api/coverage-estimates/?incident=*", (route) =>
+    route.fulfill({
+      json: { count: 0, next: null, previous: null, results: [] },
+    }),
+  );
   await page.route("**/api/channel-imports/", (route) =>
     route.fulfill({
       json: {
@@ -534,6 +572,20 @@ test("administrator signs in and sees the incident planning workspace", async ({
   ).toBeVisible();
   await expect(
     page.getByText("Synthetic Command Site", { exact: true }).first(),
+  ).toBeVisible();
+  const coverageWorkspace = page.getByRole("region", {
+    name: "Band and environment estimates",
+  });
+  await expect(
+    coverageWorkspace.getByText("fspl-horizon-v1-provisional", {
+      exact: true,
+    }),
+  ).toBeVisible();
+  await expect(
+    coverageWorkspace.getByText(
+      "Provisional configuration—practitioner review required",
+      { exact: true },
+    ),
   ).toBeVisible();
   const rfWorkspace = page.getByRole("region", {
     name: "Subscriber RF profiles",

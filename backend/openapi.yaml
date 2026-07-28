@@ -211,6 +211,111 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+  /api/coverage-engine/:
+    get:
+      operationId: coverage_engine_retrieve
+      tags:
+      - coverage-engine
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/coverage-estimates/:
+    get:
+      operationId: coverage_estimates_list
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - coverage-estimates
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedCoverageEstimateList'
+          description: ''
+    post:
+      operationId: coverage_estimates_create
+      tags:
+      - coverage-estimates
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCoverageEstimate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CreateCoverageEstimate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CreateCoverageEstimate'
+        required: true
+      security:
+      - tokenAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CoverageEstimate'
+          description: ''
+  /api/coverage-estimates/{id}/:
+    get:
+      operationId: coverage_estimates_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this coverage estimate.
+        required: true
+      tags:
+      - coverage-estimates
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CoverageEstimate'
+          description: ''
+  /api/coverage-estimates/{id}/approve/:
+    post:
+      operationId: coverage_estimates_approve_create
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this coverage estimate.
+        required: true
+      tags:
+      - coverage-estimates
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CoverageEstimate'
+          description: ''
   /api/elevation-provider/:
     get:
       operationId: elevation_provider_retrieve
@@ -2754,16 +2859,6 @@ components:
     BlankEnum:
       enum:
       - ''
-    CalculationStateEnum:
-      enum:
-      - complete
-      - partial
-      - unavailable
-      type: string
-      description: |-
-        * `complete` - Complete
-        * `partial` - Partial
-        * `unavailable` - Unavailable
     ChannelImport:
       type: object
       properties:
@@ -2916,6 +3011,183 @@ components:
           maxLength: 240
       required:
       - coordinate
+    CoverageEstimate:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        incident:
+          type: string
+          format: uuid
+          readOnly: true
+        site:
+          type: string
+          format: uuid
+          readOnly: true
+        site_name:
+          type: string
+          readOnly: true
+        rf_input_snapshot:
+          type: string
+          format: uuid
+          readOnly: true
+        rf_input_label:
+          type: string
+          readOnly: true
+        haat_calculation:
+          type: string
+          format: uuid
+          readOnly: true
+        haat_result_sha256:
+          type: string
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/PlanRevisionStatusEnum'
+          readOnly: true
+        calculation_state:
+          allOf:
+          - $ref: '#/components/schemas/CoverageEstimateCalculationStateEnum'
+          readOnly: true
+        environment:
+          allOf:
+          - $ref: '#/components/schemas/EnvironmentEnum'
+          readOnly: true
+        band:
+          type: string
+          readOnly: true
+        engine:
+          type: string
+          readOnly: true
+        engine_version:
+          type: string
+          readOnly: true
+        preset:
+          type: string
+          readOnly: true
+        preset_version:
+          type: string
+          readOnly: true
+        center_latitude:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,6})?$
+          readOnly: true
+        center_longitude:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,6})?$
+          readOnly: true
+        nominal_distance_m:
+          type: integer
+          readOnly: true
+          nullable: true
+        conservative_distance_m:
+          type: integer
+          readOnly: true
+          nullable: true
+        optimistic_distance_m:
+          type: integer
+          readOnly: true
+          nullable: true
+        input_snapshot:
+          readOnly: true
+        input_sha256:
+          type: string
+          readOnly: true
+        model_snapshot:
+          readOnly: true
+        warnings:
+          readOnly: true
+        exclusions:
+          readOnly: true
+        explanation:
+          type: string
+          readOnly: true
+        result_snapshot:
+          readOnly: true
+        result_sha256:
+          type: string
+          readOnly: true
+        created_by:
+          type: integer
+          readOnly: true
+        approved_by:
+          type: integer
+          readOnly: true
+          nullable: true
+        approved_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        is_locked:
+          type: boolean
+          readOnly: true
+      required:
+      - approved_at
+      - approved_by
+      - band
+      - calculation_state
+      - center_latitude
+      - center_longitude
+      - conservative_distance_m
+      - created_at
+      - created_by
+      - engine
+      - engine_version
+      - environment
+      - exclusions
+      - explanation
+      - haat_calculation
+      - haat_result_sha256
+      - id
+      - incident
+      - input_sha256
+      - input_snapshot
+      - is_locked
+      - model_snapshot
+      - nominal_distance_m
+      - optimistic_distance_m
+      - preset
+      - preset_version
+      - result_sha256
+      - result_snapshot
+      - rf_input_label
+      - rf_input_snapshot
+      - site
+      - site_name
+      - status
+      - warnings
+    CoverageEstimateCalculationStateEnum:
+      enum:
+      - complete
+      - unsupported
+      type: string
+      description: |-
+        * `complete` - Complete
+        * `unsupported` - Unsupported
+    CreateCoverageEstimate:
+      type: object
+      properties:
+        haat_calculation:
+          type: string
+          format: uuid
+        environment:
+          $ref: '#/components/schemas/EnvironmentEnum'
+        preset:
+          type: string
+          default: balanced
+          maxLength: 80
+      required:
+      - environment
+      - haat_calculation
     CreateHAATCalculation:
       type: object
       properties:
@@ -3237,6 +3509,20 @@ components:
       - transformation
       - vertical_crs
       - warnings
+    EnvironmentEnum:
+      enum:
+      - open
+      - rural
+      - suburban
+      - urban
+      - dense_urban
+      type: string
+      description: |-
+        * `open` - Open
+        * `rural` - Rural
+        * `suburban` - Suburban
+        * `urban` - Urban
+        * `dense_urban` - Dense urban
     ErpSourceEnum:
       enum:
       - unknown
@@ -3339,7 +3625,7 @@ components:
           readOnly: true
         calculation_state:
           allOf:
-          - $ref: '#/components/schemas/CalculationStateEnum'
+          - $ref: '#/components/schemas/HAATCalculationCalculationStateEnum'
           readOnly: true
         method:
           type: string
@@ -3474,6 +3760,16 @@ components:
       - status
       - supersedes
       - warnings
+    HAATCalculationCalculationStateEnum:
+      enum:
+      - complete
+      - partial
+      - unavailable
+      type: string
+      description: |-
+        * `complete` - Complete
+        * `partial` - Partial
+        * `unavailable` - Unavailable
     ImportConventionalChannel:
       type: object
       properties:
@@ -3892,6 +4188,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ConventionalChannel'
+    PaginatedCoverageEstimateList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/CoverageEstimate'
     PaginatedHAATCalculationList:
       type: object
       required:

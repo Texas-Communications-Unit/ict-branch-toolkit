@@ -1,7 +1,10 @@
 import type {
+  CoverageEngineStatus,
+  CoverageEstimate,
   ConventionalChannel,
   CoordinateParseResult,
   CreateHAATCalculationPayload,
+  CreateCoverageEstimatePayload,
   CreateSubscriberProfilePayload,
   CurrentUser,
   EditableRFInputFields,
@@ -498,6 +501,34 @@ export function retryHAATCalculation(id: string): Promise<HAATCalculation> {
 
 export function approveHAATCalculation(id: string): Promise<HAATCalculation> {
   return request<HAATCalculation>(`/api/haat-calculations/${id}/approve/`, {
+    method: "POST",
+  });
+}
+
+export function getCoverageEngineStatus(): Promise<CoverageEngineStatus> {
+  return request<CoverageEngineStatus>("/api/coverage-engine/");
+}
+
+export async function listCoverageEstimates(
+  incident: string,
+): Promise<CoverageEstimate[]> {
+  const result = await request<Paginated<CoverageEstimate>>(
+    `/api/coverage-estimates/?incident=${encodeURIComponent(incident)}`,
+  );
+  return result.results;
+}
+
+export function createCoverageEstimate(
+  payload: CreateCoverageEstimatePayload,
+): Promise<CoverageEstimate> {
+  return request<CoverageEstimate>("/api/coverage-estimates/", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function approveCoverageEstimate(id: string): Promise<CoverageEstimate> {
+  return request<CoverageEstimate>(`/api/coverage-estimates/${id}/approve/`, {
     method: "POST",
   });
 }
