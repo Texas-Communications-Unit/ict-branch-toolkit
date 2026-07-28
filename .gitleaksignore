@@ -1,0 +1,6 @@
+# Public offline-status field descriptions misclassified as generic API keys in the
+# original P3.2 commit. The field was renamed to avoid future matches; retain these
+# exact historical fingerprints without weakening any rule or path.
+80ea3f68fa549805dd96b6b38da566807bd3c80f:frontend/tests/App.test.tsx:generic-api-key:146
+80ea3f68fa549805dd96b6b38da566807bd3c80f:backend/apps/offline/services.py:generic-api-key:100
+80ea3f68fa549805dd96b6b38da566807bd3c80f:frontend/tests/OfflineWorkspace.test.tsx:generic-api-key:88
