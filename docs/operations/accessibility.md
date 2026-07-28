@@ -20,6 +20,8 @@ The browser workflow currently checks:
 - the authenticated skip link and focus transfer;
 - the map's accessible name, instructions, coordinate form, and structured site
   workflow;
+- terrain capability, fail-closed status, and disabled-action presentation
+  within the authenticated workflow;
 - the authenticated workspace at 320 CSS pixels;
 - document-level horizontal overflow at 320 CSS pixels.
 
@@ -74,6 +76,10 @@ when the affected process or generated artifact changed.
 - Clicking, dragging, and visual layers are optional. Coordinate entry, parsed
   results, radio-site lists, result tables, and explicit actions provide the
   non-pointer and nonvisual workflows.
+- Terrain results expose Phase 2 and terrain distances as text and use a
+  captioned profile table with explicit `clear`, `obstructed`, `missing`, and
+  `out of coverage` labels; color and map geometry are not the only state
+  indicators.
 - Styled buttons and form controls target 44-by-44 CSS pixels; the WCAG 2.2
   Level AA minimum and documented exceptions still govern all other targets.
 - Reduced-motion preferences suppress nonessential authored animation and
@@ -86,6 +92,9 @@ when the affected process or generated artifact changed.
   authentication, contrast, motion, or touch requirement.
 - The MapLibre canvas is a visual aid. Structured controls and tables are the
   accessible source for planning data and actions.
+- The terrain profile table can use contained horizontal scrolling. Human
+  review must verify table navigation and queue/run/cancel/retry/approve status
+  announcements with keyboard and screen reader at the exact candidate commit.
 - Browser checks do not evaluate downloaded PDF, SVG, CSV, KML, or GeoJSON
   files.
 - The current release remains blocked until the required human record and

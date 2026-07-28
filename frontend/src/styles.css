@@ -1378,6 +1378,51 @@ footer a {
   white-space: pre-wrap;
 }
 
+.terrain-form h3,
+.terrain-form .form-note,
+.terrain-form > button {
+  grid-column: 1 / -1;
+}
+
+.terrain-results {
+  grid-template-columns: 1fr;
+}
+
+.terrain-comparison {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  margin: 0.75rem 0;
+}
+
+.terrain-comparison > div {
+  background: var(--tx-comu-light);
+  border: 1px solid var(--tx-comu-border);
+  border-radius: 0.55rem;
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.8rem;
+}
+
+.terrain-comparison span {
+  color: var(--tx-comu-blue);
+  font-size: 1.25rem;
+  font-weight: 800;
+}
+
+.terrain-comparison small {
+  color: var(--tx-comu-slate);
+}
+
+[data-path-state="obstructed"] {
+  border-left: 0.35rem solid #9f1d20;
+}
+
+[data-path-state="missing"],
+[data-path-state="out of coverage"] {
+  border-left: 0.35rem dashed #746000;
+}
+
 @media (max-width: 640px) {
   .haat-result-heading {
     align-items: stretch;

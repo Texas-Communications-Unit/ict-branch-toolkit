@@ -47,6 +47,14 @@ only.
   coordination, spectrum, propagation, or incident-command authority.
 - Frequencies, squelch values, coordinates, frozen site evidence, selected resources, or warning
   contents leaking through deconfliction audit details.
+- A browser-selected or unapproved terrain provider receiving incident path coordinates.
+- A coarse source being sampled below its declared resolution and presented with false precision.
+- Missing, boundary, out-of-coverage, or unsupported terrain being presented as a complete path.
+- A terrain result silently replacing the Phase 2 estimate or being represented as diffraction,
+  propagation, field validation, coordination, regulatory, or coverage-guarantee evidence.
+- Provider exception detail, credentials, coordinates, samples, or raw responses leaking through
+  API failures, audit events, logs, screenshots, or CI artifacts.
+- Repeated maximum-size synchronous terrain requests exhausting application resources.
 
 ## Design responses
 
@@ -128,3 +136,19 @@ qualified review. Audit details retain only identifiers, versions, counts, and d
 frequency, squelch, coordinate, site, resource, or warning content. See
 [ADR-0015](../adr/0015-versioned-rf-deconfliction-decision-support.md).
 
+For P3.1, provider and engine selection remain server-controlled and the
+disabled provider is the default. The exact source/dataset/content digest and
+engine/version must match the protected allowlist before a provider is called.
+Requests are incident-scoped and bounded by distance and sample count. Input
+and result evidence is immutable; retry creates lineage and configuration or
+Phase 2 changes make old evidence stale. Missing/out-of-coverage samples are
+not interpolated, and only a current complete result can be approved.
+
+The UI and result snapshot keep Phase 2 and terrain values separate, label the
+sampled method's unsupported conditions, and provide text-distinct profile
+states. Provider failures return bounded recovery language while protected
+server logs hold exception detail. Audit events retain identifiers, versions,
+states, and digests rather than coordinates, samples, RF values, or
+credentials. General throttling and profile bounds reduce but do not eliminate
+synchronous denial-of-service risk. See
+[ADR-0017](../adr/0017-optional-source-aware-terrain-analysis.md).

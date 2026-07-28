@@ -17,6 +17,8 @@ from .views import (
     RFAnalysisInputSnapshotViewSet,
     SubscriberProfileVersionViewSet,
     SubscriberProfileViewSet,
+    TerrainAnalysisStatusView,
+    TerrainAnalysisViewSet,
 )
 
 router = DefaultRouter()
@@ -66,6 +68,11 @@ router.register(
     Phase2ValidationBundleViewSet,
     basename="phase2-validation-bundle",
 )
+router.register(
+    "terrain-analyses",
+    TerrainAnalysisViewSet,
+    basename="terrain-analysis",
+)
 
 urlpatterns = [
     path(
@@ -92,6 +99,11 @@ urlpatterns = [
         "phase2-validation-status/",
         Phase2ValidationStatusView.as_view(),
         name="phase2-validation-status",
+    ),
+    path(
+        "terrain-analysis-status/",
+        TerrainAnalysisStatusView.as_view(),
+        name="terrain-analysis-status",
     ),
     *router.urls,
 ]

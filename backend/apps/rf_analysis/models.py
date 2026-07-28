@@ -1437,3 +1437,230 @@ class Phase2ValidationBundle(models.Model):
     @property
     def is_locked(self):
         return self.status == self.Status.APPROVED
+
+
+class TerrainAnalysis(models.Model):
+    """Retained source-aware terrain profile and sampled line-of-sight evidence."""
+
+    class JobState(models.TextChoices):
+        QUEUED = "queued", "Queued"
+        RUNNING = "running", "Running"
+        COMPLETE = "complete", "Complete"
+        FAILED = "failed", "Failed"
+        CANCELLED = "cancelled", "Cancelled"
+
+    class AnalysisState(models.TextChoices):
+        COMPLETE = "complete", "Complete"
+        PARTIAL = "partial", "Partial"
+        UNSUPPORTED = "unsupported", "Unsupported"
+
+    class Status(models.TextChoices):
+        DRAFT = "draft", "Draft"
+        APPROVED = "approved", "Approved"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    incident = models.ForeignKey(
+        Incident,
+        related_name="terrain_analyses",
+        on_delete=models.PROTECT,
+    )
+    site = models.ForeignKey(
+        RadioSite,
+        related_name="terrain_analyses",
+        on_delete=models.PROTECT,
+    )
+    coverage_estimate = models.ForeignKey(
+        CoverageEstimate,
+        related_name="terrain_analyses",
+        on_delete=models.PROTECT,
+    )
+    supersedes = models.ForeignKey(
+        "self",
+        related_name="retries",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+    )
+    provider = models.CharField(max_length=120)
+    provider_version = models.CharField(max_length=120)
+    dataset_product = models.CharField(max_length=240)
+    dataset_version = models.CharField(max_length=160)
+    engine = models.CharField(max_length=120)
+    engine_version = models.CharField(max_length=120)
+    app_version = models.CharField(max_length=80)
+    azimuth_deg = models.DecimalField(
+        max_digits=6,
+        decimal_places=3,
+        validators=[MinValueValidator(Decimal("0")), MaxValueValidator(Decimal("359.999"))],
+    )
+    maximum_distance_m = models.PositiveIntegerField(
+        validators=[MinValueValidator(1), MaxValueValidator(500_000)]
+    )
+    sample_interval_m = models.PositiveIntegerField(
+        validators=[MinValueValidator(1), MaxValueValidator(100_000)]
+    )
+    receiver_height_m = models.DecimalField(
+        max_digits=8,
+        decimal_places=3,
+        validators=[MinValueValidator(Decimal("0")), MaxValueValidator(Decimal("1000"))],
+    )
+    clearance_m = models.DecimalField(
+        max_digits=8,
+        decimal_places=3,
+        validators=[MinValueValidator(Decimal("0")), MaxValueValidator(Decimal("1000"))],
+    )
+    job_state = models.CharField(
+        max_length=12,
+        choices=JobState.choices,
+        default=JobState.QUEUED,
+    )
+    analysis_state = models.CharField(
+        max_length=16,
+        choices=AnalysisState.choices,
+        blank=True,
+    )
+    progress_step = models.CharField(max_length=80, default="queued")
+    progress_percent = models.PositiveSmallIntegerField(
+        default=0,
+        validators=[MinValueValidator(0), MaxValueValidator(100)],
+    )
+    status = models.CharField(max_length=12, choices=Status.choices, default=Status.DRAFT)
+    input_snapshot = models.JSONField()
+    input_sha256 = models.CharField(max_length=64)
+    result_snapshot = models.JSONField(default=dict, blank=True)
+    result_sha256 = models.CharField(max_length=64, blank=True)
+    failure_code = models.CharField(max_length=80, blank=True)
+    failure_message = models.CharField(max_length=240, blank=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        related_name="created_terrain_analyses",
+        on_delete=models.PROTECT,
+    )
+    approved_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        related_name="approved_terrain_analyses",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    started_at = models.DateTimeField(null=True, blank=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    approved_at = models.DateTimeField(null=True, blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["incident", "job_state"], name="rf_terrain_inc_state_idx"),
+            models.Index(fields=["incident", "status"], name="rf_terrain_inc_status_idx"),
+        ]
+        constraints = [
+            models.CheckConstraint(
+                condition=(
+                    models.Q(status="draft", approved_by__isnull=True, approved_at__isnull=True)
+                    | models.Q(
+                        status="approved",
+                        approved_by__isnull=False,
+                        approved_at__isnull=False,
+                    )
+                ),
+                name="rf_terrain_approval_consistent",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    models.Q(
+                        job_state="queued",
+                        started_at__isnull=True,
+                        completed_at__isnull=True,
+                        progress_percent=0,
+                    )
+                    | models.Q(
+                        job_state="running",
+                        started_at__isnull=False,
+                        completed_at__isnull=True,
+                    )
+                    | models.Q(
+                        job_state__in=["complete", "failed", "cancelled"],
+                        completed_at__isnull=False,
+                    )
+                ),
+                name="rf_terrain_job_state_consistent",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    models.Q(
+                        job_state="complete",
+                        analysis_state__in=["complete", "partial", "unsupported"],
+                    )
+                    & ~models.Q(result_sha256="")
+                    | ~models.Q(job_state="complete")
+                ),
+                name="rf_terrain_complete_has_result",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.site}: {self.engine_version} ({self.job_state}; {self.status})"
+
+    def save(self, *args, **kwargs):
+        if self.pk:
+            previous = TerrainAnalysis.objects.filter(pk=self.pk).first()
+            if previous:
+                immutable_fields = (
+                    "incident_id",
+                    "site_id",
+                    "coverage_estimate_id",
+                    "supersedes_id",
+                    "provider",
+                    "provider_version",
+                    "dataset_product",
+                    "dataset_version",
+                    "engine",
+                    "engine_version",
+                    "app_version",
+                    "azimuth_deg",
+                    "maximum_distance_m",
+                    "sample_interval_m",
+                    "receiver_height_m",
+                    "clearance_m",
+                    "input_snapshot",
+                    "input_sha256",
+                    "created_by_id",
+                )
+                if any(
+                    getattr(self, field) != getattr(previous, field) for field in immutable_fields
+                ):
+                    raise ValidationError("Terrain source selections and inputs are immutable.")
+                if previous.job_state in {
+                    self.JobState.COMPLETE,
+                    self.JobState.FAILED,
+                    self.JobState.CANCELLED,
+                }:
+                    terminal_fields = (
+                        "job_state",
+                        "analysis_state",
+                        "progress_step",
+                        "progress_percent",
+                        "result_snapshot",
+                        "result_sha256",
+                        "failure_code",
+                        "failure_message",
+                        "started_at",
+                        "completed_at",
+                    )
+                    if any(
+                        getattr(self, field) != getattr(previous, field)
+                        for field in terminal_fields
+                    ):
+                        raise ValidationError("Completed terrain evidence is immutable.")
+                if previous.status == self.Status.APPROVED:
+                    raise ValidationError("Approved terrain analyses are immutable.")
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError("Terrain analyses are retained.")
+
+    @property
+    def is_locked(self):
+        return self.status == self.Status.APPROVED

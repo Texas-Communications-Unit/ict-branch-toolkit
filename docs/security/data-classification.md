@@ -78,6 +78,27 @@ not declassify the remaining infrastructure, capability, actor, time, or digest
 evidence. Exports and backups remain protected application records unless an
 explicit authority determines otherwise.
 
+## P3.1 terrain profiles
+
+Terrain requests and results inherit the strictest classification of the
+incident, site, Phase 2/HAAT evidence, provider, and dataset. A directional
+profile contains exact site/path coordinates, elevations, obstructions, gaps,
+method parameters, capability evidence, and infrastructure implications. It is
+protected incident evidence even when names are minimized. Digests identify
+retained content; they do not anonymize or declassify it.
+
+The browser cannot choose a provider or remote endpoint. Audit details retain
+only record/source/method identifiers, lifecycle states, and digests; they do
+not copy coordinates, samples, RF values, credentials, or raw provider
+responses. Public fixtures, screenshots, CI artifacts, GitHub discussion, and
+documentation use the deterministic synthetic provider only.
+
+No real dataset, cache, transformation grid, provider credential, response,
+profile, screenshot, export, or backup may enter the repository or test
+artifacts. A real provider requires explicit classification, permitted-use,
+attribution, caching/retention, redistribution, coordinate-disclosure,
+legal-hold, access, disclosure, and destruction decisions.
+
 ## RF deconfliction evidence
 
 Deconfliction input and result snapshots inherit the highest classification of the incident,

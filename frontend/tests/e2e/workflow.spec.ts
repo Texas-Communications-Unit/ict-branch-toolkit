@@ -727,6 +727,70 @@ test("administrator signs in and sees the incident planning workspace", async ({
       json: { count: 0, next: null, previous: null, results: [] },
     }),
   );
+  await page.route("**/api/terrain-analysis-status/", (route) =>
+    route.fulfill({
+      json: {
+        provider: {
+          provider: "disabled",
+          provider_version: "",
+          dataset_product: "No terrain profile source configured",
+          dataset_version: "",
+          horizontal_crs: "EPSG:4326",
+          vertical_crs: "unknown",
+          target_vertical_crs: "unknown",
+          resolution_m: null,
+          license_terms_url: "",
+          permitted_use: "No terrain profile source is enabled.",
+          coverage: {},
+          source_content_sha256: "",
+          offline: true,
+        },
+        provider_configuration: {},
+        engine: {
+          engine: "provisional_sampled_line_of_sight",
+          engine_version: "sampled-line-of-sight-v1-provisional",
+          method: "sampled cumulative line-of-sight screening",
+          approved_for_operational_use: false,
+          capabilities: {
+            terrain_profile: true,
+            sampled_line_of_sight: true,
+            diffraction: false,
+            clutter: false,
+            external_network_required: false,
+          },
+          parameters: {
+            effective_earth_radius_factor: "1.333333333",
+            material_difference_percent: "10",
+            material_difference_minimum_m: 1000,
+          },
+          tested_limits: {
+            maximum_distance_m: 200000,
+            maximum_samples: 1001,
+            interpretation:
+              "Resource-safety bounds, not validated operational capacity.",
+          },
+          disclaimer: "Planning estimate only.",
+        },
+        configured: false,
+        approved_for_analysis: false,
+        available: false,
+        execution_model: "explicit synchronous staged job",
+        cancellation_boundary: "Queued work can be cancelled before execution.",
+        resource_safety_limits: {
+          maximum_distance_m: 200000,
+          maximum_samples: 1001,
+        },
+        warning: "No terrain profile provider is configured.",
+        classification: "NON-PRODUCTION P3.1 TERRAIN DECISION SUPPORT",
+        disclaimer: "Planning estimate only.",
+      },
+    }),
+  );
+  await page.route("**/api/terrain-analyses/?incident=*", (route) =>
+    route.fulfill({
+      json: { count: 0, next: null, previous: null, results: [] },
+    }),
+  );
   await page.route("**/api/field-observations/?incident=*", (route) =>
     route.fulfill({
       json: {
@@ -846,7 +910,7 @@ test("administrator signs in and sees the incident planning workspace", async ({
   await expect(skipLink).toBeFocused();
   await skipLink.press("Enter");
   await expect(page.locator("#main-content")).toBeFocused();
-  await expect(page.getByText(/P2.6 RC Prototype/)).toBeVisible();
+  await expect(page.getByText(/P3.1 Terrain Prototype/)).toBeVisible();
   await expect(page.getByRole("heading", { name: "ICS-205" })).toBeVisible();
   await expect(
     page.getByText("SYN CALL", { exact: true }).first(),
@@ -1038,6 +1102,19 @@ test("administrator signs in and sees the incident planning workspace", async ({
       { exact: true },
     ),
   ).toBeVisible();
+  const terrainWorkspace = page.getByRole("region", {
+    name: "Terrain profile analysis",
+  });
+  await expect(terrainWorkspace).toBeVisible();
+  await expect(
+    terrainWorkspace.getByText("fail closed", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    terrainWorkspace.getByRole("button", { name: "Queue terrain profile" }),
+  ).toBeDisabled();
+  await expect(
+    terrainWorkspace.getByText(/Core planning remains available/),
+  ).toBeVisible();
   await page
     .getByLabel("Coordinate", { exact: true })
     .fill("33° 12′ 52.20″ N, 97° 07′ 59.16″ W");
@@ -1081,7 +1158,7 @@ test("administrator signs in and sees the incident planning workspace", async ({
   await expect(
     page.getByRole("heading", { name: "ICT Branch Toolkit" }),
   ).toBeVisible();
-  await expect(page.getByText(/P2.6 RC Prototype/)).toBeVisible();
+  await expect(page.getByText(/P3.1 Terrain Prototype/)).toBeVisible();
   await expectDocumentReflow(page);
   await expectNoAccessibilityViolations(
     page,

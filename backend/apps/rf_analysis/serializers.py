@@ -19,9 +19,11 @@ from .models import (
     RFAnalysisInputSnapshot,
     SubscriberProfile,
     SubscriberProfileVersion,
+    TerrainAnalysis,
 )
 from .phase2_validation import stale_reasons
 from .services import VERSION_EDITABLE_FIELDS, normalize_version_attrs
+from .terrain import terrain_stale_reasons
 
 
 class SubscriberProfileVersionInputSerializer(serializers.ModelSerializer):
@@ -822,3 +824,174 @@ class CreatePhase2ValidationBundleSerializer(serializers.Serializer):
         required=False,
         allow_null=True,
     )
+
+
+class TerrainAnalysisSerializer(serializers.ModelSerializer):
+    is_locked = serializers.BooleanField(read_only=True)
+    is_stale = serializers.SerializerMethodField()
+    stale_reasons = serializers.SerializerMethodField()
+    approval_eligible = serializers.SerializerMethodField()
+
+    class Meta:
+        model = TerrainAnalysis
+        fields = [
+            "id",
+            "incident",
+            "site",
+            "coverage_estimate",
+            "supersedes",
+            "provider",
+            "provider_version",
+            "dataset_product",
+            "dataset_version",
+            "engine",
+            "engine_version",
+            "app_version",
+            "azimuth_deg",
+            "maximum_distance_m",
+            "sample_interval_m",
+            "receiver_height_m",
+            "clearance_m",
+            "job_state",
+            "analysis_state",
+            "progress_step",
+            "progress_percent",
+            "status",
+            "input_snapshot",
+            "input_sha256",
+            "result_snapshot",
+            "result_sha256",
+            "failure_code",
+            "failure_message",
+            "created_by",
+            "approved_by",
+            "created_at",
+            "started_at",
+            "completed_at",
+            "approved_at",
+            "updated_at",
+            "is_locked",
+            "is_stale",
+            "stale_reasons",
+            "approval_eligible",
+        ]
+        read_only_fields = fields
+
+    @staticmethod
+    def _stale_reasons(obj: TerrainAnalysis) -> list[str]:
+        cache_name = "_serialized_terrain_stale_reasons"
+        if not hasattr(obj, cache_name):
+            setattr(obj, cache_name, terrain_stale_reasons(obj))
+        return getattr(obj, cache_name)
+
+    @extend_schema_field(serializers.BooleanField())
+    def get_is_stale(self, obj: TerrainAnalysis) -> bool:
+        return bool(self._stale_reasons(obj))
+
+    @extend_schema_field(serializers.ListField(child=serializers.CharField()))
+    def get_stale_reasons(self, obj: TerrainAnalysis) -> list[str]:
+        return self._stale_reasons(obj)
+
+    @extend_schema_field(serializers.BooleanField())
+    def get_approval_eligible(self, obj: TerrainAnalysis) -> bool:
+        return (
+            obj.job_state == TerrainAnalysis.JobState.COMPLETE
+            and obj.analysis_state == TerrainAnalysis.AnalysisState.COMPLETE
+            and obj.status == TerrainAnalysis.Status.DRAFT
+            and not self._stale_reasons(obj)
+        )
+
+
+class CreateTerrainAnalysisSerializer(serializers.Serializer):
+    coverage_estimate = serializers.PrimaryKeyRelatedField(
+        queryset=CoverageEstimate.objects.select_related(
+            "incident",
+            "site",
+            "haat_calculation",
+        )
+    )
+    azimuth_deg = serializers.DecimalField(
+        max_digits=6,
+        decimal_places=3,
+        min_value=Decimal("0"),
+        max_value=Decimal("359.999"),
+    )
+    maximum_distance_m = serializers.IntegerField(min_value=1, max_value=500_000)
+    sample_interval_m = serializers.IntegerField(min_value=1, max_value=100_000)
+    receiver_height_m = serializers.DecimalField(
+        max_digits=8,
+        decimal_places=3,
+        min_value=Decimal("0"),
+        max_value=Decimal("1000"),
+    )
+    clearance_m = serializers.DecimalField(
+        max_digits=8,
+        decimal_places=3,
+        min_value=Decimal("0"),
+        max_value=Decimal("1000"),
+    )
+
+
+class TerrainSourceStatusSerializer(serializers.Serializer):
+    provider = serializers.CharField()
+    provider_version = serializers.CharField(allow_blank=True)
+    dataset_product = serializers.CharField()
+    dataset_version = serializers.CharField(allow_blank=True)
+    horizontal_crs = serializers.CharField()
+    vertical_crs = serializers.CharField()
+    target_vertical_crs = serializers.CharField()
+    resolution_m = serializers.DecimalField(
+        max_digits=12,
+        decimal_places=3,
+        allow_null=True,
+    )
+    license_terms_url = serializers.CharField(allow_blank=True)
+    permitted_use = serializers.CharField()
+    coverage = serializers.JSONField()
+    source_content_sha256 = serializers.CharField(allow_blank=True)
+    offline = serializers.BooleanField()
+
+
+class TerrainEngineCapabilitiesSerializer(serializers.Serializer):
+    terrain_profile = serializers.BooleanField()
+    sampled_line_of_sight = serializers.BooleanField()
+    diffraction = serializers.BooleanField()
+    clutter = serializers.BooleanField()
+    external_network_required = serializers.BooleanField()
+
+
+class TerrainTestedLimitsSerializer(serializers.Serializer):
+    maximum_distance_m = serializers.IntegerField()
+    maximum_samples = serializers.IntegerField()
+    interpretation = serializers.CharField()
+
+
+class TerrainEngineStatusSerializer(serializers.Serializer):
+    engine = serializers.CharField()
+    engine_version = serializers.CharField()
+    method = serializers.CharField()
+    approved_for_operational_use = serializers.BooleanField()
+    capabilities = TerrainEngineCapabilitiesSerializer()
+    parameters = serializers.JSONField()
+    tested_limits = TerrainTestedLimitsSerializer()
+    disclaimer = serializers.CharField()
+
+
+class TerrainResourceLimitsSerializer(serializers.Serializer):
+    maximum_distance_m = serializers.IntegerField()
+    maximum_samples = serializers.IntegerField()
+
+
+class TerrainAnalysisStatusSerializer(serializers.Serializer):
+    provider = TerrainSourceStatusSerializer()
+    provider_configuration = serializers.JSONField()
+    engine = TerrainEngineStatusSerializer()
+    configured = serializers.BooleanField()
+    approved_for_analysis = serializers.BooleanField()
+    available = serializers.BooleanField()
+    execution_model = serializers.CharField()
+    cancellation_boundary = serializers.CharField()
+    resource_safety_limits = TerrainResourceLimitsSerializer()
+    warning = serializers.CharField(allow_blank=True)
+    classification = serializers.CharField()
+    disclaimer = serializers.CharField()

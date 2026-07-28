@@ -368,6 +368,38 @@ release. See [ADR-0016](docs/adr/0016-phase-2-validation-evidence-bundles.md),
 the [P2.6 operations guide](docs/operations/phase-2-validation-and-rc-evaluation.md),
 and the [v0.2.0-rc.1 evidence checklist](docs/releases/v0.2.0-rc.1-evidence.md).
 
+## P3.1 optional source-aware terrain analysis
+
+Issue #21 adds a replaceable, server-selected terrain-profile provider and
+versioned analysis-engine boundary. The default provider is disabled and makes
+no network or dataset request. Enablement fails closed unless the exact
+provider, provider version, dataset product/version/content digest, engine, and
+engine version pass the qualified human gate and match the protected
+configuration allowlist.
+
+The repository includes deterministic synthetic flat, ridge, valley, missing,
+boundary, out-of-coverage, datum, and provider-failure fixtures. The initial
+sampled line-of-sight method is explicitly provisional: it records source
+resolution/datum/transformation, every bounded sample and intermediate
+decision, application/method versions, warnings, exclusions, and digests, but
+does not model diffraction, clutter, structures, vegetation, reflections, or
+multipath.
+
+The interface compares terrain continuous-clear distance beside the retained
+Phase 2 nominal estimate and explains material differences without replacing
+either layer. Structured profile rows distinguish clear, obstructed, missing,
+and out-of-coverage evidence without relying on a map or color. Partial and
+unsupported work remains visible but cannot be approved. Failed/cancelled
+retry creates retained lineage; source or Phase 2 changes mark old evidence
+stale rather than rewriting it.
+
+All results remain planning estimates, not coverage guarantees, field
+validation, regulatory studies, coordination decisions, spectrum
+authorization, or operational approval. See
+[ADR-0017](docs/adr/0017-optional-source-aware-terrain-analysis.md), the
+[terrain operations guide](docs/operations/terrain-analysis.md), and the
+[Phase 3 data model](docs/data-model/phase-3.md).
+
 ## Explainable RF deconfliction decision support
 
 Issue #39 evaluates one approved ICS-205 revision and an explicit selection of active

@@ -105,6 +105,30 @@ implemented fields, provisional validators, snapshot boundary, and human gate.
 See [ADR-0009](../adr/0009-source-aware-elevation-and-reproducible-haat.md) and the
 [elevation/HAAT operations guide](../operations/elevation-and-haat.md).
 
+## P3.1 terrain-analysis controls
+
+- `rf.view`, `rf.edit`, and `rf.approve` govern incident-scoped terrain
+  listing/retrieval, queue/run/cancel/retry, and approval. Browser controls are
+  not authorization.
+- Provider, dataset, engine, and approval selection are server configuration.
+  Requests cannot supply a provider class, URL, credential, dataset, or
+  allowlist object.
+- Queueing binds one complete approved Phase 2 estimate, its exact HAAT
+  evidence, site, source descriptor, provider configuration, engine
+  capabilities, parameters, application version, and digest.
+- Inputs and completed results are immutable and retained. Cancelled/failed
+  retry creates a new `supersedes` record. Direct update and hard deletion are
+  rejected.
+- Partial, unsupported, stale, failed, and cancelled evidence cannot be
+  approved. Approval of complete current evidence does not approve the source,
+  method, coverage, coordination, or operational decision.
+- Terrain audit events retain record/source/method identifiers, lifecycle
+  states, and digests without duplicating coordinates, profile samples, RF
+  values, provider credentials, raw responses, or protected incident content.
+
+See [ADR-0017](../adr/0017-optional-source-aware-terrain-analysis.md) and the
+[terrain operations guide](../operations/terrain-analysis.md).
+
 ## P2.5 field evidence and calibration controls
 
 - `rf.view`, `rf.edit`, and `rf.approve` govern incident-scoped observation, review, calibration

@@ -8,6 +8,7 @@ from drf_spectacular.utils import OpenApiParameter, extend_schema, extend_schema
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied, ValidationError
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.parsers import JSONParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -61,6 +62,7 @@ from .models import (
     RFAnalysisInputSnapshot,
     SubscriberProfile,
     SubscriberProfileVersion,
+    TerrainAnalysis,
 )
 from .phase2_validation import (
     approve_validation_bundle,
@@ -81,6 +83,7 @@ from .serializers import (
     CreateHAATCalculationSerializer,
     CreatePhase2ValidationBundleSerializer,
     CreateRFAnalysisInputSnapshotSerializer,
+    CreateTerrainAnalysisSerializer,
     DirectionalCoverageAnalysisSerializer,
     ElevationSnapshotSerializer,
     FieldObservationSerializer,
@@ -90,6 +93,8 @@ from .serializers import (
     RFAnalysisInputSnapshotSerializer,
     SubscriberProfileSerializer,
     SubscriberProfileVersionSerializer,
+    TerrainAnalysisSerializer,
+    TerrainAnalysisStatusSerializer,
 )
 from .services import (
     VERSION_EDITABLE_FIELDS,
@@ -97,6 +102,13 @@ from .services import (
     archive_analysis_snapshot,
     copy_version,
     create_analysis_snapshot,
+)
+from .terrain import (
+    approve_terrain_analysis,
+    cancel_terrain_analysis,
+    queue_terrain_analysis,
+    run_terrain_analysis,
+    terrain_status,
 )
 
 
@@ -109,6 +121,12 @@ def scoped_to_incidents(queryset, user, incident_path="incident"):
             f"{incident_path}__memberships__is_active": True,
         }
     ).distinct()
+
+
+class TerrainAnalysisPagination(PageNumberPagination):
+    page_size = 5
+    page_size_query_param = "page_size"
+    max_page_size = 10
 
 
 @extend_schema_view(
@@ -1226,3 +1244,165 @@ class Phase2ValidationStatusView(APIView):
     @extend_schema(responses={200: OpenApiTypes.OBJECT})
     def get(self, request):
         return Response(validation_status())
+
+
+class TerrainAnalysisViewSet(
+    mixins.ListModelMixin,
+    mixins.RetrieveModelMixin,
+    mixins.CreateModelMixin,
+    viewsets.GenericViewSet,
+):
+    queryset = TerrainAnalysis.objects.none()
+    serializer_class = TerrainAnalysisSerializer
+    permission_classes = [PolicyPermission]
+    pagination_class = TerrainAnalysisPagination
+    policy_actions = {
+        "list": RF_VIEW,
+        "retrieve": RF_VIEW,
+        "create": RF_EDIT,
+        "run": RF_EDIT,
+        "cancel": RF_EDIT,
+        "retry": RF_EDIT,
+        "approve": RF_APPROVE,
+    }
+
+    def get_queryset(self):
+        queryset = scoped_to_incidents(
+            TerrainAnalysis.objects.select_related(
+                "incident",
+                "site",
+                "coverage_estimate__haat_calculation",
+                "created_by",
+                "approved_by",
+                "supersedes",
+            ),
+            self.request.user,
+        )
+        incident_id = self.request.query_params.get("incident")
+        return queryset.filter(incident_id=incident_id) if incident_id else queryset
+
+    def get_serializer_class(self):
+        if self.action == "create":
+            return CreateTerrainAnalysisSerializer
+        return TerrainAnalysisSerializer
+
+    @extend_schema(
+        request=CreateTerrainAnalysisSerializer,
+        responses={201: TerrainAnalysisSerializer},
+    )
+    def create(self, request, *args, **kwargs):
+        request_serializer = CreateTerrainAnalysisSerializer(data=request.data)
+        request_serializer.is_valid(raise_exception=True)
+        values = request_serializer.validated_data
+        incident = values["coverage_estimate"].incident
+        if not user_has_permission(request.user, RF_EDIT, incident):
+            raise PermissionDenied("Your incident role cannot queue terrain analysis.")
+        analysis = queue_terrain_analysis(actor=request.user, **values)
+        record_event(
+            actor=request.user,
+            action="terrain_analysis.queued",
+            target=analysis,
+            details={
+                "coverage_estimate_id": str(analysis.coverage_estimate_id),
+                "provider": analysis.provider,
+                "provider_version": analysis.provider_version,
+                "dataset_version": analysis.dataset_version,
+                "engine": analysis.engine,
+                "engine_version": analysis.engine_version,
+                "input_sha256": analysis.input_sha256,
+            },
+        )
+        return Response(
+            TerrainAnalysisSerializer(analysis).data,
+            status=status.HTTP_201_CREATED,
+        )
+
+    @extend_schema(request=None, responses={200: TerrainAnalysisSerializer})
+    @action(detail=True, methods=["post"])
+    def run(self, request, pk=None):
+        analysis = run_terrain_analysis(self.get_object())
+        record_event(
+            actor=request.user,
+            action=(
+                "terrain_analysis.completed"
+                if analysis.job_state == TerrainAnalysis.JobState.COMPLETE
+                else "terrain_analysis.failed"
+            ),
+            target=analysis,
+            details={
+                "job_state": analysis.job_state,
+                "analysis_state": analysis.analysis_state,
+                "failure_code": analysis.failure_code,
+                "input_sha256": analysis.input_sha256,
+                "result_sha256": analysis.result_sha256,
+                "engine_version": analysis.engine_version,
+            },
+        )
+        return Response(TerrainAnalysisSerializer(analysis).data)
+
+    @extend_schema(request=None, responses={200: TerrainAnalysisSerializer})
+    @action(detail=True, methods=["post"])
+    def cancel(self, request, pk=None):
+        analysis = cancel_terrain_analysis(self.get_object())
+        record_event(
+            actor=request.user,
+            action="terrain_analysis.cancelled",
+            target=analysis,
+            details={
+                "job_state": analysis.job_state,
+                "failure_code": analysis.failure_code,
+            },
+        )
+        return Response(TerrainAnalysisSerializer(analysis).data)
+
+    @extend_schema(request=None, responses={201: TerrainAnalysisSerializer})
+    @action(detail=True, methods=["post"])
+    def retry(self, request, pk=None):
+        source = self.get_object()
+        analysis = queue_terrain_analysis(
+            coverage_estimate=source.coverage_estimate,
+            azimuth_deg=source.azimuth_deg,
+            maximum_distance_m=source.maximum_distance_m,
+            sample_interval_m=source.sample_interval_m,
+            receiver_height_m=source.receiver_height_m,
+            clearance_m=source.clearance_m,
+            supersedes=source,
+            actor=request.user,
+        )
+        record_event(
+            actor=request.user,
+            action="terrain_analysis.retried",
+            target=analysis,
+            details={
+                "supersedes_id": str(source.id),
+                "input_sha256": analysis.input_sha256,
+            },
+        )
+        return Response(
+            TerrainAnalysisSerializer(analysis).data,
+            status=status.HTTP_201_CREATED,
+        )
+
+    @extend_schema(request=None, responses={200: TerrainAnalysisSerializer})
+    @action(detail=True, methods=["post"])
+    def approve(self, request, pk=None):
+        analysis = approve_terrain_analysis(self.get_object(), actor=request.user)
+        record_event(
+            actor=request.user,
+            action="terrain_analysis.approved",
+            target=analysis,
+            details={
+                "changed_fields": ["approved_at", "approved_by", "status"],
+                "result_sha256": analysis.result_sha256,
+                "engine_version": analysis.engine_version,
+            },
+        )
+        return Response(TerrainAnalysisSerializer(analysis).data)
+
+
+class TerrainAnalysisStatusView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(responses={200: TerrainAnalysisStatusSerializer})
+    def get(self, request):
+        return Response(terrain_status())

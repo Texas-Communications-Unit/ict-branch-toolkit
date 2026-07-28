@@ -43,12 +43,24 @@ services:
       ICT_APPROVED_CALIBRATION_METHODS: ${ICT_APPROVED_CALIBRATION_METHODS:-[]}
       ICT_APPROVED_PHASE2_VALIDATION_PROFILES: ${ICT_APPROVED_PHASE2_VALIDATION_PROFILES:-[]}
       ICT_APPROVED_DECONFLICTION_RULESETS: ${ICT_APPROVED_DECONFLICTION_RULESETS:-[]}
+      ICT_TERRAIN_PROVIDER: ${ICT_TERRAIN_PROVIDER:-apps.rf_analysis.terrain.DisabledTerrainProfileProvider}
+      ICT_TERRAIN_ENGINE: ${ICT_TERRAIN_ENGINE:-apps.rf_analysis.terrain.ProvisionalSampledLineOfSightEngine}
+      ICT_APPROVED_TERRAIN_CONFIGURATIONS: ${ICT_APPROVED_TERRAIN_CONFIGURATIONS:-[]}
+      ICT_SYNTHETIC_TERRAIN_MODE: ${ICT_SYNTHETIC_TERRAIN_MODE:-flat}
+      ICT_TERRAIN_MAX_DISTANCE_M: ${ICT_TERRAIN_MAX_DISTANCE_M:-200000}
+      ICT_TERRAIN_MAX_SAMPLES: ${ICT_TERRAIN_MAX_SAMPLES:-1001}
     command: ["/app/scripts/start-backend.sh"]
     depends_on:
       db:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health/', timeout=2)"]
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health/', timeout=2)",
+        ]
       interval: 10s
       timeout: 5s
       retries: 12

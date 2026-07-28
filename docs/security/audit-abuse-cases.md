@@ -28,21 +28,35 @@ export format.
 
 ## Automated abuse cases
 
-| Abuse case | Expected control | Automated evidence |
-| --- | --- | --- |
-| Unauthenticated client sends a direct mutation request | Request is denied; target and audit log remain unchanged | `test_unauthenticated_mutation_is_denied_without_a_success_audit_event` |
-| Authenticated user guesses an object identifier outside assigned incidents | Scoped lookup returns not found; no mutation or success event is recorded | `test_cross_incident_mutation_is_hidden_and_does_not_poison_the_audit_log` |
-| Audit append fails after a material serializer save | The request transaction rolls back the data change and returns a generic error | `test_audit_append_failure_rolls_back_the_material_api_mutation` |
-| Protected contact values are submitted in an assignment update | Audit details contain field names, not submitted values | `test_protected_assignment_values_are_not_copied_into_audit_details` |
-| Application code tries to save, update, bulk update, or delete an audit row | Supported ORM mutation paths raise the append-only guard | `test_application_orm_cannot_rewrite_or_remove_an_audit_event` |
-| Account deletion would erase actor attribution | Database protection blocks deletion of the attributed actor | `test_deleting_an_actor_cannot_erase_audit_attribution` |
-| A caller tries to override server-derived export metadata | Server digest, size, format, and revision fields take precedence | `test_export_audit_callers_cannot_override_authoritative_digest_metadata` |
-| A valid digest is replayed against another revision or format | Verification reports no match | `test_export_digest_replay_is_bound_to_the_original_revision_and_format` |
-| A malformed digest is submitted | Validation rejects it before audit lookup | `test_verify_rejects_a_malformed_digest` |
-| A stored event is rehashed with a non-contiguous sequence | Full-chain verification reports the first broken event | `test_verify_audit_chain_detects_a_rehashed_sequence_gap` |
+| Abuse case                                                                  | Expected control                                                               | Automated evidence                                                         |
+| --------------------------------------------------------------------------- | ------------------------------------------------------------------------------ | -------------------------------------------------------------------------- |
+| Unauthenticated client sends a direct mutation request                      | Request is denied; target and audit log remain unchanged                       | `test_unauthenticated_mutation_is_denied_without_a_success_audit_event`    |
+| Authenticated user guesses an object identifier outside assigned incidents  | Scoped lookup returns not found; no mutation or success event is recorded      | `test_cross_incident_mutation_is_hidden_and_does_not_poison_the_audit_log` |
+| Audit append fails after a material serializer save                         | The request transaction rolls back the data change and returns a generic error | `test_audit_append_failure_rolls_back_the_material_api_mutation`           |
+| Protected contact values are submitted in an assignment update              | Audit details contain field names, not submitted values                        | `test_protected_assignment_values_are_not_copied_into_audit_details`       |
+| Application code tries to save, update, bulk update, or delete an audit row | Supported ORM mutation paths raise the append-only guard                       | `test_application_orm_cannot_rewrite_or_remove_an_audit_event`             |
+| Account deletion would erase actor attribution                              | Database protection blocks deletion of the attributed actor                    | `test_deleting_an_actor_cannot_erase_audit_attribution`                    |
+| A caller tries to override server-derived export metadata                   | Server digest, size, format, and revision fields take precedence               | `test_export_audit_callers_cannot_override_authoritative_digest_metadata`  |
+| A valid digest is replayed against another revision or format               | Verification reports no match                                                  | `test_export_digest_replay_is_bound_to_the_original_revision_and_format`   |
+| A malformed digest is submitted                                             | Validation rejects it before audit lookup                                      | `test_verify_rejects_a_malformed_digest`                                   |
+| A stored event is rehashed with a non-contiguous sequence                   | Full-chain verification reports the first broken event                         | `test_verify_audit_chain_detects_a_rehashed_sequence_gap`                  |
 
 The broader audit-chain, authorization, export-integrity, and resource-import tests remain part of
 the required backend suite.
+
+## P3.1 terrain-analysis extension
+
+Terrain queue/run/cancel/retry/approval events use the existing append-only
+chain and request transaction boundary. Their audit details retain only record
+and source identifiers, versions, lifecycle state, failure code, and input or
+result digests.
+
+| Abuse case                                                                                | Expected control                                                                                     | Automated evidence                                                          |
+| ----------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| Terrain actions could copy exact path coordinates or elevation samples into audit details | All terrain lifecycle events omit coordinates plus source/transformed elevations                     | `test_terrain_lifecycle_is_source_aware_deterministic_and_immutable`        |
+| An adapter changes a requested coordinate while retaining its configured source identity  | Provider output validation rejects the result; the API exposes only a bounded source-invalid failure | `test_provider_cannot_change_requested_path_or_source_evidence`             |
+| A user guesses terrain identifiers outside assigned incidents                             | Incident-scoped list/detail returns no cross-incident evidence                                       | `test_cancel_retry_failure_recovery_and_incident_isolation`                 |
+| Provider configuration changes after a completed result                                   | Old evidence remains retained, becomes stale, and cannot be approved                                 | `test_completed_evidence_becomes_stale_when_provider_configuration_changes` |
 
 ## Operational verification
 

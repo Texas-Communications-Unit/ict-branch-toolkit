@@ -156,6 +156,39 @@ if not isinstance(ICT_APPROVED_DECONFLICTION_RULESETS, list) or not all(
     isinstance(rule_set, str) for rule_set in ICT_APPROVED_DECONFLICTION_RULESETS
 ):
     raise ValueError("ICT_APPROVED_DECONFLICTION_RULESETS must be a JSON array of strings.")
+ICT_TERRAIN_PROVIDER = os.getenv(
+    "ICT_TERRAIN_PROVIDER",
+    "apps.rf_analysis.terrain.DisabledTerrainProfileProvider",
+)
+ICT_TERRAIN_ENGINE = os.getenv(
+    "ICT_TERRAIN_ENGINE",
+    "apps.rf_analysis.terrain.ProvisionalSampledLineOfSightEngine",
+)
+ICT_APPROVED_TERRAIN_CONFIGURATIONS = json.loads(
+    os.getenv("ICT_APPROVED_TERRAIN_CONFIGURATIONS", "[]")
+)
+if not isinstance(ICT_APPROVED_TERRAIN_CONFIGURATIONS, list) or not all(
+    isinstance(configuration, dict) for configuration in ICT_APPROVED_TERRAIN_CONFIGURATIONS
+):
+    raise ValueError("ICT_APPROVED_TERRAIN_CONFIGURATIONS must be a JSON array of objects.")
+ICT_SYNTHETIC_TERRAIN_MODE = os.getenv("ICT_SYNTHETIC_TERRAIN_MODE", "flat")
+if ICT_SYNTHETIC_TERRAIN_MODE not in {
+    "flat",
+    "ridge",
+    "valley",
+    "missing",
+    "boundary",
+    "out_of_coverage",
+    "datum",
+    "failure",
+}:
+    raise ValueError("ICT_SYNTHETIC_TERRAIN_MODE is not supported.")
+ICT_TERRAIN_MAX_DISTANCE_M = int(os.getenv("ICT_TERRAIN_MAX_DISTANCE_M", "200000"))
+if not 1_000 <= ICT_TERRAIN_MAX_DISTANCE_M <= 500_000:
+    raise ValueError("ICT_TERRAIN_MAX_DISTANCE_M must be between 1000 and 500000.")
+ICT_TERRAIN_MAX_SAMPLES = int(os.getenv("ICT_TERRAIN_MAX_SAMPLES", "1001"))
+if not 2 <= ICT_TERRAIN_MAX_SAMPLES <= 5001:
+    raise ValueError("ICT_TERRAIN_MAX_SAMPLES must be between 2 and 5001.")
 RADIOREFERENCE_ENABLED = os.getenv("RADIOREFERENCE_ENABLED", "false").lower() == "true"
 RADIOREFERENCE_WSDL_URL = os.getenv(
     "RADIOREFERENCE_WSDL_URL",
