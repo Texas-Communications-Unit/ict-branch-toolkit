@@ -691,3 +691,88 @@ export interface CreateCalibrationSetPayload {
     maximum_ratio: string;
   };
 }
+
+export interface DeconflictionRuleDefinition {
+  id: string;
+  name: string;
+  severity: "critical" | "warning" | "caution";
+  summary: string;
+}
+
+export interface DeconflictionRuleSetStatus {
+  rule_set_id: string;
+  rule_set_version: string;
+  approved_for_operational_use: boolean;
+  adjacent_channel_threshold_hz: number;
+  rules: DeconflictionRuleDefinition[];
+  squelch_rule: string;
+  disclaimer: string;
+}
+
+export interface DeconflictionComparedInput {
+  id: string;
+  name: string;
+  rx_frequency_hz: number | null;
+  tx_frequency_hz: number | null;
+  rx_squelch: string;
+  tx_squelch: string;
+}
+
+export interface DeconflictionWarning {
+  rule_id: string;
+  rule_name: string;
+  rule_set_version: string;
+  severity: DeconflictionRuleDefinition["severity"];
+  compared_inputs: DeconflictionComparedInput[];
+  evidence: Record<string, unknown>;
+  assumptions: string[];
+  explanation: string;
+  disclaimer: string;
+}
+
+export interface DeconflictionAnalysis {
+  id: string;
+  incident: string;
+  approved_revision: string;
+  revision_number: number;
+  rule_set_id: string;
+  rule_set_version: string;
+  status: "draft" | "approved";
+  input_snapshot: {
+    schema_version: string;
+    approved_revision: {
+      id: string;
+      plan_id: string;
+      number: number;
+      approved_at: string;
+      approved_by_id: string;
+    };
+    adjacent_channel_threshold_hz: number;
+    assignments: Record<string, unknown>[];
+    selected_active_resources: Record<string, unknown>[];
+  };
+  input_sha256: string;
+  result_snapshot: {
+    schema_version: string;
+    rule_set_id: string;
+    rule_set_version: string;
+    input_sha256: string;
+    rule_definitions: DeconflictionRuleDefinition[];
+    warning_count: number;
+    warnings: DeconflictionWarning[];
+    disclaimer: string;
+  };
+  result_sha256: string;
+  warning_count: number;
+  created_by: number;
+  approved_by: number | null;
+  approved_at: string | null;
+  created_at: string;
+  is_locked: boolean;
+}
+
+export interface CreateDeconflictionAnalysisPayload {
+  incident: string;
+  approved_revision: string;
+  active_resources: string[];
+}

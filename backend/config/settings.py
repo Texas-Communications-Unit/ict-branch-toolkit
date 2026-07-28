@@ -35,6 +35,7 @@ INSTALLED_APPS = [
     "apps.plans",
     "apps.sites",
     "apps.rf_analysis",
+    "apps.deconfliction",
 ]
 if ENABLE_GIS:
     INSTALLED_APPS.append("django.contrib.gis")
@@ -141,6 +142,13 @@ if not isinstance(ICT_APPROVED_CALIBRATION_METHODS, list) or not all(
     isinstance(method, str) for method in ICT_APPROVED_CALIBRATION_METHODS
 ):
     raise ValueError("ICT_APPROVED_CALIBRATION_METHODS must be a JSON array of strings.")
+ICT_APPROVED_DECONFLICTION_RULESETS = json.loads(
+    os.getenv("ICT_APPROVED_DECONFLICTION_RULESETS", "[]")
+)
+if not isinstance(ICT_APPROVED_DECONFLICTION_RULESETS, list) or not all(
+    isinstance(rule_set, str) for rule_set in ICT_APPROVED_DECONFLICTION_RULESETS
+):
+    raise ValueError("ICT_APPROVED_DECONFLICTION_RULESETS must be a JSON array of strings.")
 RADIOREFERENCE_ENABLED = os.getenv("RADIOREFERENCE_ENABLED", "false").lower() == "true"
 RADIOREFERENCE_WSDL_URL = os.getenv(
     "RADIOREFERENCE_WSDL_URL",

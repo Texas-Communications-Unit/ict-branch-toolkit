@@ -421,6 +421,116 @@ paths:
               schema:
                 $ref: '#/components/schemas/CoverageEstimate'
           description: ''
+  /api/deconfliction-analyses/:
+    get:
+      operationId: deconfliction_analyses_list
+      parameters:
+      - in: query
+        name: incident
+        schema:
+          type: string
+          format: uuid
+        description: Limit results to one incident.
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - deconfliction-analyses
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedDeconflictionAnalysisList'
+          description: ''
+    post:
+      operationId: deconfliction_analyses_create
+      tags:
+      - deconfliction-analyses
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateDeconflictionAnalysis'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CreateDeconflictionAnalysis'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CreateDeconflictionAnalysis'
+        required: true
+      security:
+      - tokenAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeconflictionAnalysis'
+          description: ''
+  /api/deconfliction-analyses/{id}/:
+    get:
+      operationId: deconfliction_analyses_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this deconfliction analysis.
+        required: true
+      tags:
+      - deconfliction-analyses
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeconflictionAnalysis'
+          description: ''
+  /api/deconfliction-analyses/{id}/approve/:
+    post:
+      operationId: deconfliction_analyses_approve_create
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this deconfliction analysis.
+        required: true
+      tags:
+      - deconfliction-analyses
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeconflictionAnalysis'
+          description: ''
+  /api/deconfliction-status/:
+    get:
+      operationId: deconfliction_status_retrieve
+      tags:
+      - deconfliction-status
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeconflictionRuleSetStatus'
+          description: ''
   /api/directional-analysis-status/:
     get:
       operationId: directional_analysis_status_retrieve
@@ -3667,6 +3777,23 @@ components:
       required:
       - environment
       - haat_calculation
+    CreateDeconflictionAnalysis:
+      type: object
+      properties:
+        incident:
+          type: string
+          format: uuid
+        approved_revision:
+          type: string
+          format: uuid
+        active_resources:
+          type: array
+          items:
+            type: string
+            format: uuid
+      required:
+      - approved_revision
+      - incident
     CreateDirectionalCoverageAnalysis:
       type: object
       properties:
@@ -3866,6 +3993,119 @@ components:
       description: |-
         * `approved` - Approved
         * `excluded` - Excluded
+    DeconflictionAnalysis:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        incident:
+          type: string
+          format: uuid
+          readOnly: true
+        approved_revision:
+          type: string
+          format: uuid
+          readOnly: true
+        revision_number:
+          type: integer
+          readOnly: true
+        rule_set_id:
+          type: string
+          readOnly: true
+        rule_set_version:
+          type: string
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/PlanRevisionStatusEnum'
+          readOnly: true
+        input_snapshot:
+          readOnly: true
+        input_sha256:
+          type: string
+          readOnly: true
+        result_snapshot:
+          readOnly: true
+        result_sha256:
+          type: string
+          readOnly: true
+        warning_count:
+          type: integer
+          readOnly: true
+        created_by:
+          type: integer
+          readOnly: true
+        approved_by:
+          type: integer
+          readOnly: true
+          nullable: true
+        approved_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        is_locked:
+          type: boolean
+          readOnly: true
+      required:
+      - approved_at
+      - approved_by
+      - approved_revision
+      - created_at
+      - created_by
+      - id
+      - incident
+      - input_sha256
+      - input_snapshot
+      - is_locked
+      - result_sha256
+      - result_snapshot
+      - revision_number
+      - rule_set_id
+      - rule_set_version
+      - status
+      - warning_count
+    DeconflictionRuleSetStatus:
+      type: object
+      properties:
+        rule_set_id:
+          type: string
+          readOnly: true
+        rule_set_version:
+          type: string
+          readOnly: true
+        approved_for_operational_use:
+          type: boolean
+          readOnly: true
+        adjacent_channel_threshold_hz:
+          type: integer
+          readOnly: true
+        rules:
+          type: array
+          items:
+            type: object
+            additionalProperties: {}
+          readOnly: true
+        squelch_rule:
+          type: string
+          readOnly: true
+        disclaimer:
+          type: string
+          readOnly: true
+      required:
+      - adjacent_channel_threshold_hz
+      - approved_for_operational_use
+      - disclaimer
+      - rule_set_id
+      - rule_set_version
+      - rules
+      - squelch_rule
     DirectionalCoverageAnalysis:
       type: object
       properties:
@@ -5264,6 +5504,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/CoverageEstimate'
+    PaginatedDeconflictionAnalysisList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/DeconflictionAnalysis'
     PaginatedDirectionalCoverageAnalysisList:
       type: object
       required:

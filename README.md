@@ -215,8 +215,8 @@ support metadata are complete. See
 
 See [ADR-0004](docs/adr/0004-spatial-sites-snapshots-and-exports.md) and [spatial input and reference-source controls](docs/operations/spatial-inputs-and-reference-sources.md).
 
-The prototype does not yet implement deconfliction or production identity controls such as
-multifactor authentication and approved external federation.
+The prototype does not yet implement production identity controls such as multifactor
+authentication and approved external federation.
 
 ## P2.1 versioned RF input design
 
@@ -343,6 +343,27 @@ configured security/privacy and qualified RF gate. Repository fixtures and tests
 See [ADR-0012](docs/adr/0012-field-observations-and-incident-local-calibration.md), the
 [field observation and calibration guide](docs/operations/field-observations-and-calibration.md),
 and the [Phase 2 data model](docs/data-model/phase-2.md).
+
+## Explainable RF deconfliction decision support
+
+Issue #39 evaluates one approved ICS-205 revision and an explicit selection of active
+conventional-channel resources against stable, server-side rules for co-channel and
+adjacent-channel area overlap, reversed repeater pairs, duplicate frequency pairs under different
+names, missing technical values, selected active resources omitted from the plan, and missing
+approved operating or coordination areas.
+
+Every warning preserves its rule ID and version, severity, compared inputs, evidence, assumptions,
+plain-language explanation, and decision-support disclaimer. CTCSS, DCS, NAC, and other squelch
+differences remain visible evidence and never suppress a warning. Immutable input and result
+snapshots and SHA-256 digests preserve the exact approved revision, selected resources, frozen
+areas, rules, and output needed to reconstruct the result.
+
+The initial `rf-deconfliction-v1-provisional` rule set is synthetic-evaluation decision support,
+not frequency coordination, spectrum authorization, propagation analysis, or incident-command
+authority. Approval fails closed until qualified COML, COMT, COMC, and frequency-coordination
+practitioners accept the exact rules, severities, threshold, explanations, and positive, negative,
+and boundary cases. See [ADR-0015](docs/adr/0015-versioned-rf-deconfliction-decision-support.md)
+and the [RF deconfliction operations guide](docs/operations/rf-deconfliction.md).
 
 ## Accessibility
 
