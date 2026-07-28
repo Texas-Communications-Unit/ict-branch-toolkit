@@ -31,7 +31,7 @@ def create_user(username: str, role: str):
 
 
 owner = create_user("rc-synthetic-owner", Role.COML)
-evaluator = create_user("rc-synthetic-evaluator", Role.READ_ONLY)
+evaluator = create_user("egildersleeve", Role.READ_ONLY)
 
 assigned_incident = Incident.objects.create(
     name="Synthetic RC Assigned Incident",
