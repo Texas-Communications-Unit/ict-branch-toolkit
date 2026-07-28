@@ -17,6 +17,7 @@ import {
 import { BrandMark } from "./BrandMark";
 import { HAATWorkspace } from "./HAATWorkspace";
 import { CoverageEstimateWorkspace } from "./CoverageEstimateWorkspace";
+import { DirectionalCoverageWorkspace } from "./DirectionalCoverageWorkspace";
 import { MapShell } from "./MapShell";
 import { PlanWorkspace } from "./PlanWorkspace";
 import { RFProfileWorkspace } from "./RFProfileWorkspace";
@@ -362,7 +363,7 @@ export default function App() {
         <div className="identity-summary">
           <span>{currentUser?.display_name}</span>
           <div className="prototype-badge">
-            P2.2 Prototype · {currentUser?.role}
+            P2.4 Prototype · {currentUser?.role}
           </div>
           <button
             className="sign-out-button"
@@ -494,6 +495,7 @@ export default function App() {
         <RFProfileWorkspace incident={selected} />
         <HAATWorkspace incident={selected} />
         <CoverageEstimateWorkspace incident={selected} />
+        <DirectionalCoverageWorkspace incident={selected} />
         <MapShell incident={selected} />
         <section className="library-panel" aria-labelledby="library-heading">
           <div className="section-heading">

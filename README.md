@@ -221,7 +221,7 @@ multifactor authentication and approved external federation.
 ## P2.1 versioned RF input design
 
 Issue #15 implements incident-scoped and versioned RF analysis inputs through portable, mobile,
-fixed, or configurable subscriber profiles. The workflow is:
+fixed, cache, gateway, or configurable subscriber profiles. The workflow is:
 
 1. create an incident-scoped subscriber profile and its first numbered draft;
 2. record typed transmitter, receiver, antenna, feed-line, gain/loss, polarization, band,
@@ -290,6 +290,24 @@ limits, rounding, and formulas are synthetic-evaluation defaults that have not p
 qualified practitioner gate. They are not operational defaults. See
 [ADR-0010](docs/adr/0010-provisional-explainable-coverage-estimates.md), the
 [coverage-estimate operations guide](docs/operations/coverage-estimates.md), and the
+[Phase 2 data model](docs/data-model/phase-2.md).
+
+## P2.4 separate talk-out, talk-in, and probable two-way analysis
+
+Issue #18 adds immutable directional analysis using one complete approved infrastructure HAAT
+result and a distinct approved subscriber RF snapshot. Infrastructure-to-subscriber talk-out and
+subscriber-to-infrastructure talk-in use their applicable transmit ERP and receiver sensitivity.
+The provisional `concentric-minimum-v1-provisional` rule derives probable two-way distance only
+from the smaller supported nominal path and identifies the limiting direction.
+
+Portable, mobile, fixed, cache, gateway, and configurable profiles remain versioned assumption
+sets rather than measured equipment facts. Frequency mismatches, incomplete paths, and unsupported
+inputs remain explicit and produce no fabricated two-way geometry. Directional layers, P2.3
+single-path estimates, and manual rings remain separate in the API, accessible tables, and map.
+
+Approval fails closed until the exact engine, preset, and directional rule pass qualified review.
+See [ADR-0011](docs/adr/0011-separate-directional-and-two-way-analysis.md), the
+[directional analysis operations guide](docs/operations/directional-coverage-analysis.md), and the
 [Phase 2 data model](docs/data-model/phase-2.md).
 
 ## Accessibility

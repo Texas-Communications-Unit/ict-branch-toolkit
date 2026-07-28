@@ -37,7 +37,7 @@ suitable.
 P2.1 implements only these aggregates:
 
 - `SubscriberProfile`: an incident-scoped stable identity categorized as `portable`, `mobile`,
-  `fixed`, or `configurable`;
+  `fixed`, `cache`, `gateway`, or `configurable`;
 - `SubscriberProfileVersion`: numbered draft or immutable approved RF values for one profile; and
 - `RFAnalysisInputSnapshot`: a named, incident-scoped immutable copy of one approved profile
   version for later analysis use.

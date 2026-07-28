@@ -6,6 +6,7 @@ from apps.sites.models import RadioSite
 
 from .models import (
     CoverageEstimate,
+    DirectionalCoverageAnalysis,
     ElevationSnapshot,
     HAATCalculation,
     RFAnalysisInputSnapshot,
@@ -131,12 +132,25 @@ class SubscriberProfileSerializer(serializers.ModelSerializer):
 
 
 class RFAnalysisInputSnapshotSerializer(serializers.ModelSerializer):
+    profile_name = serializers.CharField(source="profile_version.profile.name", read_only=True)
+    profile_type = serializers.CharField(
+        source="profile_version.profile.profile_type",
+        read_only=True,
+    )
+    profile_version_number = serializers.IntegerField(
+        source="profile_version.number",
+        read_only=True,
+    )
+
     class Meta:
         model = RFAnalysisInputSnapshot
         fields = [
             "id",
             "incident",
             "profile_version",
+            "profile_name",
+            "profile_type",
+            "profile_version_number",
             "label",
             "input_snapshot",
             "input_sha256",
@@ -372,3 +386,106 @@ class CreateCoverageEstimateSerializer(serializers.Serializer):
         allow_blank=False,
         trim_whitespace=True,
     )
+
+
+class DirectionalCoverageAnalysisSerializer(serializers.ModelSerializer):
+    is_locked = serializers.BooleanField(read_only=True)
+    site_name = serializers.CharField(source="site.name", read_only=True)
+    infrastructure_label = serializers.CharField(
+        source="infrastructure_rf_input_snapshot.label",
+        read_only=True,
+    )
+    subscriber_label = serializers.CharField(
+        source="subscriber_rf_input_snapshot.label",
+        read_only=True,
+    )
+    subscriber_profile_name = serializers.CharField(
+        source="subscriber_rf_input_snapshot.profile_version.profile.name",
+        read_only=True,
+    )
+    subscriber_profile_type = serializers.CharField(
+        source="subscriber_rf_input_snapshot.profile_version.profile.profile_type",
+        read_only=True,
+    )
+    haat_result_sha256 = serializers.CharField(
+        source="haat_calculation.result_sha256",
+        read_only=True,
+    )
+
+    class Meta:
+        model = DirectionalCoverageAnalysis
+        fields = [
+            "id",
+            "incident",
+            "site",
+            "site_name",
+            "infrastructure_rf_input_snapshot",
+            "infrastructure_label",
+            "subscriber_rf_input_snapshot",
+            "subscriber_label",
+            "subscriber_profile_name",
+            "subscriber_profile_type",
+            "haat_calculation",
+            "haat_result_sha256",
+            "status",
+            "calculation_state",
+            "environment",
+            "engine",
+            "engine_version",
+            "preset",
+            "preset_version",
+            "rule_version",
+            "center_latitude",
+            "center_longitude",
+            "talk_out_distance_m",
+            "talk_in_distance_m",
+            "probable_two_way_distance_m",
+            "limiting_path",
+            "input_snapshot",
+            "input_sha256",
+            "model_snapshot",
+            "warnings",
+            "exclusions",
+            "explanation",
+            "result_snapshot",
+            "result_sha256",
+            "created_by",
+            "approved_by",
+            "approved_at",
+            "created_at",
+            "is_locked",
+        ]
+        read_only_fields = fields
+
+
+class CreateDirectionalCoverageAnalysisSerializer(serializers.Serializer):
+    haat_calculation = serializers.PrimaryKeyRelatedField(
+        queryset=HAATCalculation.objects.select_related(
+            "incident",
+            "site",
+            "rf_input_snapshot",
+        )
+    )
+    subscriber_rf_input_snapshot = serializers.PrimaryKeyRelatedField(
+        queryset=RFAnalysisInputSnapshot.objects.select_related(
+            "incident",
+            "profile_version__profile",
+        )
+    )
+    environment = serializers.ChoiceField(choices=CoverageEstimate.Environment.choices)
+    preset = serializers.CharField(
+        max_length=80,
+        default="balanced",
+        allow_blank=False,
+        trim_whitespace=True,
+    )
+
+    def validate(self, attrs):
+        if (
+            attrs["haat_calculation"].incident_id
+            != attrs["subscriber_rf_input_snapshot"].incident_id
+        ):
+            raise serializers.ValidationError(
+                "HAAT and subscriber RF snapshots must belong to the same incident."
+            )
+        return attrs

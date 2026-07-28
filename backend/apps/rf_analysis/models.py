@@ -25,6 +25,8 @@ class SubscriberProfile(models.Model):
         PORTABLE = "portable", "Portable"
         MOBILE = "mobile", "Mobile"
         FIXED = "fixed", "Fixed"
+        CACHE = "cache", "Cache"
+        GATEWAY = "gateway", "Gateway"
         CONFIGURABLE = "configurable", "Configurable"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -731,6 +733,145 @@ class CoverageEstimate(models.Model):
 
     def delete(self, *args, **kwargs):
         raise ValidationError("Coverage estimates are retained.")
+
+    @property
+    def is_locked(self):
+        return self.status == self.Status.APPROVED
+
+
+class DirectionalCoverageAnalysis(models.Model):
+    class Status(models.TextChoices):
+        DRAFT = "draft", "Draft"
+        APPROVED = "approved", "Approved"
+
+    class CalculationState(models.TextChoices):
+        COMPLETE = "complete", "Complete"
+        UNSUPPORTED = "unsupported", "Unsupported"
+        NO_OVERLAP = "no_overlap", "No probable two-way overlap"
+
+    class LimitingPath(models.TextChoices):
+        TALK_OUT = "talk_out", "Talk-out"
+        TALK_IN = "talk_in", "Talk-in"
+        EQUAL = "equal", "Equal"
+        NONE = "none", "Not available"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    incident = models.ForeignKey(
+        Incident,
+        related_name="directional_coverage_analyses",
+        on_delete=models.PROTECT,
+    )
+    site = models.ForeignKey(
+        RadioSite,
+        related_name="directional_coverage_analyses",
+        on_delete=models.PROTECT,
+    )
+    infrastructure_rf_input_snapshot = models.ForeignKey(
+        RFAnalysisInputSnapshot,
+        related_name="infrastructure_directional_analyses",
+        on_delete=models.PROTECT,
+    )
+    subscriber_rf_input_snapshot = models.ForeignKey(
+        RFAnalysisInputSnapshot,
+        related_name="subscriber_directional_analyses",
+        on_delete=models.PROTECT,
+    )
+    haat_calculation = models.ForeignKey(
+        HAATCalculation,
+        related_name="directional_coverage_analyses",
+        on_delete=models.PROTECT,
+    )
+    status = models.CharField(max_length=12, choices=Status.choices, default=Status.DRAFT)
+    calculation_state = models.CharField(
+        max_length=16,
+        choices=CalculationState.choices,
+    )
+    environment = models.CharField(max_length=16, choices=CoverageEstimate.Environment.choices)
+    engine = models.CharField(max_length=120)
+    engine_version = models.CharField(max_length=80)
+    preset = models.CharField(max_length=80)
+    preset_version = models.CharField(max_length=80)
+    rule_version = models.CharField(max_length=80)
+    center_latitude = models.DecimalField(max_digits=9, decimal_places=6)
+    center_longitude = models.DecimalField(max_digits=9, decimal_places=6)
+    talk_out_distance_m = models.PositiveIntegerField(null=True, blank=True)
+    talk_in_distance_m = models.PositiveIntegerField(null=True, blank=True)
+    probable_two_way_distance_m = models.PositiveIntegerField(null=True, blank=True)
+    limiting_path = models.CharField(max_length=12, choices=LimitingPath.choices)
+    input_snapshot = models.JSONField()
+    input_sha256 = models.CharField(max_length=64)
+    model_snapshot = models.JSONField()
+    warnings = models.JSONField(default=list, blank=True)
+    exclusions = models.JSONField(default=list, blank=True)
+    explanation = models.TextField()
+    result_snapshot = models.JSONField()
+    result_sha256 = models.CharField(max_length=64)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        related_name="created_directional_coverage_analyses",
+        on_delete=models.PROTECT,
+    )
+    approved_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        related_name="approved_directional_coverage_analyses",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+    )
+    approved_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(
+                fields=["incident", "site", "status"],
+                name="rf_dir_inc_site_status_idx",
+            )
+        ]
+        constraints = [
+            models.CheckConstraint(
+                condition=(
+                    models.Q(
+                        status="draft",
+                        approved_by__isnull=True,
+                        approved_at__isnull=True,
+                    )
+                    | models.Q(
+                        status="approved",
+                        approved_by__isnull=False,
+                        approved_at__isnull=False,
+                    )
+                ),
+                name="rf_dir_approval_consistent",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    models.Q(
+                        calculation_state="complete",
+                        talk_out_distance_m__isnull=False,
+                        talk_in_distance_m__isnull=False,
+                        probable_two_way_distance_m__isnull=False,
+                    )
+                    | models.Q(
+                        calculation_state__in=["unsupported", "no_overlap"],
+                        probable_two_way_distance_m__isnull=True,
+                    )
+                ),
+                name="rf_dir_distance_state_consistent",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.site}: {self.rule_version} ({self.calculation_state}; {self.limiting_path})"
+
+    def save(self, *args, **kwargs):
+        if self.pk and DirectionalCoverageAnalysis.objects.filter(pk=self.pk).exists():
+            raise ValidationError("Directional coverage analyses are immutable after creation.")
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError("Directional coverage analyses are retained.")
 
     @property
     def is_locked(self):
