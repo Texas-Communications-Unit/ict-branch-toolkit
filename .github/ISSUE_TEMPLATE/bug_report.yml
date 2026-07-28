@@ -32,6 +32,13 @@ body:
       label: Commit or version
     validations:
       required: true
+  - type: textarea
+    id: accessibility
+    attributes:
+      label: Accessibility impact
+      description: Identify assistive technology, keyboard, reflow, contrast, motion, or generated-content effects, or state none known.
+    validations:
+      required: true
   - type: dropdown
     id: priority
     attributes:

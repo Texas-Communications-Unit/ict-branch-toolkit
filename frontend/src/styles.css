@@ -46,6 +46,8 @@ button {
   border-radius: 6px;
   background: var(--tx-comu-blue);
   color: var(--tx-comu-white);
+  min-height: 2.75rem;
+  min-width: 2.75rem;
   padding: 0.72rem 1rem;
   font-weight: 700;
 }
@@ -62,9 +64,15 @@ textarea {
   width: 100%;
   border: 1px solid var(--tx-comu-border);
   border-radius: 5px;
+  min-height: 2.75rem;
   padding: 0.65rem 0.7rem;
   background: var(--tx-comu-white);
   color: var(--tx-comu-navy);
+}
+summary {
+  cursor: pointer;
+  min-height: 2.75rem;
+  padding-block: 0.65rem;
 }
 button:focus-visible,
 input:focus-visible,
@@ -74,6 +82,7 @@ a:focus-visible,
 [tabindex]:focus-visible {
   outline: 3px solid var(--tx-comu-red);
   outline-offset: 3px;
+  scroll-margin-block: 1rem;
 }
 textarea {
   resize: vertical;
@@ -886,12 +895,12 @@ footer a {
   }
   .identity-summary {
     width: 100%;
-    grid-template-columns: 1fr auto auto;
+    grid-template-columns: 1fr;
     align-items: center;
     justify-items: start;
   }
   .prototype-badge {
-    justify-self: end;
+    justify-self: start;
   }
   .compact-form {
     grid-template-columns: 1fr;
@@ -907,6 +916,17 @@ footer a {
   .button-row {
     align-items: stretch;
     flex-direction: column;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
   }
 }
 

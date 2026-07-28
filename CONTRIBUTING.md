@@ -10,6 +10,13 @@ Thank you for helping improve ICT Branch Toolkit. The project is developed in pu
 4. Add or update tests and documentation.
 5. Run `make check` or the equivalent commands in the README.
 
+User-facing work must meet the
+[WCAG 2.2 Level AA accessibility definition of done](docs/governance/accessibility-standard.md).
+Describe the affected processes and states, keyboard/non-pointer behavior,
+responsive and reflow behavior, screen-reader semantics, status/error
+announcements, and generated-content impact. Add automated coverage for every
+new route or material state and identify the human checks that remain.
+
 GitHub Issues are the project work queue. Human comments are recorded as task input and may be assessed by Codex under the controls in [`docs/governance/issue-lifecycle.md`](docs/governance/issue-lifecycle.md). External comments require maintainer review before paid AI execution or repository writes. Only trusted maintainers may use `/codex implement`, which creates a feature branch and draft pull request rather than changing `main`.
 
 When work moves between AI environments, use the
@@ -22,6 +29,10 @@ Do not submit real incident information, protected channel information, personal
 
 ## Pull requests
 
-Describe what changed, why, user or operator impact, assumptions, verification results, limitations, screenshots for UI work, and follow-up work. Keep dependency upgrades and broad formatting separate from feature changes unless they are inseparable.
+Describe what changed, why, user or operator impact, assumptions, verification
+results, accessibility impact, limitations, screenshots for UI work, and
+follow-up work. A passing axe scan is automated evidence, not a conformance
+claim. Keep dependency upgrades and broad formatting separate from feature
+changes unless they are inseparable.
 
 All contributions are accepted under the repository's GNU AGPL v3 license.

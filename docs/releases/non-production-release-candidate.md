@@ -88,8 +88,10 @@ candidate. Link the evidence for the exact candidate commit.
 - [ ] Dependency audit, secret scanning, static analysis, container scanning,
       and software-composition analysis pass or every finding has a documented
       maintainer and security disposition.
-- [ ] Automated accessibility checks pass and the required human keyboard,
-      zoom/reflow, contrast, and screen-reader review is recorded.
+- [ ] WCAG 2.2 Level AA automated checks pass and the completed
+      [accessibility evaluation record](../templates/accessibility-evaluation.md)
+      documents keyboard, zoom/reflow, contrast, screen-reader, and
+      generated-content review for the exact commit.
 - [ ] Authentication/token lifecycle behavior, secure headers, HTTPS/HSTS,
       rate limits, generic error handling, and incident-scoped authorization are
       tested and their remaining limitations accepted.

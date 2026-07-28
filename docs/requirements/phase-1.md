@@ -51,11 +51,19 @@ Phase 1 is an operational-planning prototype. It must prove a controlled workflo
 
 ## P1.6 hardening and release candidate
 
-- Complete accessibility, error handling, backup/restore, audit review, security, performance, installation, upgrade, rollback, and operator documentation.
+- Meet the project WCAG 2.2 Level AA accessibility definition of done for
+  complete Phase 1 processes and record automated plus human evidence,
+  including applicable generated content.
+- Complete error handling, backup/restore, audit review, security, performance,
+  installation, upgrade, rollback, and operator documentation.
 - Run dependency, secret, static-analysis, and container checks and publish tested limits.
 - Produce a clearly labeled non-production release candidate and human acceptance checklist.
 
 ## Definition of done
 
-Each milestone requires documented assumptions; reversible migrations; unit, integration, and updated end-to-end tests; passing format/lint/type/test/build/migration checks; security/privacy review; current documentation and sample configuration; approved data provenance; and a pull request describing changes, verification, limitations, screenshots, and follow-up work.
-
+Each milestone requires documented assumptions; reversible migrations; unit,
+integration, updated end-to-end, and applicable WCAG 2.2 AA checks; passing
+format/lint/type/test/build/migration checks; security/privacy and accessibility
+review; current documentation and sample configuration; approved data
+provenance; and a pull request describing changes, verification, accessibility
+impact, limitations, screenshots, and follow-up work.

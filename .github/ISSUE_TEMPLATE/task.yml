@@ -35,6 +35,13 @@ body:
       description: Identify tests, reviews, or evidence expected before completion.
     validations:
       required: true
+  - type: textarea
+    id: accessibility
+    attributes:
+      label: Accessibility impact
+      description: State the applicable WCAG 2.2 AA behavior and evidence, or explain why the task has no user-facing impact.
+    validations:
+      required: true
   - type: dropdown
     id: risk
     attributes:

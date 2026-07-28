@@ -312,14 +312,17 @@ See [ADR-0011](docs/adr/0011-separate-directional-and-two-way-analysis.md), the
 
 ## Accessibility
 
-The browser workflow targets WCAG 2.1 Level A and AA. GitHub Actions runs
-axe-core checks against the sign-in and authenticated planning screens, along
-with keyboard checks for sign-in order and the planning-workspace skip link.
-The coordinate form and radio site list provide a non-pointer alternative to
-map interaction.
+The Toolkit targets WCAG 2.2 Level AA across complete user processes. GitHub
+Actions enforces JSX accessibility linting and axe-core checks on desktop and
+320-CSS-pixel presentations, together with keyboard, skip-link, and document
+reflow checks. Coordinate forms, structured result tables, and radio-site lists
+provide non-pointer and nonvisual alternatives to map interactions.
 
-See the [accessibility review and checks](docs/operations/accessibility.md) for
-the automated scope, known boundaries, and required human acceptance testing.
+Automated results are evidence, not a conformance claim. Release and deployment
+candidates also require recorded keyboard, zoom/reflow, contrast, screen-reader,
+and generated-content evaluation. See the
+[accessibility standard](docs/governance/accessibility-standard.md) and
+[accessibility review procedure](docs/operations/accessibility.md).
 
 ## TX-COMU brand system
 

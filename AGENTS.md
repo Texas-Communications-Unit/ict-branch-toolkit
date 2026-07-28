@@ -20,9 +20,14 @@ Build the ICT Branch Toolkit as a standalone, portable, secure-by-default incide
 - Store frequencies as integer hertz, coordinates in WGS 84, and distances canonically in meters.
 - Keep conventional channels and trunked talkgroups distinct and retain source/version provenance.
 - Put authorization policy in backend permission classes or services, not scattered UI conditionals.
+- Treat WCAG 2.2 Level AA as the accessibility engineering target for complete
+  user processes, responsive states, nonvisual/non-pointer alternatives, and
+  generated content. Follow `docs/governance/accessibility-standard.md`.
 - Add migrations, tests, documentation, and sample configuration with behavioral changes.
 - Prefer small, focused commits and reversible decisions. Record material architectural choices as ADRs.
-- Run formatting, linting, type checks, tests, builds, migration checks, and security checks before requesting review.
+- Run formatting, accessibility linting/scans, type checks, tests, builds,
+  migration checks, and security checks before requesting review. Never claim
+  accessibility conformance from automated checks alone.
 
 ## GitHub issue work queue
 
