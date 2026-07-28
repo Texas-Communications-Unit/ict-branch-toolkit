@@ -34,6 +34,7 @@ class PolicyPermission(BasePermission):
             "haat-calculation",
             "field-observation",
             "calibration-set",
+            "deconfliction-analysis",
         }:
             return True
         return required is None or user_has_permission(request.user, required)

@@ -657,6 +657,33 @@ test("administrator signs in and sees the incident planning workspace", async ({
         json: { count: 0, next: null, previous: null, results: [] },
       }),
   );
+  await page.route("**/api/deconfliction-status/", (route) =>
+    route.fulfill({
+      json: {
+        rule_set_id: "rf-deconfliction",
+        rule_set_version: "rf-deconfliction-v1-provisional",
+        approved_for_operational_use: false,
+        adjacent_channel_threshold_hz: 12500,
+        rules: [
+          {
+            id: "RF-001",
+            name: "Co-channel overlap",
+            severity: "critical",
+            summary: "Operating frequencies match and approved areas overlap.",
+          },
+        ],
+        squelch_rule:
+          "CTCSS, DCS, NAC, or other squelch differences never suppress a frequency warning.",
+        disclaimer:
+          "Decision support only—not a coordination decision or spectrum authorization.",
+      },
+    }),
+  );
+  await page.route("**/api/deconfliction-analyses/?incident=*", (route) =>
+    route.fulfill({
+      json: { count: 0, next: null, previous: null, results: [] },
+    }),
+  );
   await page.route("**/api/calibration-status/", (route) =>
     route.fulfill({
       json: {
@@ -813,6 +840,18 @@ test("administrator signs in and sees the incident planning workspace", async ({
       "Provisional configuration—practitioner review required",
       { exact: true },
     ),
+  ).toBeVisible();
+  const deconflictionWorkspace = page.getByRole("region", {
+    name: "Frequency deconfliction review",
+  });
+  await expect(
+    deconflictionWorkspace.getByText(
+      "Provisional rule set—qualified practitioner review required",
+      { exact: true },
+    ),
+  ).toBeVisible();
+  await expect(
+    deconflictionWorkspace.getByText(/differences never suppress/i),
   ).toBeVisible();
   const rfWorkspace = page.getByRole("region", {
     name: "Subscriber RF profiles",

@@ -40,6 +40,13 @@ only.
 - Missing values or outliers being silently removed from calibration.
 - An incident-local fit overwriting an organization default or being represented as validated
   coverage.
+- A browser-only or mutable deconfliction rule producing results that cannot be reconstructed.
+- Squelch differences suppressing a co-channel or adjacent-channel warning.
+- A missing operating area being replaced with an invented location or assumed non-overlap.
+- A provisional warning, severity, threshold, or zero-warning result being represented as
+  coordination, spectrum, propagation, or incident-command authority.
+- Frequencies, squelch values, coordinates, frozen site evidence, selected resources, or warning
+  contents leaking through deconfliction audit details.
 
 ## Design responses
 
@@ -94,4 +101,13 @@ Every recommendation remains marked incident-local and not promoted. Non-synthet
 requires separate incident authority, security/privacy review, retention/consent decisions, and
 qualified RF review. See
 [ADR-0012](../adr/0012-field-observations-and-incident-local-calibration.md).
+
+For RF deconfliction, versioned rules run only on the backend against an approved incident-scoped
+ICS-205 revision, frozen approved areas, and an explicit active-resource selection. The service
+never invents a missing location and never uses a squelch difference to suppress a frequency
+warning. It retains canonical input/result snapshots and digests; later changes create a new
+analysis rather than rewriting evidence. Approval fails closed until the exact rule version passes
+qualified review. Audit details retain only identifiers, versions, counts, and digests rather than
+frequency, squelch, coordinate, site, resource, or warning content. See
+[ADR-0015](../adr/0015-versioned-rf-deconfliction-decision-support.md).
 
