@@ -1,11 +1,14 @@
 import type {
   CoverageEngineStatus,
   CoverageEstimate,
+  CreateDirectionalCoverageAnalysisPayload,
   ConventionalChannel,
   CoordinateParseResult,
   CreateHAATCalculationPayload,
   CreateCoverageEstimatePayload,
   CreateSubscriberProfilePayload,
+  DirectionalAnalysisStatus,
+  DirectionalCoverageAnalysis,
   CurrentUser,
   EditableRFInputFields,
   ElevationProviderStatus,
@@ -531,4 +534,40 @@ export function approveCoverageEstimate(id: string): Promise<CoverageEstimate> {
   return request<CoverageEstimate>(`/api/coverage-estimates/${id}/approve/`, {
     method: "POST",
   });
+}
+
+export function getDirectionalAnalysisStatus(): Promise<DirectionalAnalysisStatus> {
+  return request<DirectionalAnalysisStatus>(
+    "/api/directional-analysis-status/",
+  );
+}
+
+export async function listDirectionalCoverageAnalyses(
+  incident: string,
+): Promise<DirectionalCoverageAnalysis[]> {
+  const result = await request<Paginated<DirectionalCoverageAnalysis>>(
+    `/api/directional-coverage-analyses/?incident=${encodeURIComponent(incident)}`,
+  );
+  return result.results;
+}
+
+export function createDirectionalCoverageAnalysis(
+  payload: CreateDirectionalCoverageAnalysisPayload,
+): Promise<DirectionalCoverageAnalysis> {
+  return request<DirectionalCoverageAnalysis>(
+    "/api/directional-coverage-analyses/",
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+    },
+  );
+}
+
+export function approveDirectionalCoverageAnalysis(
+  id: string,
+): Promise<DirectionalCoverageAnalysis> {
+  return request<DirectionalCoverageAnalysis>(
+    `/api/directional-coverage-analyses/${id}/approve/`,
+    { method: "POST" },
+  );
 }

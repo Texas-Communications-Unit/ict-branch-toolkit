@@ -73,6 +73,9 @@ test("administrator signs in and sees the incident planning workspace", async ({
     id: "rf-snapshot-1",
     incident: "syn-1",
     profile_version: "rf-version-1",
+    profile_name: "Synthetic Portable Assumption",
+    profile_type: "portable",
+    profile_version_number: 1,
     label: "Synthetic RF baseline",
     input_snapshot: {
       schema_version: 1,
@@ -516,6 +519,32 @@ test("administrator signs in and sees the incident planning workspace", async ({
       json: { count: 0, next: null, previous: null, results: [] },
     }),
   );
+  await page.route("**/api/directional-analysis-status/", (route) =>
+    route.fulfill({
+      json: {
+        rule_version: "concentric-minimum-v1-provisional",
+        approved_for_operational_use: false,
+        rule: "Probable two-way distance is the smaller supported nominal path.",
+        disclaimer:
+          "Provisional planning estimate only—not a propagation study, frequency-coordination decision, spectrum authorization, or coverage guarantee.",
+        supported_profile_types: [
+          "portable",
+          "mobile",
+          "fixed",
+          "cache",
+          "gateway",
+          "configurable",
+        ],
+      },
+    }),
+  );
+  await page.route(
+    "**/api/directional-coverage-analyses/?incident=*",
+    (route) =>
+      route.fulfill({
+        json: { count: 0, next: null, previous: null, results: [] },
+      }),
+  );
   await page.route("**/api/channel-imports/", (route) =>
     route.fulfill({
       json: {
@@ -565,7 +594,7 @@ test("administrator signs in and sees the incident planning workspace", async ({
   await expect(skipLink).toBeFocused();
   await skipLink.press("Enter");
   await expect(page.locator("#main-content")).toBeFocused();
-  await expect(page.getByText(/P2.2 Prototype/)).toBeVisible();
+  await expect(page.getByText(/P2.4 Prototype/)).toBeVisible();
   await expect(page.getByRole("heading", { name: "ICS-205" })).toBeVisible();
   await expect(
     page.getByText("SYN CALL", { exact: true }).first(),
@@ -719,7 +748,7 @@ test("administrator signs in and sees the incident planning workspace", async ({
   await expect(
     page.getByRole("heading", { name: "ICT Branch Toolkit" }),
   ).toBeVisible();
-  await expect(page.getByText(/P2.2 Prototype/)).toBeVisible();
+  await expect(page.getByText(/P2.4 Prototype/)).toBeVisible();
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= window.innerWidth,

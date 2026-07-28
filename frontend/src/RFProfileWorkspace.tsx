@@ -28,6 +28,8 @@ const PROFILE_TYPES: {
   { value: "portable", label: "Portable" },
   { value: "mobile", label: "Mobile" },
   { value: "fixed", label: "Fixed" },
+  { value: "cache", label: "Cache" },
+  { value: "gateway", label: "Gateway" },
   { value: "configurable", label: "Configurable" },
 ];
 

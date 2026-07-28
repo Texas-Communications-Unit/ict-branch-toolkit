@@ -103,6 +103,9 @@ const rfSnapshot: RFAnalysisInputSnapshot = {
   id: "rf-snapshot-1",
   incident: incident.id,
   profile_version: version.id,
+  profile_name: profile.name,
+  profile_type: profile.profile_type,
+  profile_version_number: version.number,
   label: "Synthetic approved RF baseline",
   input_snapshot: {
     schema_version: 1,

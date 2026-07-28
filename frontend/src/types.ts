@@ -222,7 +222,7 @@ export interface GeocoderSearchResult {
 }
 
 export type SubscriberProfileType =
-  "portable" | "mobile" | "fixed" | "configurable";
+  "portable" | "mobile" | "fixed" | "cache" | "gateway" | "configurable";
 
 export type ERPSource = "unknown" | "entered" | "calculated";
 export type AntennaGainReference = "unknown" | "dbi" | "dbd";
@@ -295,6 +295,9 @@ export interface RFAnalysisInputSnapshot {
   id: string;
   incident: string;
   profile_version: string;
+  profile_name: string;
+  profile_type: SubscriberProfileType;
+  profile_version_number: number;
   label: string;
   input_snapshot: Record<string, unknown>;
   input_sha256: string;
@@ -480,6 +483,61 @@ export interface CoverageEstimate {
 
 export interface CreateCoverageEstimatePayload {
   haat_calculation: string;
+  environment: CoverageEstimate["environment"];
+  preset: string;
+}
+
+export interface DirectionalAnalysisStatus {
+  rule_version: string;
+  approved_for_operational_use: boolean;
+  rule: string;
+  disclaimer: string;
+  supported_profile_types: SubscriberProfileType[];
+}
+
+export interface DirectionalCoverageAnalysis {
+  id: string;
+  incident: string;
+  site: string;
+  site_name: string;
+  infrastructure_rf_input_snapshot: string;
+  infrastructure_label: string;
+  subscriber_rf_input_snapshot: string;
+  subscriber_label: string;
+  subscriber_profile_name: string;
+  subscriber_profile_type: SubscriberProfileType;
+  haat_calculation: string;
+  haat_result_sha256: string;
+  status: "draft" | "approved";
+  calculation_state: "complete" | "unsupported" | "no_overlap";
+  environment: CoverageEstimate["environment"];
+  engine: string;
+  engine_version: string;
+  preset: string;
+  preset_version: string;
+  rule_version: string;
+  center_latitude: string;
+  center_longitude: string;
+  talk_out_distance_m: number | null;
+  talk_in_distance_m: number | null;
+  probable_two_way_distance_m: number | null;
+  limiting_path: "talk_out" | "talk_in" | "equal" | "none";
+  input_snapshot: Record<string, unknown>;
+  input_sha256: string;
+  model_snapshot: Record<string, unknown>;
+  warnings: string[];
+  exclusions: { code: string; reason: string }[];
+  explanation: string;
+  result_snapshot: Record<string, unknown>;
+  result_sha256: string;
+  approved_at: string | null;
+  created_at: string;
+  is_locked: boolean;
+}
+
+export interface CreateDirectionalCoverageAnalysisPayload {
+  haat_calculation: string;
+  subscriber_rf_input_snapshot: string;
   environment: CoverageEstimate["environment"];
   preset: string;
 }

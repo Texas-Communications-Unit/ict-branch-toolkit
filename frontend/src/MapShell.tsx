@@ -20,6 +20,7 @@ import {
   createSiteAssignment,
   downloadSpatialExport,
   listCoverageEstimates,
+  listDirectionalCoverageAnalyses,
   listPlans,
   listRadioSites,
   listSiteAssignments,
@@ -30,6 +31,7 @@ import {
 import { resolveMapProvider } from "./mapProvider";
 import type {
   CoverageEstimate,
+  DirectionalCoverageAnalysis,
   CoordinateParseResult,
   ICS205Plan,
   Incident,
@@ -106,6 +108,9 @@ export function MapShell({ incident }: { incident?: Incident }) {
   const [coverageEstimates, setCoverageEstimates] = useState<
     CoverageEstimate[]
   >([]);
+  const [directionalAnalyses, setDirectionalAnalyses] = useState<
+    DirectionalCoverageAnalysis[]
+  >([]);
   const [coordinateText, setCoordinateText] = useState("");
   const [parsed, setParsed] = useState<CoordinateParseResult>();
   const [message, setMessage] = useState("");
@@ -158,16 +163,24 @@ export function MapShell({ incident }: { incident?: Incident }) {
       setPlans([]);
       setLinks([]);
       setCoverageEstimates([]);
+      setDirectionalAnalyses([]);
       return;
     }
-    const [nextSites, nextPlans, nextCoverageEstimates] = await Promise.all([
+    const [
+      nextSites,
+      nextPlans,
+      nextCoverageEstimates,
+      nextDirectionalAnalyses,
+    ] = await Promise.all([
       listRadioSites(incident.id),
       listPlans(),
       listCoverageEstimates(incident.id),
+      listDirectionalCoverageAnalyses(incident.id),
     ]);
     setSites(nextSites);
     setPlans(nextPlans);
     setCoverageEstimates(nextCoverageEstimates);
+    setDirectionalAnalyses(nextDirectionalAnalyses);
     const incidentPlan = nextPlans.find(
       (item) => item.incident === incident.id,
     );
@@ -186,23 +199,32 @@ export function MapShell({ incident }: { incident?: Incident }) {
       listRadioSites(incident.id),
       listPlans(),
       listCoverageEstimates(incident.id),
+      listDirectionalCoverageAnalyses(incident.id),
     ])
-      .then(async ([nextSites, nextPlans, nextCoverageEstimates]) => {
-        if (!active) return;
-        setSites(nextSites);
-        setPlans(nextPlans);
-        setCoverageEstimates(nextCoverageEstimates);
-        const incidentPlan = nextPlans.find(
-          (item) => item.incident === incident.id,
-        );
-        const currentRevision =
-          incidentPlan?.revisions.find((item) => item.status === "draft") ??
-          incidentPlan?.revisions[0];
-        const nextLinks = currentRevision
-          ? await listSiteAssignments(currentRevision.id)
-          : [];
-        if (active) setLinks(nextLinks);
-      })
+      .then(
+        async ([
+          nextSites,
+          nextPlans,
+          nextCoverageEstimates,
+          nextDirectionalAnalyses,
+        ]) => {
+          if (!active) return;
+          setSites(nextSites);
+          setPlans(nextPlans);
+          setCoverageEstimates(nextCoverageEstimates);
+          setDirectionalAnalyses(nextDirectionalAnalyses);
+          const incidentPlan = nextPlans.find(
+            (item) => item.incident === incident.id,
+          );
+          const currentRevision =
+            incidentPlan?.revisions.find((item) => item.status === "draft") ??
+            incidentPlan?.revisions[0];
+          const nextLinks = currentRevision
+            ? await listSiteAssignments(currentRevision.id)
+            : [];
+          if (active) setLinks(nextLinks);
+        },
+      )
       .catch((error: Error) => {
         if (active) setMessage(error.message);
       });
@@ -219,11 +241,20 @@ export function MapShell({ incident }: { incident?: Incident }) {
       "ict-coverage-estimates-updated",
       handleCoverageUpdate,
     );
-    return () =>
+    window.addEventListener(
+      "ict-directional-analyses-updated",
+      handleCoverageUpdate,
+    );
+    return () => {
       window.removeEventListener(
         "ict-coverage-estimates-updated",
         handleCoverageUpdate,
       );
+      window.removeEventListener(
+        "ict-directional-analyses-updated",
+        handleCoverageUpdate,
+      );
+    };
   }, [refresh]);
 
   useEffect(() => {
@@ -436,6 +467,100 @@ export function MapShell({ incident }: { incident?: Incident }) {
           },
         });
       }
+      const directionalFeatures = directionalAnalyses.flatMap((analysis) => {
+        const site = sites.find((candidate) => candidate.id === analysis.site);
+        if (!site) return [];
+        return (
+          [
+            ["talk_out", analysis.talk_out_distance_m],
+            ["talk_in", analysis.talk_in_distance_m],
+            ["probable_two_way", analysis.probable_two_way_distance_m],
+          ] as const
+        ).flatMap(([path, radiusM]) =>
+          radiusM === null
+            ? []
+            : [
+                {
+                  type: "Feature" as const,
+                  properties: {
+                    path,
+                    site: analysis.site_name,
+                    subscriber: analysis.subscriber_profile_name,
+                    profileType: analysis.subscriber_profile_type,
+                    limitingPath: analysis.limiting_path,
+                    status: analysis.status,
+                    resultDigest: analysis.result_sha256,
+                  },
+                  geometry: {
+                    type: "Polygon" as const,
+                    coordinates: [ringPolygon(site, radiusM)],
+                  },
+                },
+              ],
+        );
+      });
+      const directionalData = {
+        type: "FeatureCollection" as const,
+        features: directionalFeatures,
+      };
+      const directionalSource = map.getSource(
+        "directional-coverage-analyses",
+      ) as GeoJSONSource | undefined;
+      if (directionalSource) {
+        directionalSource.setData(directionalData);
+      } else {
+        map.addSource("directional-coverage-analyses", {
+          type: "geojson",
+          data: directionalData,
+        });
+        map.addLayer({
+          id: "directional-coverage-fill",
+          type: "fill",
+          source: "directional-coverage-analyses",
+          paint: {
+            "fill-color": [
+              "match",
+              ["get", "path"],
+              "talk_out",
+              colors.blue,
+              "talk_in",
+              colors.red,
+              colors.navy,
+            ],
+            "fill-opacity": [
+              "match",
+              ["get", "path"],
+              "probable_two_way",
+              0.12,
+              0.035,
+            ],
+          },
+        });
+        map.addLayer({
+          id: "directional-coverage-line",
+          type: "line",
+          source: "directional-coverage-analyses",
+          paint: {
+            "line-color": [
+              "match",
+              ["get", "path"],
+              "talk_out",
+              colors.blue,
+              "talk_in",
+              colors.red,
+              colors.navy,
+            ],
+            "line-width": ["match", ["get", "path"], "probable_two_way", 4, 2],
+            "line-dasharray": [
+              "match",
+              ["get", "path"],
+              "probable_two_way",
+              ["literal", [1, 0]],
+              ["literal", [2, 2]],
+            ],
+          },
+        });
+      }
       if (sites.length) {
         const bounds = new maplibregl.LngLatBounds();
         sites.forEach((site) =>
@@ -446,7 +571,7 @@ export function MapShell({ incident }: { incident?: Incident }) {
     };
     if (map.loaded()) render();
     else map.once("load", render);
-  }, [canEdit, coverageEstimates, refresh, sites]);
+  }, [canEdit, coverageEstimates, directionalAnalyses, refresh, sites]);
 
   async function handleParse() {
     try {
