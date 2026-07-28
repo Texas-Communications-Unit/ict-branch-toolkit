@@ -24,6 +24,7 @@ import { MapShell } from "./MapShell";
 import { PlanWorkspace } from "./PlanWorkspace";
 import { Phase2ValidationWorkspace } from "./Phase2ValidationWorkspace";
 import { RFProfileWorkspace } from "./RFProfileWorkspace";
+import { TerrainAnalysisWorkspace } from "./TerrainAnalysisWorkspace";
 import type {
   ConventionalChannel,
   CurrentUser,
@@ -366,7 +367,7 @@ export default function App() {
         <div className="identity-summary">
           <span>{currentUser?.display_name}</span>
           <div className="prototype-badge">
-            P2.6 RC Prototype · {currentUser?.role}
+            P3.1 Terrain Prototype · {currentUser?.role}
           </div>
           <button
             className="sign-out-button"
@@ -502,6 +503,7 @@ export default function App() {
         <DeconflictionWorkspace incident={selected} />
         <FieldCalibrationWorkspace incident={selected} />
         <Phase2ValidationWorkspace incident={selected} />
+        <TerrainAnalysisWorkspace incident={selected} />
         <MapShell incident={selected} />
         <section className="library-panel" aria-labelledby="library-heading">
           <div className="section-heading">

@@ -13,6 +13,7 @@ from .models import (
     RFAnalysisInputSnapshot,
     SubscriberProfile,
     SubscriberProfileVersion,
+    TerrainAnalysis,
 )
 
 
@@ -179,6 +180,33 @@ class Phase2ValidationBundleAdmin(ReadOnlyRFAdmin):
     search_fields = (
         "incident__name",
         "incident__incident_number",
+        "input_sha256",
+        "result_sha256",
+    )
+
+
+@admin.register(TerrainAnalysis)
+class TerrainAnalysisAdmin(ReadOnlyRFAdmin):
+    list_display = (
+        "site",
+        "dataset_version",
+        "engine_version",
+        "job_state",
+        "analysis_state",
+        "status",
+        "created_at",
+    )
+    list_filter = (
+        "provider",
+        "dataset_version",
+        "engine_version",
+        "job_state",
+        "analysis_state",
+        "status",
+    )
+    search_fields = (
+        "site__name",
+        "incident__name",
         "input_sha256",
         "result_sha256",
     )

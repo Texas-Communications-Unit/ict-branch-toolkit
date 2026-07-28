@@ -17,13 +17,13 @@ sensitive to runner contention to be a reliable release gate.
 `backend/tests/test_performance_limits.py` creates only synthetic records and
 tests these authenticated list paths:
 
-| Workload | Synthetic dataset and returned page | Database-query budget | JSON response budget |
-| --- | --- | ---: | ---: |
-| Incident list | 101 incident memberships; first 100 incidents, each with 2 operational periods | 6 | 128 KiB |
-| Incident update with audit | 1 incident membership; status patch plus append-only audit event | 12 | 8 KiB |
-| Conventional-channel list | 1,001 channels; oversized request is clamped to 1,000 results | 4 | 1.5 MiB |
-| Radio-site list | 101 sites; first 100 sites, each with 3 manual rings | 5 | 256 KiB |
-| ICS-205 plan list | 25 plans, 2 revisions per plan, 10 assignments and 1 two-assignment relationship per revision | 8 | 512 KiB |
+| Workload                   | Synthetic dataset and returned page                                                           | Database-query budget | JSON response budget |
+| -------------------------- | --------------------------------------------------------------------------------------------- | --------------------: | -------------------: |
+| Incident list              | 101 incident memberships; first 100 incidents, each with 2 operational periods                |                     6 |              128 KiB |
+| Incident update with audit | 1 incident membership; status patch plus append-only audit event                              |                    12 |                8 KiB |
+| Conventional-channel list  | 1,001 channels; oversized request is clamped to 1,000 results                                 |                     4 |              1.5 MiB |
+| Radio-site list            | 101 sites; first 100 sites, each with 3 manual rings                                          |                     5 |              256 KiB |
+| ICS-205 plan list          | 25 plans, 2 revisions per plan, 10 assignments and 1 two-assignment relationship per revision |                     8 |              512 KiB |
 
 The query budgets cover request transaction control, pagination counts, object
 retrieval, nested serialization, and—on the update workload—the material write
@@ -110,3 +110,29 @@ Before expanding the tested synthetic scope, record observation/assignment
 counts, result/export byte size, PostgreSQL query plans, CPU/memory, concurrent
 requests, timeout behavior, and audit growth. Do not infer production capacity
 from the three-observation release-candidate fixture.
+
+## Terrain-analysis workload
+
+P3.1 bounds one terrain profile to 200,000 meters and 1,001 samples by default.
+Terrain history returns five records per page and permits an explicit page size
+only up to ten so completed profile evidence cannot multiply into an unbounded
+list response. The browser renders the full profile table only when its
+disclosure is opened.
+The focused synthetic regression evaluates the maximum default profile
+(200-meter interval) and currently requires completion in under five seconds
+on the local test runner. That elapsed-time assertion guards deterministic
+algorithmic regression only; it is not a service-level objective, concurrent
+capacity rating, or real-dataset/provider benchmark.
+
+The same suite covers flat, ridge, valley, missing, dataset-boundary,
+out-of-coverage, datum-offset, provider-failure, queued cancellation, retained
+retry, incident isolation, and a lower configured sample limit. Synthetic
+generation is network-free and does not measure provider latency, disk/cache
+I/O, database/result growth under repeated work, or transformation-grid cost.
+
+Before approving a real provider or raising either bound, record source and
+result byte size, database growth, CPU/memory, transformation cost, provider
+latency/timeouts/rate limits, concurrent requests, cancellation behavior, audit
+growth, and recovery under failure. Use synthetic data for load testing. A
+successful 1,001-sample fixture does not validate terrain accuracy or authorize
+operational use.

@@ -762,6 +762,171 @@ export interface Phase2ExportVerification {
   result_sha256?: string;
 }
 
+export interface TerrainSourceStatus {
+  provider: string;
+  provider_version: string;
+  dataset_product: string;
+  dataset_version: string;
+  horizontal_crs: string;
+  vertical_crs: string;
+  target_vertical_crs: string;
+  resolution_m: string | null;
+  license_terms_url: string;
+  permitted_use: string;
+  coverage: Record<string, unknown>;
+  source_content_sha256: string;
+  offline: boolean;
+}
+
+export interface TerrainEngineStatus {
+  engine: string;
+  engine_version: string;
+  method: string;
+  approved_for_operational_use: boolean;
+  capabilities: {
+    terrain_profile: boolean;
+    sampled_line_of_sight: boolean;
+    diffraction: boolean;
+    clutter: boolean;
+    external_network_required: boolean;
+  };
+  parameters: Record<string, string | number>;
+  tested_limits: {
+    maximum_distance_m: number;
+    maximum_samples: number;
+    interpretation: string;
+  };
+  disclaimer: string;
+}
+
+export interface TerrainAnalysisStatus {
+  provider: TerrainSourceStatus;
+  provider_configuration: Record<string, unknown>;
+  engine: TerrainEngineStatus;
+  configured: boolean;
+  approved_for_analysis: boolean;
+  available: boolean;
+  execution_model: string;
+  cancellation_boundary: string;
+  resource_safety_limits: {
+    maximum_distance_m: number;
+    maximum_samples: number;
+  };
+  warning: string;
+  classification: string;
+  disclaimer: string;
+}
+
+export interface TerrainProfileSample {
+  distance_m: number;
+  azimuth_deg: string;
+  latitude: string;
+  longitude: string;
+  state: "complete" | "missing" | "out_of_coverage";
+  source_elevation_m: string | null;
+  terrain_elevation_m: string | null;
+  reason: string;
+  visible?: boolean | null;
+  curvature_drop_m?: string | null;
+  receiver_slope?: string | null;
+  obstruction_slope?: string | null;
+}
+
+export interface TerrainAnalysisResult {
+  schema_version?: string;
+  classification?: string;
+  application_version?: string;
+  input_sha256?: string;
+  source?: Record<string, unknown>;
+  algorithm?: Record<string, unknown>;
+  profile?: {
+    acquisition_state?: string;
+    requested_distance_m?: number;
+    sample_interval_m?: number;
+    sample_count?: number;
+    complete_sample_count?: number;
+    gap_count?: number;
+    edge_effect?: boolean;
+    samples?: TerrainProfileSample[];
+    sample_sha256?: string;
+  };
+  line_of_sight?: {
+    continuous_clear_distance_m?: number;
+    first_obstruction_or_gap_distance_m?: number | null;
+    obstruction_count?: number;
+    receiver_height_m?: string;
+    clearance_m?: string;
+    effective_earth_radius_factor?: string;
+  };
+  comparison?: {
+    phase2_nominal_distance_m?: number | null;
+    terrain_continuous_los_distance_m?: number | null;
+    difference_m?: number | null;
+    difference_percent?: string | null;
+    material_threshold_m?: number | null;
+    materially_different?: boolean | null;
+    interpretation?: string;
+    layer_behavior?: string;
+  };
+  supported_conditions?: string[];
+  unsupported_conditions?: string[];
+  warnings?: string[];
+  exclusions?: Record<string, unknown>[];
+  explanation?: string;
+  disclaimer?: string;
+}
+
+export interface TerrainAnalysis {
+  id: string;
+  incident: string;
+  site: string;
+  coverage_estimate: string;
+  supersedes: string | null;
+  provider: string;
+  provider_version: string;
+  dataset_product: string;
+  dataset_version: string;
+  engine: string;
+  engine_version: string;
+  app_version: string;
+  azimuth_deg: string;
+  maximum_distance_m: number;
+  sample_interval_m: number;
+  receiver_height_m: string;
+  clearance_m: string;
+  job_state: "queued" | "running" | "complete" | "failed" | "cancelled";
+  analysis_state: "complete" | "partial" | "unsupported" | "";
+  progress_step: string;
+  progress_percent: number;
+  status: "draft" | "approved";
+  input_snapshot: Record<string, unknown>;
+  input_sha256: string;
+  result_snapshot: TerrainAnalysisResult;
+  result_sha256: string;
+  failure_code: string;
+  failure_message: string;
+  created_by: number;
+  approved_by: number | null;
+  created_at: string;
+  started_at: string | null;
+  completed_at: string | null;
+  approved_at: string | null;
+  updated_at: string;
+  is_locked: boolean;
+  is_stale: boolean;
+  stale_reasons: string[];
+  approval_eligible: boolean;
+}
+
+export interface CreateTerrainAnalysisPayload {
+  coverage_estimate: string;
+  azimuth_deg: string;
+  maximum_distance_m: number;
+  sample_interval_m: number;
+  receiver_height_m: string;
+  clearance_m: string;
+}
+
 export interface DeconflictionRuleDefinition {
   id: string;
   name: string;

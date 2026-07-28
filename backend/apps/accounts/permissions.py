@@ -40,6 +40,7 @@ class PolicyPermission(BasePermission):
             "calibration-set",
             "phase2-validation-bundle",
             "deconfliction-analysis",
+            "terrain-analysis",
         }:
             return True
         return required is None or user_has_permission(request.user, required)

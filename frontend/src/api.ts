@@ -39,6 +39,9 @@ import type {
   SiteAssignment,
   SubscriberProfile,
   SubscriberProfileVersion,
+  TerrainAnalysis,
+  TerrainAnalysisStatus,
+  CreateTerrainAnalysisPayload,
   TrunkedTalkgroup,
   UpdateSubscriberProfilePayload,
 } from "./types";
@@ -758,4 +761,50 @@ export function verifyPhase2ValidationExport(
       body: JSON.stringify({ content_sha256: contentSha256 }),
     },
   );
+}
+
+export function getTerrainAnalysisStatus(): Promise<TerrainAnalysisStatus> {
+  return request<TerrainAnalysisStatus>("/api/terrain-analysis-status/");
+}
+
+export async function listTerrainAnalyses(
+  incident: string,
+  page = 1,
+): Promise<Paginated<TerrainAnalysis>> {
+  return request<Paginated<TerrainAnalysis>>(
+    `/api/terrain-analyses/?incident=${encodeURIComponent(incident)}&page=${page}`,
+  );
+}
+
+export function createTerrainAnalysis(
+  payload: CreateTerrainAnalysisPayload,
+): Promise<TerrainAnalysis> {
+  return request<TerrainAnalysis>("/api/terrain-analyses/", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function runTerrainAnalysis(id: string): Promise<TerrainAnalysis> {
+  return request<TerrainAnalysis>(`/api/terrain-analyses/${id}/run/`, {
+    method: "POST",
+  });
+}
+
+export function cancelTerrainAnalysis(id: string): Promise<TerrainAnalysis> {
+  return request<TerrainAnalysis>(`/api/terrain-analyses/${id}/cancel/`, {
+    method: "POST",
+  });
+}
+
+export function retryTerrainAnalysis(id: string): Promise<TerrainAnalysis> {
+  return request<TerrainAnalysis>(`/api/terrain-analyses/${id}/retry/`, {
+    method: "POST",
+  });
+}
+
+export function approveTerrainAnalysis(id: string): Promise<TerrainAnalysis> {
+  return request<TerrainAnalysis>(`/api/terrain-analyses/${id}/approve/`, {
+    method: "POST",
+  });
 }

@@ -3334,6 +3334,182 @@ paths:
               schema:
                 $ref: '#/components/schemas/SubscriberProfile'
           description: ''
+  /api/terrain-analyses/:
+    get:
+      operationId: terrain_analyses_list
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      tags:
+      - terrain-analyses
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedTerrainAnalysisList'
+          description: ''
+    post:
+      operationId: terrain_analyses_create
+      tags:
+      - terrain-analyses
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTerrainAnalysis'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CreateTerrainAnalysis'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CreateTerrainAnalysis'
+        required: true
+      security:
+      - tokenAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TerrainAnalysis'
+          description: ''
+  /api/terrain-analyses/{id}/:
+    get:
+      operationId: terrain_analyses_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this terrain analysis.
+        required: true
+      tags:
+      - terrain-analyses
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TerrainAnalysis'
+          description: ''
+  /api/terrain-analyses/{id}/approve/:
+    post:
+      operationId: terrain_analyses_approve_create
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this terrain analysis.
+        required: true
+      tags:
+      - terrain-analyses
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TerrainAnalysis'
+          description: ''
+  /api/terrain-analyses/{id}/cancel/:
+    post:
+      operationId: terrain_analyses_cancel_create
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this terrain analysis.
+        required: true
+      tags:
+      - terrain-analyses
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TerrainAnalysis'
+          description: ''
+  /api/terrain-analyses/{id}/retry/:
+    post:
+      operationId: terrain_analyses_retry_create
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this terrain analysis.
+        required: true
+      tags:
+      - terrain-analyses
+      security:
+      - tokenAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TerrainAnalysis'
+          description: ''
+  /api/terrain-analyses/{id}/run/:
+    post:
+      operationId: terrain_analyses_run_create
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this terrain analysis.
+        required: true
+      tags:
+      - terrain-analyses
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TerrainAnalysis'
+          description: ''
+  /api/terrain-analysis-status/:
+    get:
+      operationId: terrain_analysis_status_retrieve
+      tags:
+      - terrain-analysis-status
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TerrainAnalysisStatus'
+          description: ''
   /api/trunked-talkgroups/:
     get:
       operationId: trunked_talkgroups_list
@@ -3403,6 +3579,16 @@ components:
         * `partial` - Partial
         * `missing` - Missing
         * `out_of_coverage` - Out of coverage
+    AnalysisStateEnum:
+      enum:
+      - complete
+      - partial
+      - unsupported
+      type: string
+      description: |-
+        * `complete` - Complete
+        * `partial` - Partial
+        * `unsupported` - Unsupported
     AntennaGainReferenceEnum:
       enum:
       - unknown
@@ -4220,6 +4406,39 @@ components:
           maxLength: 200
       required:
       - label
+    CreateTerrainAnalysis:
+      type: object
+      properties:
+        coverage_estimate:
+          type: string
+          format: uuid
+        azimuth_deg:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,3})?$
+        maximum_distance_m:
+          type: integer
+          maximum: 500000
+          minimum: 1
+        sample_interval_m:
+          type: integer
+          maximum: 100000
+          minimum: 1
+        receiver_height_m:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,5}(?:\.\d{0,3})?$
+        clearance_m:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,5}(?:\.\d{0,3})?$
+      required:
+      - azimuth_deg
+      - clearance_m
+      - coverage_estimate
+      - maximum_distance_m
+      - receiver_height_m
+      - sample_interval_m
     CurrentUser:
       type: object
       properties:
@@ -6189,6 +6408,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/SubscriberProfileVersion'
+    PaginatedTerrainAnalysisList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/TerrainAnalysis'
     PaginatedTrunkedTalkgroupList:
       type: object
       required:
@@ -7860,6 +8102,343 @@ components:
         notes:
           type: string
           nullable: true
+    TerrainAnalysis:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        incident:
+          type: string
+          format: uuid
+          readOnly: true
+        site:
+          type: string
+          format: uuid
+          readOnly: true
+        coverage_estimate:
+          type: string
+          format: uuid
+          readOnly: true
+        supersedes:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
+        provider:
+          type: string
+          readOnly: true
+        provider_version:
+          type: string
+          readOnly: true
+        dataset_product:
+          type: string
+          readOnly: true
+        dataset_version:
+          type: string
+          readOnly: true
+        engine:
+          type: string
+          readOnly: true
+        engine_version:
+          type: string
+          readOnly: true
+        app_version:
+          type: string
+          readOnly: true
+        azimuth_deg:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,3})?$
+          readOnly: true
+        maximum_distance_m:
+          type: integer
+          readOnly: true
+        sample_interval_m:
+          type: integer
+          readOnly: true
+        receiver_height_m:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,5}(?:\.\d{0,3})?$
+          readOnly: true
+        clearance_m:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,5}(?:\.\d{0,3})?$
+          readOnly: true
+        job_state:
+          allOf:
+          - $ref: '#/components/schemas/JobStateEnum'
+          readOnly: true
+        analysis_state:
+          allOf:
+          - $ref: '#/components/schemas/AnalysisStateEnum'
+          readOnly: true
+        progress_step:
+          type: string
+          readOnly: true
+        progress_percent:
+          type: integer
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/PlanRevisionStatusEnum'
+          readOnly: true
+        input_snapshot:
+          readOnly: true
+        input_sha256:
+          type: string
+          readOnly: true
+        result_snapshot:
+          readOnly: true
+        result_sha256:
+          type: string
+          readOnly: true
+        failure_code:
+          type: string
+          readOnly: true
+        failure_message:
+          type: string
+          readOnly: true
+        created_by:
+          type: integer
+          readOnly: true
+        approved_by:
+          type: integer
+          readOnly: true
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        started_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        completed_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        approved_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+        is_locked:
+          type: boolean
+          readOnly: true
+        is_stale:
+          type: boolean
+          readOnly: true
+        stale_reasons:
+          type: array
+          items:
+            type: string
+          readOnly: true
+        approval_eligible:
+          type: boolean
+          readOnly: true
+      required:
+      - analysis_state
+      - app_version
+      - approval_eligible
+      - approved_at
+      - approved_by
+      - azimuth_deg
+      - clearance_m
+      - completed_at
+      - coverage_estimate
+      - created_at
+      - created_by
+      - dataset_product
+      - dataset_version
+      - engine
+      - engine_version
+      - failure_code
+      - failure_message
+      - id
+      - incident
+      - input_sha256
+      - input_snapshot
+      - is_locked
+      - is_stale
+      - job_state
+      - maximum_distance_m
+      - progress_percent
+      - progress_step
+      - provider
+      - provider_version
+      - receiver_height_m
+      - result_sha256
+      - result_snapshot
+      - sample_interval_m
+      - site
+      - stale_reasons
+      - started_at
+      - status
+      - supersedes
+      - updated_at
+    TerrainAnalysisStatus:
+      type: object
+      properties:
+        provider:
+          $ref: '#/components/schemas/TerrainSourceStatus'
+        provider_configuration: {}
+        engine:
+          $ref: '#/components/schemas/TerrainEngineStatus'
+        configured:
+          type: boolean
+        approved_for_analysis:
+          type: boolean
+        available:
+          type: boolean
+        execution_model:
+          type: string
+        cancellation_boundary:
+          type: string
+        resource_safety_limits:
+          $ref: '#/components/schemas/TerrainResourceLimits'
+        warning:
+          type: string
+        classification:
+          type: string
+        disclaimer:
+          type: string
+      required:
+      - approved_for_analysis
+      - available
+      - cancellation_boundary
+      - classification
+      - configured
+      - disclaimer
+      - engine
+      - execution_model
+      - provider
+      - provider_configuration
+      - resource_safety_limits
+      - warning
+    TerrainEngineCapabilities:
+      type: object
+      properties:
+        terrain_profile:
+          type: boolean
+        sampled_line_of_sight:
+          type: boolean
+        diffraction:
+          type: boolean
+        clutter:
+          type: boolean
+        external_network_required:
+          type: boolean
+      required:
+      - clutter
+      - diffraction
+      - external_network_required
+      - sampled_line_of_sight
+      - terrain_profile
+    TerrainEngineStatus:
+      type: object
+      properties:
+        engine:
+          type: string
+        engine_version:
+          type: string
+        method:
+          type: string
+        approved_for_operational_use:
+          type: boolean
+        capabilities:
+          $ref: '#/components/schemas/TerrainEngineCapabilities'
+        parameters: {}
+        tested_limits:
+          $ref: '#/components/schemas/TerrainTestedLimits'
+        disclaimer:
+          type: string
+      required:
+      - approved_for_operational_use
+      - capabilities
+      - disclaimer
+      - engine
+      - engine_version
+      - method
+      - parameters
+      - tested_limits
+    TerrainResourceLimits:
+      type: object
+      properties:
+        maximum_distance_m:
+          type: integer
+        maximum_samples:
+          type: integer
+      required:
+      - maximum_distance_m
+      - maximum_samples
+    TerrainSourceStatus:
+      type: object
+      properties:
+        provider:
+          type: string
+        provider_version:
+          type: string
+        dataset_product:
+          type: string
+        dataset_version:
+          type: string
+        horizontal_crs:
+          type: string
+        vertical_crs:
+          type: string
+        target_vertical_crs:
+          type: string
+        resolution_m:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,9}(?:\.\d{0,3})?$
+          nullable: true
+        license_terms_url:
+          type: string
+        permitted_use:
+          type: string
+        coverage: {}
+        source_content_sha256:
+          type: string
+        offline:
+          type: boolean
+      required:
+      - coverage
+      - dataset_product
+      - dataset_version
+      - horizontal_crs
+      - license_terms_url
+      - offline
+      - permitted_use
+      - provider
+      - provider_version
+      - resolution_m
+      - source_content_sha256
+      - target_vertical_crs
+      - vertical_crs
+    TerrainTestedLimits:
+      type: object
+      properties:
+        maximum_distance_m:
+          type: integer
+        maximum_samples:
+          type: integer
+        interpretation:
+          type: string
+      required:
+      - interpretation
+      - maximum_distance_m
+      - maximum_samples
     TokenSession:
       type: object
       properties:
