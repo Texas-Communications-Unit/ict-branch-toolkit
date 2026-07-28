@@ -1,0 +1,227 @@
+name: Phase 1 RC evaluation
+
+on:
+  pull_request:
+    branches: [release/phase-1]
+  push:
+    branches: [release/phase-1]
+
+concurrency:
+  group: "phase-1-rc-evaluation-${{ github.event.pull_request.number || github.sha }}"
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+jobs:
+  clean-install-and-operations:
+    name: Clean install and operations
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Record public evaluation environment
+        shell: bash
+        run: |
+          mkdir -p evaluation-evidence
+          {
+            printf 'evaluated_commit=%s\n' "$GITHUB_SHA"
+            printf 'runner_os=%s\n' "$RUNNER_OS"
+            printf 'runner_arch=%s\n' "$RUNNER_ARCH"
+            docker --version
+            docker compose version
+          } > evaluation-evidence/environment.txt
+
+      - name: Create protected synthetic evaluation configuration
+        shell: bash
+        run: |
+          deploy_env="$RUNNER_TEMP/ict-phase1-rc.env"
+          umask 077
+          {
+            echo 'POSTGRES_DB=ict_toolkit_rc'
+            echo 'POSTGRES_USER=ict_toolkit_rc'
+            echo 'POSTGRES_PASSWORD=synthetic-rc-database-password'
+            echo 'DJANGO_SECRET_KEY=synthetic-rc-django-secret-key'
+            echo 'DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1,backend'
+            echo 'DJANGO_CORS_ALLOWED_ORIGINS=http://127.0.0.1:8088'
+            echo 'DJANGO_FORCE_HTTPS=false'
+            echo 'DJANGO_SUPERUSER_USERNAME=synthetic-rc-admin'
+            echo 'DJANGO_SUPERUSER_EMAIL=synthetic-rc-admin@example.invalid'
+            echo 'DJANGO_SUPERUSER_PASSWORD=synthetic-rc-admin-password'
+            echo 'APP_BIND_ADDRESS=127.0.0.1'
+            echo 'APP_PORT=8088'
+            echo 'ICT_IDENTITY_PROVIDER=local'
+            echo 'ICT_APPROVED_REFERENCE_IMPORTS=[]'
+            echo 'ICT_GEOCODER_PROVIDER=apps.sites.geocoders.DisabledGeocoder'
+          } > "$deploy_env"
+          chmod 600 "$deploy_env"
+          echo "DEPLOY_ENV=$deploy_env" >> "$GITHUB_ENV"
+
+      - name: Build and start clean production Compose stack
+        shell: bash
+        run: |
+          docker compose \
+            --env-file "$DEPLOY_ENV" \
+            -f compose.production.yaml \
+            config --quiet
+          docker compose \
+            --env-file "$DEPLOY_ENV" \
+            -f compose.production.yaml \
+            build
+          docker compose \
+            --env-file "$DEPLOY_ENV" \
+            -f compose.production.yaml \
+            up --detach --wait
+          docker compose \
+            --env-file "$DEPLOY_ENV" \
+            -f compose.production.yaml \
+            ps > evaluation-evidence/compose-services.txt
+
+      - name: Verify health and security headers
+        shell: bash
+        run: |
+          curl --fail --silent --show-error \
+            http://127.0.0.1:8088/api/health/ \
+            --output evaluation-evidence/health.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          payload = json.loads(Path("evaluation-evidence/health.json").read_text())
+          assert payload["status"] == "ok", payload
+          assert payload["database"] == "postgresql", payload
+          assert payload["postgis"], payload
+          PY
+
+          curl --fail --silent --show-error \
+            --dump-header "$RUNNER_TEMP/phase1-rc-headers.txt" \
+            --output /dev/null \
+            http://127.0.0.1:8088/api/health/
+          grep -Eiq '^X-Content-Type-Options:[[:space:]]*nosniff' \
+            "$RUNNER_TEMP/phase1-rc-headers.txt"
+          grep -Eiq '^X-Frame-Options:[[:space:]]*DENY' \
+            "$RUNNER_TEMP/phase1-rc-headers.txt"
+          grep -Eiq '^Referrer-Policy:[[:space:]]*same-origin' \
+            "$RUNNER_TEMP/phase1-rc-headers.txt"
+          {
+            echo 'X-Content-Type-Options: nosniff'
+            echo 'X-Frame-Options: DENY'
+            echo 'Referrer-Policy: same-origin'
+          } > evaluation-evidence/security-headers.txt
+
+      - name: Exercise incident scope, export, and audit integrity
+        shell: bash
+        run: |
+          docker compose \
+            --env-file "$DEPLOY_ENV" \
+            -f compose.production.yaml \
+            exec -T backend \
+            python manage.py shell \
+            < .github/scripts/phase1_rc_smoke.py \
+            | tee evaluation-evidence/application-smoke.txt
+
+      - name: Exercise public sign-in and token revocation
+        shell: bash
+        run: |
+          token_response="$(
+            curl --fail --silent --show-error \
+              --header 'Content-Type: application/json' \
+              --data '{"username":"egildersleeve","password":"synthetic-evaluation-password"}' \
+              http://127.0.0.1:8088/api/auth/token/
+          )"
+          token="$(
+            TOKEN_RESPONSE="$token_response" python -c \
+              'import json, os; print(json.loads(os.environ["TOKEN_RESPONSE"])["token"])'
+          )"
+          test -n "$token"
+          curl --fail --silent --show-error \
+            --header "Authorization: Token $token" \
+            http://127.0.0.1:8088/api/me/ \
+            --output "$RUNNER_TEMP/phase1-rc-me.json"
+          curl --fail --silent --show-error \
+            --request POST \
+            --header "Authorization: Token $token" \
+            http://127.0.0.1:8088/api/auth/logout/ \
+            --output /dev/null
+          revoked_status="$(
+            curl --silent --output /dev/null --write-out '%{http_code}' \
+              --header "Authorization: Token $token" \
+              http://127.0.0.1:8088/api/me/
+          )"
+          test "$revoked_status" = '401'
+          echo 'The egildersleeve test account signed in; logout revoked its evaluated token.' \
+            > evaluation-evidence/token-lifecycle.txt
+
+      - name: Verify backup and isolated restore
+        shell: bash
+        env:
+          ICT_BACKUP_DIR: ${{ runner.temp }}/ict-phase1-rc-backups
+        run: |
+          export ICT_APP_DIR="$GITHUB_WORKSPACE"
+          export ICT_DEPLOY_ENV_FILE="$DEPLOY_ENV"
+          export ICT_COMPOSE_FILE="$GITHUB_WORKSPACE/compose.production.yaml"
+          backup_path="$ICT_BACKUP_DIR/phase1-rc.dump"
+          scripts/database-recovery.sh backup "$backup_path" \
+            > evaluation-evidence/backup.txt
+          scripts/database-recovery.sh verify "$backup_path" \
+            > evaluation-evidence/backup-verify.txt
+          scripts/database-recovery.sh drill "$backup_path" \
+            > evaluation-evidence/restore-drill.txt
+          sha256sum "$backup_path" \
+            | awk '{print $1 "  phase1-rc.dump"}' \
+            > evaluation-evidence/backup-sha256.txt
+
+      - name: Verify audit chain after operations
+        shell: bash
+        run: |
+          docker compose \
+            --env-file "$DEPLOY_ENV" \
+            -f compose.production.yaml \
+            exec -T backend \
+            python manage.py shell -c \
+            "from apps.audit.services import verify_audit_chain; ok, event = verify_audit_chain(); print({'ok': ok, 'broken_sequence': getattr(event, 'sequence', None)}); raise SystemExit(0 if ok else 1)" \
+            | tee evaluation-evidence/audit-chain.txt
+
+      - name: Record sanitized monitoring exercise
+        shell: bash
+        run: |
+          docker compose \
+            --env-file "$DEPLOY_ENV" \
+            -f compose.production.yaml \
+            ps --status running --services \
+            | sort > "$RUNNER_TEMP/running-services.txt"
+          diff -u \
+            <(printf 'backend\ndb\nfrontend\n') \
+            "$RUNNER_TEMP/running-services.txt"
+          {
+            echo 'running_services=backend,db,frontend'
+            echo 'health_status=ok'
+            echo 'audit_chain=ok'
+            echo 'account_revocation=ok'
+            echo 'external_map_provider=disabled'
+            echo 'dataset=synthetic-only'
+          } > evaluation-evidence/monitoring-summary.txt
+
+      - name: Upload sanitized evaluation evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: phase-1-rc-evaluation-${{ github.sha }}
+          path: evaluation-evidence/
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Remove temporary evaluation stack
+        if: always()
+        shell: bash
+        run: |
+          if [[ -n "${DEPLOY_ENV:-}" && -f "$DEPLOY_ENV" ]]; then
+            docker compose \
+              --env-file "$DEPLOY_ENV" \
+              -f compose.production.yaml \
+              down --volumes --remove-orphans
+          fi

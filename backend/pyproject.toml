@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "ict-branch-toolkit-backend"
-version = "0.1.0"
+version = "0.1.0rc1"
 description = "Backend API for ICT Branch Toolkit"
 requires-python = ">=3.12,<3.14"
 license = { text = "AGPL-3.0-only" }
