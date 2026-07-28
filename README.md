@@ -244,10 +244,33 @@ and RF engineering practitioners must complete the human gate before the design 
 operationally suitable. Only synthetic or explicitly approved data may be used.
 
 See the [Phase 2 RF input data model](docs/data-model/phase-2.md) and
-[ADR-0008](docs/adr/0008-versioned-rf-analysis-inputs-and-subscriber-profiles.md). Calculated
-propagation results and their future approval-to-snapshot linkage are outside P2.1. Any later
+[ADR-0008](docs/adr/0008-versioned-rf-analysis-inputs-and-subscriber-profiles.md). P2.2 binds
+HAAT results to these snapshots; calculated propagation results remain outside P2.1. Any later
 output remains planning decision support, not a propagation study, frequency-coordination
 approval, spectrum authorization, or coverage guarantee.
+
+## P2.2 source-aware elevation and HAAT
+
+Issue #16 adds a server-selected, replaceable elevation-provider boundary, immutable elevation
+cache snapshots, and retained HAAT calculations. External terrain is disabled by default and no
+third-party terrain is bundled. A configured provider is called only when its complete source
+descriptor is present in the server approval allowlist.
+
+The calculation binds to an immutable approved RF input snapshot and records site and
+profile-version inputs, provider/product provenance, horizontal and vertical references,
+transformation, coverage and license metadata, every radial/azimuth and distance parameter, sample
+exclusions, rounding, warnings, and SHA-256 digests. Complete results may be approved and locked;
+partial and unavailable results remain visible but cannot be approved. Retry creates new source
+and result records instead of rewriting prior evidence.
+
+The bundled deterministic provider is synthetic and offline-only. It supports automated flat,
+sloped, rugged, missing-data, boundary, out-of-coverage, and datum-conversion fixtures. It is not
+actual terrain and must never be used for operational decisions.
+
+See [ADR-0009](docs/adr/0009-source-aware-elevation-and-reproducible-haat.md) and the
+[elevation/HAAT operations guide](docs/operations/elevation-and-haat.md). The method is a
+provisional general planning radial-average terrain method, not a claim that any one regulatory
+service's HAAT method governs all land-mobile-radio work.
 
 ## Accessibility
 

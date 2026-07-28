@@ -1,20 +1,24 @@
-# Phase 2 RF analysis input data model
+# Phase 2 RF analysis and terrain data model
 
 ## Status and boundary
 
 P2.1 implements incident-scoped, versioned subscriber profiles and immutable RF analysis input
-snapshots through migrations, API/OpenAPI, backend permissions, unit/integration tests, and an
-authenticated synthetic browser workflow.
+snapshots. P2.2 adds source-aware elevation snapshots and reproducible HAAT calculations. Both
+include migrations, API/OpenAPI, backend permissions, unit/integration tests, and authenticated
+synthetic browser workflows.
 
 The implemented aggregates are:
 
 - `SubscriberProfile`;
 - `SubscriberProfileVersion`; and
-- `RFAnalysisInputSnapshot`.
+- `RFAnalysisInputSnapshot`;
+- `ElevationSnapshot`; and
+- `HAATCalculation`.
 
-These three records are the complete P2.1 aggregate boundary. A propagation result and approved
-analysis-result relationship remain future work. A future approved analysis must reference the
-exact `RFAnalysisInputSnapshot` it used.
+The first three records are the P2.1 input aggregate. The P2.2 terrain aggregate references an
+exact site and immutable approved RF input snapshot, including its profile version, but is not a
+propagation result. Future coverage estimates must reference the exact approved RF input and
+applicable elevation/HAAT result rather than resolving a current mutable record.
 
 Only synthetic or explicitly approved data may be used. All field enumerations, numerical ranges,
 cross-field rules, calculation conventions, and subscriber assumptions are provisional. **No
@@ -247,10 +251,61 @@ write `erp_calculation_path`.
 - `antenna_center_amsl_m` is antenna-center elevation above mean sea level.
 - `haat_m` is antenna-center height relative to average terrain under a defined method.
 - All may be unknown independently.
-- P2.1 does not calculate HAAT or automatically derive/cross-correct these fields.
-- Future automated elevation/HAAT work must preserve terrain source/version, sampling method,
-  coordinate, method version, and approval snapshot. Its range/tolerance requires the same
-  qualified human gate.
+- P2.1 does not automatically derive or cross-correct these version fields.
+- P2.2 creates a separate retained `HAATCalculation`; it does not silently overwrite the profile
+  version's entered height fields.
+- The P2.2 result preserves terrain source/version, site and profile input snapshots, sampling
+  method, coordinates, datum transformation, exclusions, method version, and result digest.
+- The implemented method and all validation ranges remain provisional and require the qualified
+  human gate.
+
+## `ElevationSnapshot`
+
+An immutable elevation cache record belongs to one incident and radio site. It retains the exact
+canonical radial query and samples rather than storing only a site elevation.
+
+| Field group | Preserved evidence |
+| --- | --- |
+| Identity and scope | UUID, incident, radio site, creator, creation time |
+| Cache identity | canonical query JSON and SHA-256 |
+| Source | provider, dataset/product, source version or retrieval time, resolution, coverage |
+| References | horizontal CRS, source vertical CRS, target vertical CRS, transformation path |
+| Terms | permitted use and license/terms reference |
+| Integrity | source content digest when supplied, canonical sample digest |
+| State | `complete`, `partial`, `missing`, or `out_of_coverage`; expired records expose `stale` |
+| Retention | retrieval and stale times, warnings, immutable sample snapshot |
+
+Cache reuse requires the same incident, site, and query digest and an unexpired record. A forced
+refresh creates another immutable snapshot. Stale records remain available as evidence but are not
+reused for new work.
+
+## `HAATCalculation`
+
+Each retained calculation references one radio site, one immutable `RFAnalysisInputSnapshot` and
+its approved subscriber profile version, and one elevation snapshot. Retry creates a new
+calculation with `supersedes`; it never updates the previous result.
+
+The calculation records:
+
+- draft or approved/locked lifecycle and complete, partial, or unavailable result state;
+- method and version;
+- radial count, starting azimuth, exact generated azimuths, sample interval, distance limits, and
+  endpoint behavior;
+- coordinate earth model, datum transformation, exclusion rule, partial-result rule, and rounding;
+- antenna AGL, site elevation, antenna AMSL, average terrain, and HAAT in meters;
+- used/excluded sample counts, each exclusion, warnings, creator/approver evidence; and
+- canonical result snapshot and SHA-256.
+
+The approved RF input snapshot must contain explicit antenna-center AGL. Complete results may be
+approved by an authorized reviewer. Partial and unavailable results remain visible but cannot be
+approved.
+One request is limited to 10,000 terrain samples as a provisional resource-safety guard; it is not
+an operational method limit.
+
+`haat-radial-average-v1-provisional` is a general planning radial-average terrain method. It is
+not represented as the governing method for any FCC, NTIA, coordination, licensing, or
+land-mobile-radio service. See [ADR-0009](../adr/0009-source-aware-elevation-and-reproducible-haat.md)
+and the [operations guide](../operations/elevation-and-haat.md).
 
 ## `RFAnalysisInputSnapshot`
 
@@ -271,8 +326,9 @@ analysis use. Creating it does not create or approve a propagation result.
 | `created_at`      | UTC timestamp, required                          | Server-assigned snapshot creation time.                                        |
 | `archived_at`     | UTC timestamp, nullable                          | Archive marker; `null` means active.                                           |
 
-Snapshots are immutable and retained; archive is the removal path. A future approved analysis must
-reference its exact snapshot and include that snapshot identity/digest in result provenance.
+Snapshots are immutable and retained; archive is the removal path. P2.2 HAAT calculations
+reference the exact snapshot and include its identity/digest in result provenance. Future
+calculated estimates must preserve the same boundary.
 The create action accepts only a nonblank `label` for an approved profile version; every stored
 snapshot field is server-controlled and read-only.
 

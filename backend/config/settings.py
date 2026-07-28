@@ -98,6 +98,26 @@ if ICT_TOKEN_TTL_SECONDS <= 0:
     raise ValueError("ICT_TOKEN_TTL_SECONDS must be greater than zero.")
 ICT_APPROVED_REFERENCE_IMPORTS = json.loads(os.getenv("ICT_APPROVED_REFERENCE_IMPORTS", "[]"))
 ICT_GEOCODER_PROVIDER = os.getenv("ICT_GEOCODER_PROVIDER", "apps.sites.geocoders.DisabledGeocoder")
+ICT_ELEVATION_PROVIDER = os.getenv(
+    "ICT_ELEVATION_PROVIDER",
+    "apps.rf_analysis.elevation.DisabledElevationProvider",
+)
+ICT_APPROVED_ELEVATION_SOURCES = json.loads(os.getenv("ICT_APPROVED_ELEVATION_SOURCES", "[]"))
+ICT_ELEVATION_CACHE_TTL_SECONDS = int(os.getenv("ICT_ELEVATION_CACHE_TTL_SECONDS", "604800"))
+if ICT_ELEVATION_CACHE_TTL_SECONDS < 0:
+    raise ValueError("ICT_ELEVATION_CACHE_TTL_SECONDS cannot be negative.")
+ICT_SYNTHETIC_ELEVATION_MODE = os.getenv("ICT_SYNTHETIC_ELEVATION_MODE", "flat")
+if ICT_SYNTHETIC_ELEVATION_MODE not in {
+    "flat",
+    "slope",
+    "rugged",
+    "missing",
+    "boundary",
+    "out_of_coverage",
+    "datum",
+    "failure",
+}:
+    raise ValueError("ICT_SYNTHETIC_ELEVATION_MODE is not supported.")
 
 CORS_ALLOWED_ORIGINS = [
     origin.strip()

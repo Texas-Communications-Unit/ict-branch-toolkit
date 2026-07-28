@@ -1,16 +1,21 @@
 import {
   AUTHENTICATION_EXPIRED_EVENT,
+  approveHAATCalculation,
   approveSubscriberProfileVersion,
   archiveSubscriberProfile,
   copySubscriberProfileVersion,
+  createHAATCalculation,
   createRFAnalysisInputSnapshot,
   createSubscriberProfile,
+  getElevationProviderStatus,
   hasActiveSession,
+  listHAATCalculations,
   listRFAnalysisInputSnapshots,
   listSubscriberProfiles,
   listSubscriberProfileVersions,
   login,
   logout,
+  retryHAATCalculation,
   updateSubscriberProfile,
   updateSubscriberProfileVersion,
 } from "../src/api";
@@ -199,5 +204,77 @@ test("uses the incident-scoped RF profile and immutable snapshot endpoints", asy
     expect.objectContaining({
       Authorization: "Token synthetic-rf-token",
     }),
+  );
+});
+
+test("uses source-aware elevation and immutable HAAT workflow endpoints", async () => {
+  sessionStorage.setItem("ict-toolkit-token", "synthetic-haat-token");
+  sessionStorage.setItem(
+    "ict-toolkit-token-expires-at",
+    "2099-07-27T20:00:00Z",
+  );
+  const fetchMock = vi
+    .spyOn(globalThis, "fetch")
+    .mockImplementation(async (input) => {
+      const url = String(input);
+      if (url.includes("/api/haat-calculations/?")) {
+        return new Response(
+          JSON.stringify({
+            count: 0,
+            next: null,
+            previous: null,
+            results: [],
+          }),
+          { status: 200 },
+        );
+      }
+      return new Response(JSON.stringify({ id: "haat-result" }), {
+        status: 200,
+      });
+    });
+
+  await getElevationProviderStatus();
+  await listHAATCalculations("incident / one");
+  await createHAATCalculation({
+    site: "site-1",
+    rf_input_snapshot: "rf-snapshot-1",
+    radial_count: 8,
+    start_azimuth_deg: "0.000",
+    sampling_interval_m: 1000,
+    inner_distance_m: 3000,
+    outer_distance_m: 16000,
+    rounding_m: "0.100",
+    force_refresh: false,
+  });
+  await retryHAATCalculation("haat-1");
+  await approveHAATCalculation("haat-1");
+
+  expect(String(fetchMock.mock.calls[0][0])).toBe(
+    "http://localhost:8000/api/elevation-provider/",
+  );
+  expect(String(fetchMock.mock.calls[1][0])).toBe(
+    "http://localhost:8000/api/haat-calculations/?incident=incident%20%2F%20one",
+  );
+  expect(fetchMock.mock.calls[2][1]).toEqual(
+    expect.objectContaining({
+      method: "POST",
+      body: JSON.stringify({
+        site: "site-1",
+        rf_input_snapshot: "rf-snapshot-1",
+        radial_count: 8,
+        start_azimuth_deg: "0.000",
+        sampling_interval_m: 1000,
+        inner_distance_m: 3000,
+        outer_distance_m: 16000,
+        rounding_m: "0.100",
+        force_refresh: false,
+      }),
+    }),
+  );
+  expect(String(fetchMock.mock.calls[3][0])).toBe(
+    "http://localhost:8000/api/haat-calculations/haat-1/retry/",
+  );
+  expect(String(fetchMock.mock.calls[4][0])).toBe(
+    "http://localhost:8000/api/haat-calculations/haat-1/approve/",
   );
 });

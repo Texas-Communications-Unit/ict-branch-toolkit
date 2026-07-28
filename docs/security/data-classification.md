@@ -33,6 +33,17 @@ retain minimized profile identity/description, version identity, canonical RF va
 notes, the calculation path, digest, and approval metadata needed to reproduce the later
 decision-support input selection.
 
+Elevation queries, cached samples, provider metadata, HAAT results, and their snapshots inherit
+the incident and source-material classification. Coordinates and terrain-derived site heights may
+identify infrastructure even when names are minimized. They are protected application records,
+not public telemetry. The browser cannot select an arbitrary provider or remote URL. Audit detail
+does not duplicate coordinates or sample values.
+
+Only deterministic synthetic terrain is committed to the repository. A real elevation dataset or
+cache may not be committed, exported, or redistributed until its exact permitted use, attribution,
+retention, and redistribution terms are approved. SHA-256 digests identify retained content; they
+do not anonymize the source or incident.
+
 ## Current prototype controls
 
 - Centralized backend policy for installation and incident-scoped roles.

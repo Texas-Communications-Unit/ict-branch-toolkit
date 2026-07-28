@@ -2,19 +2,36 @@ from django.db.models import Prefetch
 from django.utils import timezone
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema, extend_schema_view
-from rest_framework import mixins, viewsets
+from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from apps.accounts.models import Role
 from apps.accounts.permissions import PolicyPermission
 from apps.accounts.policy import RF_APPROVE, RF_EDIT, RF_VIEW, role_for_user, user_has_permission
 from apps.audit.services import record_event
 
-from .models import RFAnalysisInputSnapshot, SubscriberProfile, SubscriberProfileVersion
+from .elevation import provider_status
+from .haat import (
+    approve_haat_calculation,
+    create_haat_calculation,
+    retry_haat_calculation,
+)
+from .models import (
+    ElevationSnapshot,
+    HAATCalculation,
+    RFAnalysisInputSnapshot,
+    SubscriberProfile,
+    SubscriberProfileVersion,
+)
 from .serializers import (
+    CreateHAATCalculationSerializer,
     CreateRFAnalysisInputSnapshotSerializer,
+    ElevationSnapshotSerializer,
+    HAATCalculationSerializer,
     RFAnalysisInputSnapshotSerializer,
     SubscriberProfileSerializer,
     SubscriberProfileVersionSerializer,
@@ -322,3 +339,156 @@ class RFAnalysisInputSnapshotViewSet(viewsets.ReadOnlyModelViewSet):
             details={"changed_fields": ["archived_at"]},
         )
         return Response(self.get_serializer(snapshot).data)
+
+
+class ElevationProviderStatusView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(responses={200: OpenApiTypes.OBJECT})
+    def get(self, request):
+        return Response(provider_status())
+
+
+class ElevationSnapshotViewSet(
+    mixins.RetrieveModelMixin,
+    viewsets.GenericViewSet,
+):
+    queryset = ElevationSnapshot.objects.none()
+    serializer_class = ElevationSnapshotSerializer
+    permission_classes = [PolicyPermission]
+    policy_actions = {"retrieve": RF_VIEW}
+
+    def get_queryset(self):
+        return scoped_to_incidents(
+            ElevationSnapshot.objects.select_related(
+                "incident",
+                "site",
+                "created_by",
+            ),
+            self.request.user,
+        )
+
+
+class HAATCalculationViewSet(
+    mixins.ListModelMixin,
+    mixins.RetrieveModelMixin,
+    mixins.CreateModelMixin,
+    viewsets.GenericViewSet,
+):
+    queryset = HAATCalculation.objects.none()
+    serializer_class = HAATCalculationSerializer
+    permission_classes = [PolicyPermission]
+    policy_actions = {
+        "list": RF_VIEW,
+        "retrieve": RF_VIEW,
+        "create": RF_EDIT,
+        "retry": RF_EDIT,
+        "approve": RF_APPROVE,
+    }
+
+    def get_queryset(self):
+        queryset = scoped_to_incidents(
+            HAATCalculation.objects.select_related(
+                "incident",
+                "site",
+                "profile_version__profile",
+                "rf_input_snapshot",
+                "elevation_snapshot",
+                "created_by",
+                "approved_by",
+                "supersedes",
+            ),
+            self.request.user,
+        )
+        incident_id = self.request.query_params.get("incident")
+        return queryset.filter(incident_id=incident_id) if incident_id else queryset
+
+    def get_serializer_class(self):
+        if self.action == "create":
+            return CreateHAATCalculationSerializer
+        return HAATCalculationSerializer
+
+    @extend_schema(
+        request=CreateHAATCalculationSerializer,
+        responses={201: HAATCalculationSerializer},
+    )
+    def create(self, request, *args, **kwargs):
+        request_serializer = CreateHAATCalculationSerializer(data=request.data)
+        request_serializer.is_valid(raise_exception=True)
+        values = request_serializer.validated_data
+        site = values["site"]
+        if not user_has_permission(request.user, RF_EDIT, site.incident):
+            raise PermissionDenied("Your incident role cannot calculate HAAT.")
+        calculation, cache_hit = create_haat_calculation(
+            site=site,
+            rf_input_snapshot=values["rf_input_snapshot"],
+            actor=request.user,
+            radial_count=values["radial_count"],
+            start_azimuth_deg=values["start_azimuth_deg"],
+            sampling_interval_m=values["sampling_interval_m"],
+            inner_distance_m=values["inner_distance_m"],
+            outer_distance_m=values["outer_distance_m"],
+            rounding_m=values["rounding_m"],
+            force_refresh=values["force_refresh"],
+        )
+        record_event(
+            actor=request.user,
+            action="haat_calculation.created",
+            target=calculation,
+            details={
+                "changed_fields": [
+                    "algorithm_snapshot",
+                    "calculation_state",
+                    "elevation_snapshot",
+                    "result_sha256",
+                    "result_snapshot",
+                    "site",
+                    "rf_input_snapshot",
+                ],
+                "cache_hit": cache_hit,
+            },
+        )
+        return Response(
+            HAATCalculationSerializer(calculation).data,
+            status=status.HTTP_201_CREATED,
+        )
+
+    @extend_schema(request=None, responses={201: HAATCalculationSerializer})
+    @action(detail=True, methods=["post"])
+    def retry(self, request, pk=None):
+        source = self.get_object()
+        calculation, cache_hit = retry_haat_calculation(source, actor=request.user)
+        record_event(
+            actor=request.user,
+            action="haat_calculation.retried",
+            target=calculation,
+            details={
+                "changed_fields": [
+                    "elevation_snapshot",
+                    "result_sha256",
+                    "result_snapshot",
+                    "supersedes",
+                ],
+                "cache_hit": cache_hit,
+                "superseded_calculation_id": str(source.id),
+            },
+        )
+        return Response(
+            HAATCalculationSerializer(calculation).data,
+            status=status.HTTP_201_CREATED,
+        )
+
+    @extend_schema(request=None, responses={200: HAATCalculationSerializer})
+    @action(detail=True, methods=["post"])
+    def approve(self, request, pk=None):
+        calculation = approve_haat_calculation(self.get_object(), actor=request.user)
+        record_event(
+            actor=request.user,
+            action="haat_calculation.approved",
+            target=calculation,
+            details={
+                "changed_fields": ["approved_at", "approved_by", "status"],
+                "result_sha256": calculation.result_sha256,
+            },
+        )
+        return Response(HAATCalculationSerializer(calculation).data)

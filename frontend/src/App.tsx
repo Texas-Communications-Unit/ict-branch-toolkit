@@ -15,6 +15,7 @@ import {
   logout,
 } from "./api";
 import { BrandMark } from "./BrandMark";
+import { HAATWorkspace } from "./HAATWorkspace";
 import { MapShell } from "./MapShell";
 import { PlanWorkspace } from "./PlanWorkspace";
 import { RFProfileWorkspace } from "./RFProfileWorkspace";
@@ -360,7 +361,7 @@ export default function App() {
         <div className="identity-summary">
           <span>{currentUser?.display_name}</span>
           <div className="prototype-badge">
-            P2.1 Prototype · {currentUser?.role}
+            P2.2 Prototype · {currentUser?.role}
           </div>
           <button
             className="sign-out-button"
@@ -490,6 +491,7 @@ export default function App() {
         </section>
         <PlanWorkspace incident={selected} />
         <RFProfileWorkspace incident={selected} />
+        <HAATWorkspace incident={selected} />
         <MapShell incident={selected} />
         <section className="library-panel" aria-labelledby="library-heading">
           <div className="section-heading">

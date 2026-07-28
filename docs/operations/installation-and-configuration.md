@@ -80,6 +80,10 @@ Security and policy settings:
 | `ICT_ROLE_POLICY_OVERRIDES`      | `{}`              | JSON policy overrides. Review with least privilege and test incident-scoped authorization before use.                                                                                                |
 | `ICT_APPROVED_REFERENCE_IMPORTS` | `[]`              | Exact, checksum-pinned approval objects only. Follow the [reference import runbook](reference-library-imports.md).                                                                                   |
 | `ICT_GEOCODER_PROVIDER`          | disabled provider | Keep disabled unless a separate privacy, terms, reliability, and provenance review approves a provider implementation.                                                                               |
+| `ICT_ELEVATION_PROVIDER`         | disabled provider | Server-selected implementation. Keep disabled until the source and adapter pass the [elevation/HAAT approval procedure](elevation-and-haat.md).                                                      |
+| `ICT_APPROVED_ELEVATION_SOURCES` | `[]`              | Exact complete source descriptors, including references, terms, coverage, digest, and network mode. Never include credentials.                                                                      |
+| `ICT_ELEVATION_CACHE_TTL_SECONDS` | `604800`          | Maximum reuse period for an exact cached query. Expiration marks retained evidence stale; it does not delete or rewrite it.                                                                          |
+| `ICT_SYNTHETIC_ELEVATION_MODE`   | `flat`            | Applies only to the explicitly selected synthetic fixture provider. It is not actual terrain.                                                                                                        |
 
 The neutral, network-free map is the default. Enabling any external map requires
 the [map-provider deployment checklist](map-provider-deployment-checklist.md)
@@ -138,6 +142,9 @@ results of these checks:
    [recovery runbook](backup-restore-and-rollback.md).
 10. External map or reference data is absent unless its separate human approval
     and provenance record is complete.
+11. Elevation retrieval reports disabled unless an exact source approval exists;
+    if enabled, verify its source references and one explicitly approved test
+    through the [elevation/HAAT operations guide](elevation-and-haat.md).
 
 If any check fails, leave external access disabled, preserve sanitized evidence,
 and return the installation to the maintainer for review. Do not work around a

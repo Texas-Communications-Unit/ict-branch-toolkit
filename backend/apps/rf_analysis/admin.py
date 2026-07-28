@@ -1,6 +1,12 @@
 from django.contrib import admin
 
-from .models import RFAnalysisInputSnapshot, SubscriberProfile, SubscriberProfileVersion
+from .models import (
+    ElevationSnapshot,
+    HAATCalculation,
+    RFAnalysisInputSnapshot,
+    SubscriberProfile,
+    SubscriberProfileVersion,
+)
 
 
 class ReadOnlyRFAdmin(admin.ModelAdmin):
@@ -33,3 +39,32 @@ class RFAnalysisInputSnapshotAdmin(ReadOnlyRFAdmin):
     list_display = ("label", "incident", "profile_version", "created_by", "created_at")
     list_filter = ("archived_at",)
     search_fields = ("label", "incident__name", "input_sha256")
+
+
+@admin.register(ElevationSnapshot)
+class ElevationSnapshotAdmin(ReadOnlyRFAdmin):
+    list_display = (
+        "site",
+        "provider",
+        "dataset_product",
+        "acquisition_state",
+        "retrieved_at",
+        "stale_at",
+    )
+    list_filter = ("provider", "acquisition_state")
+    search_fields = ("site__name", "incident__name", "query_sha256", "sample_sha256")
+
+
+@admin.register(HAATCalculation)
+class HAATCalculationAdmin(ReadOnlyRFAdmin):
+    list_display = (
+        "site",
+        "rf_input_snapshot",
+        "profile_version",
+        "calculation_state",
+        "status",
+        "haat_m",
+        "created_at",
+    )
+    list_filter = ("calculation_state", "status", "method_version")
+    search_fields = ("site__name", "profile_version__profile__name", "result_sha256")

@@ -5,8 +5,10 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
+from django.utils import timezone
 
 from apps.incidents.models import Incident
+from apps.sites.models import RadioSite
 
 FREQUENCY_MAX_HZ = 1_000_000_000_000
 POWER_MAX_W = Decimal("10000000")
@@ -349,3 +351,252 @@ class RFAnalysisInputSnapshot(models.Model):
 
     def delete(self, *args, **kwargs):
         raise ValidationError("RF analysis input snapshots are retained.")
+
+
+class ElevationSnapshot(models.Model):
+    class AcquisitionState(models.TextChoices):
+        COMPLETE = "complete", "Complete"
+        PARTIAL = "partial", "Partial"
+        MISSING = "missing", "Missing"
+        OUT_OF_COVERAGE = "out_of_coverage", "Out of coverage"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    incident = models.ForeignKey(
+        Incident,
+        related_name="elevation_snapshots",
+        on_delete=models.PROTECT,
+    )
+    site = models.ForeignKey(
+        RadioSite,
+        related_name="elevation_snapshots",
+        on_delete=models.PROTECT,
+    )
+    query_sha256 = models.CharField(max_length=64, db_index=True)
+    query_snapshot = models.JSONField()
+    provider = models.CharField(max_length=160)
+    dataset_product = models.CharField(max_length=240)
+    horizontal_crs = models.CharField(max_length=120)
+    vertical_crs = models.CharField(max_length=120)
+    target_vertical_crs = models.CharField(max_length=120)
+    resolution_m = models.DecimalField(
+        max_digits=12,
+        decimal_places=3,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(Decimal("0")), MaxValueValidator(LENGTH_MAX_M)],
+    )
+    source_version = models.CharField(max_length=160, blank=True)
+    source_retrieved_at = models.DateTimeField(null=True, blank=True)
+    license_terms_url = models.URLField(max_length=500, blank=True)
+    permitted_use = models.TextField()
+    coverage = models.JSONField(default=dict, blank=True)
+    source_content_sha256 = models.CharField(max_length=64, blank=True)
+    acquisition_state = models.CharField(max_length=24, choices=AcquisitionState.choices)
+    sample_snapshot = models.JSONField()
+    sample_sha256 = models.CharField(max_length=64)
+    transformation = models.JSONField(default=dict, blank=True)
+    warnings = models.JSONField(default=list, blank=True)
+    retrieved_at = models.DateTimeField()
+    stale_at = models.DateTimeField(null=True, blank=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        related_name="created_elevation_snapshots",
+        on_delete=models.PROTECT,
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(
+                fields=["incident", "site", "query_sha256"],
+                name="rf_elev_cache_lookup_idx",
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.site}: {self.dataset_product} ({self.acquisition_state})"
+
+    def save(self, *args, **kwargs):
+        if self.pk and ElevationSnapshot.objects.filter(pk=self.pk).exists():
+            raise ValidationError("Elevation snapshots are immutable.")
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError("Elevation snapshots are retained.")
+
+    @property
+    def current_state(self):
+        if self.stale_at and self.stale_at <= timezone.now():
+            return "stale"
+        return self.acquisition_state
+
+
+class HAATCalculation(models.Model):
+    class Status(models.TextChoices):
+        DRAFT = "draft", "Draft"
+        APPROVED = "approved", "Approved"
+
+    class CalculationState(models.TextChoices):
+        COMPLETE = "complete", "Complete"
+        PARTIAL = "partial", "Partial"
+        UNAVAILABLE = "unavailable", "Unavailable"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    incident = models.ForeignKey(
+        Incident,
+        related_name="haat_calculations",
+        on_delete=models.PROTECT,
+    )
+    site = models.ForeignKey(
+        RadioSite,
+        related_name="haat_calculations",
+        on_delete=models.PROTECT,
+    )
+    profile_version = models.ForeignKey(
+        SubscriberProfileVersion,
+        related_name="haat_calculations",
+        on_delete=models.PROTECT,
+    )
+    rf_input_snapshot = models.ForeignKey(
+        RFAnalysisInputSnapshot,
+        related_name="haat_calculations",
+        on_delete=models.PROTECT,
+    )
+    elevation_snapshot = models.ForeignKey(
+        ElevationSnapshot,
+        related_name="haat_calculations",
+        on_delete=models.PROTECT,
+    )
+    supersedes = models.ForeignKey(
+        "self",
+        related_name="retries",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+    )
+    status = models.CharField(max_length=12, choices=Status.choices, default=Status.DRAFT)
+    calculation_state = models.CharField(max_length=16, choices=CalculationState.choices)
+    method = models.CharField(max_length=80)
+    method_version = models.CharField(max_length=80)
+    radial_count = models.PositiveSmallIntegerField(
+        validators=[MinValueValidator(1), MaxValueValidator(360)]
+    )
+    start_azimuth_deg = models.DecimalField(
+        max_digits=6,
+        decimal_places=3,
+        validators=[MinValueValidator(Decimal("0")), MaxValueValidator(Decimal("359.999"))],
+    )
+    sampling_interval_m = models.PositiveIntegerField(
+        validators=[MinValueValidator(1), MaxValueValidator(100_000)]
+    )
+    inner_distance_m = models.PositiveIntegerField(
+        validators=[MinValueValidator(1), MaxValueValidator(100_000)]
+    )
+    outer_distance_m = models.PositiveIntegerField(
+        validators=[MinValueValidator(1), MaxValueValidator(100_000)]
+    )
+    rounding_m = models.DecimalField(
+        max_digits=7,
+        decimal_places=3,
+        validators=[MinValueValidator(Decimal("0.001")), MaxValueValidator(Decimal("100"))],
+    )
+    antenna_agl_m = models.DecimalField(
+        max_digits=12,
+        decimal_places=3,
+        validators=[MinValueValidator(Decimal("0")), MaxValueValidator(HEIGHT_MAX_M)],
+    )
+    site_elevation_m = models.DecimalField(
+        max_digits=12,
+        decimal_places=3,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(HEIGHT_MIN_M), MaxValueValidator(HEIGHT_MAX_M)],
+    )
+    antenna_amsl_m = models.DecimalField(
+        max_digits=12,
+        decimal_places=3,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(HEIGHT_MIN_M), MaxValueValidator(HEIGHT_MAX_M)],
+    )
+    average_terrain_m = models.DecimalField(
+        max_digits=12,
+        decimal_places=3,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(HEIGHT_MIN_M), MaxValueValidator(HEIGHT_MAX_M)],
+    )
+    haat_m = models.DecimalField(
+        max_digits=12,
+        decimal_places=3,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(HEIGHT_MIN_M), MaxValueValidator(HEIGHT_MAX_M)],
+    )
+    sample_count = models.PositiveIntegerField(default=0)
+    excluded_sample_count = models.PositiveIntegerField(default=0)
+    algorithm_snapshot = models.JSONField()
+    exclusions = models.JSONField(default=list, blank=True)
+    warnings = models.JSONField(default=list, blank=True)
+    result_snapshot = models.JSONField()
+    result_sha256 = models.CharField(max_length=64)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        related_name="created_haat_calculations",
+        on_delete=models.PROTECT,
+    )
+    approved_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        related_name="approved_haat_calculations",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+    )
+    approved_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(
+                fields=["incident", "site", "status"],
+                name="rf_haat_inc_site_status_idx",
+            )
+        ]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(outer_distance_m__gt=models.F("inner_distance_m")),
+                name="rf_haat_outer_gt_inner",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    models.Q(
+                        status="draft",
+                        approved_by__isnull=True,
+                        approved_at__isnull=True,
+                    )
+                    | models.Q(
+                        status="approved",
+                        approved_by__isnull=False,
+                        approved_at__isnull=False,
+                    )
+                ),
+                name="rf_haat_approval_consistent",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.site}: {self.method_version} ({self.calculation_state})"
+
+    def save(self, *args, **kwargs):
+        if self.pk and HAATCalculation.objects.filter(pk=self.pk).exists():
+            raise ValidationError("HAAT calculations are immutable after creation.")
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError("HAAT calculations are retained.")
+
+    @property
+    def is_locked(self):
+        return self.status == self.Status.APPROVED
