@@ -89,6 +89,7 @@ Security and policy settings:
 | `RADIOREFERENCE_MAX_RESPONSE_BYTES` | `1048576`     | Synthetic SOAP contract input limit. Must remain between 1,024 and 5,242,880 bytes.                                                                                                                   |
 | `ICT_APPROVED_CALIBRATION_METHODS` | `[]`            | Exact incident-local calibration versions that passed security/privacy and qualified RF review. This never authorizes real collection or default-preset promotion.                                  |
 | `ICT_APPROVED_PHASE2_VALIDATION_PROFILES` | `[]`    | Exact P2.6 evidence profile accepted by qualified RF/GIS, security/privacy, accessibility, operations, and maintainer review. Empty fails closed; enabling it does not authorize deployment or real data. |
+| `ICT_APPROVED_DECONFLICTION_RULESETS` | `[]`         | Exact RF deconfliction rule-set versions that passed the [qualified practitioner gate](rf-deconfliction.md). Draft synthetic analysis remains available; approval fails closed.                      |
 
 The neutral, network-free map is the default. Enabling any external map requires
 the [map-provider deployment checklist](map-provider-deployment-checklist.md)
@@ -157,6 +158,10 @@ results of these checks:
 13. Calibration approval remains disabled unless its separate field-data authority,
     privacy, and qualified RF review are recorded. Verify only synthetic observations
     through the [field observation and calibration guide](field-observations-and-calibration.md).
+14. RF deconfliction approval remains disabled unless the exact rule set passed the qualified
+    COML, COMT, COMC, and frequency-coordination gate. Verify the positive, negative, boundary,
+    squelch, immutability, digest, authorization, and audit cases through the
+    [RF deconfliction guide](rf-deconfliction.md).
 
 If any check fails, leave external access disabled, preserve sanitized evidence,
 and return the installation to the maintainer for review. Do not work around a

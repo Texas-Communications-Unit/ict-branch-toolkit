@@ -18,6 +18,7 @@ import { BrandMark } from "./BrandMark";
 import { HAATWorkspace } from "./HAATWorkspace";
 import { CoverageEstimateWorkspace } from "./CoverageEstimateWorkspace";
 import { DirectionalCoverageWorkspace } from "./DirectionalCoverageWorkspace";
+import { DeconflictionWorkspace } from "./DeconflictionWorkspace";
 import { FieldCalibrationWorkspace } from "./FieldCalibrationWorkspace";
 import { MapShell } from "./MapShell";
 import { PlanWorkspace } from "./PlanWorkspace";
@@ -498,6 +499,7 @@ export default function App() {
         <HAATWorkspace incident={selected} />
         <CoverageEstimateWorkspace incident={selected} />
         <DirectionalCoverageWorkspace incident={selected} />
+        <DeconflictionWorkspace incident={selected} />
         <FieldCalibrationWorkspace incident={selected} />
         <Phase2ValidationWorkspace incident={selected} />
         <MapShell incident={selected} />

@@ -121,6 +121,26 @@ See [ADR-0009](../adr/0009-source-aware-elevation-and-reproducible-haat.md) and 
 See [ADR-0012](../adr/0012-field-observations-and-incident-local-calibration.md) and the
 [field observation and calibration guide](../operations/field-observations-and-calibration.md).
 
+## RF deconfliction controls
+
+- `rf.view`, `rf.edit`, and `rf.approve` govern incident-scoped deconfliction listing, creation,
+  and approval. Browser controls are not authorization.
+- Creation requires an approved ICS-205 revision owned by the selected active incident. Active
+  resources are checked for omission only when the user explicitly selects them.
+- Analyses, input snapshots, result snapshots, and digests are retained and immutable. A changed
+  plan, resource selection, source release, frozen area, or rule version requires a new analysis.
+- Approval fails closed unless the exact rule-set version is server-allowlisted and the retained
+  input and result digests reproduce.
+- `deconfliction_analysis.created` and `deconfliction_analysis.approved` audit events record the
+  analysis, revision, rule-set version, counts, and digests. They do not copy frequencies,
+  squelch values, coordinates, site snapshots, selected-resource content, or warnings.
+- A warning or absence of warnings remains decision support. It does not provide frequency
+  coordination, spectrum authorization, propagation evidence, interference protection, or
+  incident-command approval.
+
+See [ADR-0015](../adr/0015-versioned-rf-deconfliction-decision-support.md) and the
+[RF deconfliction operations guide](../operations/rf-deconfliction.md).
+
 ## P1.6 append-only audit review
 
 The append-only implementation, request transaction boundary, hash-chain verification, protected

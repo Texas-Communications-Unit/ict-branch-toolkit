@@ -11,6 +11,9 @@ import type {
   CreateCalibrationSetPayload,
   CreateSubscriberProfilePayload,
   CreateFieldObservationPayload,
+  CreateDeconflictionAnalysisPayload,
+  DeconflictionAnalysis,
+  DeconflictionRuleSetStatus,
   DirectionalAnalysisStatus,
   DirectionalCoverageAnalysis,
   CurrentUser,
@@ -636,6 +639,37 @@ export function approveCalibrationSet(id: string): Promise<CalibrationSet> {
   return request<CalibrationSet>(`/api/calibration-sets/${id}/approve/`, {
     method: "POST",
   });
+}
+
+export function getDeconflictionStatus(): Promise<DeconflictionRuleSetStatus> {
+  return request<DeconflictionRuleSetStatus>("/api/deconfliction-status/");
+}
+
+export async function listDeconflictionAnalyses(
+  incident: string,
+): Promise<DeconflictionAnalysis[]> {
+  const result = await request<Paginated<DeconflictionAnalysis>>(
+    `/api/deconfliction-analyses/?incident=${encodeURIComponent(incident)}`,
+  );
+  return result.results;
+}
+
+export function createDeconflictionAnalysis(
+  payload: CreateDeconflictionAnalysisPayload,
+): Promise<DeconflictionAnalysis> {
+  return request<DeconflictionAnalysis>("/api/deconfliction-analyses/", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function approveDeconflictionAnalysis(
+  id: string,
+): Promise<DeconflictionAnalysis> {
+  return request<DeconflictionAnalysis>(
+    `/api/deconfliction-analyses/${id}/approve/`,
+    { method: "POST" },
+  );
 }
 
 export function getPhase2ValidationStatus(): Promise<Phase2ValidationStatus> {

@@ -1,4 +1,4 @@
-# ADR-0015: Retained Phase 2 validation evidence bundles
+# ADR-0016: Retained Phase 2 validation evidence bundles
 
 ## Status
 

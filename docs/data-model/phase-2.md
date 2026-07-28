@@ -7,7 +7,8 @@ snapshots. P2.2 adds source-aware elevation snapshots and reproducible HAAT calc
 include migrations, API/OpenAPI, backend permissions, unit/integration tests, and authenticated
 synthetic browser workflows. P2.3 adds an immutable, explainable `CoverageEstimate` aggregate and
 a replaceable provisional calculation-engine boundary. P2.4 adds immutable separate-direction
-talk-out, talk-in, and probable two-way analysis.
+talk-out, talk-in, and probable two-way analysis. Issue #39 adds immutable, versioned
+`DeconflictionAnalysis` decision-support evidence tied to an approved ICS-205 revision.
 
 The implemented aggregates are:
 
@@ -17,7 +18,8 @@ The implemented aggregates are:
 - `ElevationSnapshot`;
 - `HAATCalculation`;
 - `CoverageEstimate`; and
-- `DirectionalCoverageAnalysis`.
+- `DirectionalCoverageAnalysis`; and
+- `DeconflictionAnalysis`.
 
 The first three records are the P2.1 input aggregate. The P2.2 terrain aggregate references an
 exact site and immutable approved RF input snapshot, including its profile version, but is not a
@@ -459,8 +461,42 @@ Approval requires the exact validation profile in
 requires `plan.export`, records exact-byte SHA-256 and size in the append-only
 audit chain, and supports authorized digest verification.
 
-See [ADR-0015](../adr/0015-phase-2-validation-evidence-bundles.md) and the
+See [ADR-0016](../adr/0016-phase-2-validation-evidence-bundles.md) and the
 [P2.6 operations guide](../operations/phase-2-validation-and-rc-evaluation.md).
+
+## `DeconflictionAnalysis`
+
+Each retained analysis belongs to one active incident and references one approved ICS-205
+revision. The create request may also select up to 500 unique active conventional-channel
+resources from effective releases for explicit omission checking. The aggregate stores:
+
+- draft or approved/locked lifecycle;
+- exact rule-set identity and version;
+- canonical input snapshot and SHA-256;
+- the approved revision identity, number, approver, and approval time;
+- every assignment's plan fields, frequency/squelch values, resource snapshot, and frozen
+  operational or coordination areas;
+- the exact selected active-resource snapshots, source/release metadata, and content digests;
+- threshold and complete stable rule definitions;
+- every warning's rule ID/version, severity, compared inputs, evidence, assumptions,
+  plain-language explanation, and disclaimer;
+- warning count, canonical result snapshot and SHA-256; and
+- creator/approver identity and timestamps.
+
+Analyses are immutable and cannot be deleted. Approval is an atomic lifecycle transition that
+requires the exact rule-set version in `ICT_APPROVED_DECONFLICTION_RULESETS` and reproducible input
+and result digests. A changed plan, source release, selected resource, frozen area, threshold, or
+rule behavior creates another analysis.
+
+`rf-deconfliction-v1-provisional` evaluates co-channel and adjacent-channel relationships only
+when frozen areas overlap, with an inclusive provisional 12,500 Hz adjacent threshold. It also
+reports reversed repeater pairs, duplicate pairs under different names, missing RX/TX values,
+selected active resources omitted from the approved revision, and assignments with no approved
+area. Squelch differences remain evidence and never suppress warnings. Missing locations remain
+missing.
+
+See [ADR-0015](../adr/0015-versioned-rf-deconfliction-decision-support.md) and the
+[RF deconfliction operations guide](../operations/rf-deconfliction.md).
 
 ## `RFAnalysisInputSnapshot`
 

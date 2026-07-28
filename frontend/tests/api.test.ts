@@ -1,19 +1,23 @@
 import {
   AUTHENTICATION_EXPIRED_EVENT,
   approveCalibrationSet,
+  approveDeconflictionAnalysis,
   approveHAATCalculation,
   approveSubscriberProfileVersion,
   archiveSubscriberProfile,
   copySubscriberProfileVersion,
   createCalibrationSet,
+  createDeconflictionAnalysis,
   createFieldObservation,
   createHAATCalculation,
   createRFAnalysisInputSnapshot,
   createSubscriberProfile,
   getElevationProviderStatus,
   getCalibrationStatus,
+  getDeconflictionStatus,
   hasActiveSession,
   listCalibrationSets,
+  listDeconflictionAnalyses,
   listFieldObservations,
   listHAATCalculations,
   listRFAnalysisInputSnapshots,
@@ -393,5 +397,61 @@ test("uses incident-scoped field observation and calibration endpoints", async (
   );
   expect(String(fetchMock.mock.calls[6][0])).toBe(
     "http://localhost:8000/api/calibration-sets/calibration-1/approve/",
+  );
+});
+
+test("uses the versioned deconfliction status, analysis, and approval endpoints", async () => {
+  sessionStorage.setItem("ict-toolkit-token", "synthetic-deconfliction-token");
+  sessionStorage.setItem(
+    "ict-toolkit-token-expires-at",
+    "2099-07-28T20:00:00Z",
+  );
+  const fetchMock = vi
+    .spyOn(globalThis, "fetch")
+    .mockImplementation(async (input) => {
+      const url = String(input);
+      if (url.includes("/api/deconfliction-analyses/?")) {
+        return new Response(
+          JSON.stringify({
+            count: 0,
+            next: null,
+            previous: null,
+            results: [],
+          }),
+          { status: 200 },
+        );
+      }
+      return new Response(JSON.stringify({ id: "deconfliction-result" }), {
+        status: 200,
+      });
+    });
+
+  await getDeconflictionStatus();
+  await listDeconflictionAnalyses("incident / deconfliction");
+  await createDeconflictionAnalysis({
+    incident: "incident-1",
+    approved_revision: "revision-1",
+    active_resources: ["resource-1"],
+  });
+  await approveDeconflictionAnalysis("analysis-1");
+
+  expect(String(fetchMock.mock.calls[0][0])).toBe(
+    "http://localhost:8000/api/deconfliction-status/",
+  );
+  expect(String(fetchMock.mock.calls[1][0])).toBe(
+    "http://localhost:8000/api/deconfliction-analyses/?incident=incident%20%2F%20deconfliction",
+  );
+  expect(fetchMock.mock.calls[2][1]).toEqual(
+    expect.objectContaining({
+      method: "POST",
+      body: JSON.stringify({
+        incident: "incident-1",
+        approved_revision: "revision-1",
+        active_resources: ["resource-1"],
+      }),
+    }),
+  );
+  expect(String(fetchMock.mock.calls[3][0])).toBe(
+    "http://localhost:8000/api/deconfliction-analyses/analysis-1/approve/",
   );
 });

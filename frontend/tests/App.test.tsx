@@ -120,6 +120,21 @@ test("signs in and lists incidents from the API", async () => {
         { status: 200 },
       );
     }
+    if (url.endsWith("/api/deconfliction-status/")) {
+      return new Response(
+        JSON.stringify({
+          rule_set_id: "rf-deconfliction",
+          rule_set_version: "rf-deconfliction-v1-provisional",
+          approved_for_operational_use: false,
+          adjacent_channel_threshold_hz: 12500,
+          rules: [],
+          squelch_rule:
+            "Squelch differences never suppress a frequency warning.",
+          disclaimer: "Decision support only.",
+        }),
+        { status: 200 },
+      );
+    }
     if (url.endsWith("/api/channel-imports/") && options?.method === "POST") {
       return new Response(
         JSON.stringify({

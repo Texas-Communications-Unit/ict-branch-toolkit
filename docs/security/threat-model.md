@@ -40,6 +40,13 @@ only.
 - Missing values or outliers being silently removed from calibration.
 - An incident-local fit overwriting an organization default or being represented as validated
   coverage.
+- A browser-only or mutable deconfliction rule producing results that cannot be reconstructed.
+- Squelch differences suppressing a co-channel or adjacent-channel warning.
+- A missing operating area being replaced with an invented location or assumed non-overlap.
+- A provisional warning, severity, threshold, or zero-warning result being represented as
+  coordination, spectrum, propagation, or incident-command authority.
+- Frequencies, squelch values, coordinates, frozen site evidence, selected resources, or warning
+  contents leaking through deconfliction audit details.
 
 ## Design responses
 
@@ -110,5 +117,14 @@ limits, and the absence of external audit anchoring. General API throttling,
 incident scope, bounded upload verification, protected database access,
 backup/recovery controls, and human gates reduce but do not eliminate these
 risks. See
-[ADR-0015](../adr/0015-phase-2-validation-evidence-bundles.md).
+[ADR-0016](../adr/0016-phase-2-validation-evidence-bundles.md).
+
+For RF deconfliction, versioned rules run only on the backend against an approved incident-scoped
+ICS-205 revision, frozen approved areas, and an explicit active-resource selection. The service
+never invents a missing location and never uses a squelch difference to suppress a frequency
+warning. It retains canonical input/result snapshots and digests; later changes create a new
+analysis rather than rewriting evidence. Approval fails closed until the exact rule version passes
+qualified review. Audit details retain only identifiers, versions, counts, and digests rather than
+frequency, squelch, coordinate, site, resource, or warning content. See
+[ADR-0015](../adr/0015-versioned-rf-deconfliction-decision-support.md).
 
