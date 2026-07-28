@@ -1,14 +1,9 @@
-import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 
-async function expectNoAccessibilityViolations(
-  page: import("@playwright/test").Page,
-) {
-  const results = await new AxeBuilder({ page })
-    .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
-    .analyze();
-  expect(results.violations).toEqual([]);
-}
+import {
+  expectDocumentReflow,
+  expectNoAccessibilityViolations,
+} from "./accessibility";
 
 test("administrator signs in and sees the incident planning workspace", async ({
   page,
@@ -557,7 +552,7 @@ test("administrator signs in and sees the incident planning workspace", async ({
     }),
   );
   await page.goto("/");
-  await expectNoAccessibilityViolations(page);
+  await expectNoAccessibilityViolations(page, testInfo, "sign-in-desktop");
   await page.keyboard.press("Tab");
   await expect(page.getByLabel("Username")).toBeFocused();
   await page.keyboard.press("Tab");
@@ -734,7 +729,11 @@ test("administrator signs in and sees the incident planning workspace", async ({
   await expect(
     page.getByText(/TX-COMU names, logos, and identifying marks/),
   ).toBeVisible();
-  await expectNoAccessibilityViolations(page);
+  await expectNoAccessibilityViolations(
+    page,
+    testInfo,
+    "authenticated-workspace-desktop",
+  );
   const desktopScreenshot = testInfo.outputPath(
     "branded-workspace-desktop.png",
   );
@@ -744,16 +743,17 @@ test("administrator signs in and sees the incident planning workspace", async ({
     contentType: "image/png",
   });
 
-  await page.setViewportSize({ width: 390, height: 844 });
+  await page.setViewportSize({ width: 320, height: 720 });
   await expect(
     page.getByRole("heading", { name: "ICT Branch Toolkit" }),
   ).toBeVisible();
   await expect(page.getByText(/P2.4 Prototype/)).toBeVisible();
-  expect(
-    await page.evaluate(
-      () => document.documentElement.scrollWidth <= window.innerWidth,
-    ),
-  ).toBe(true);
+  await expectDocumentReflow(page);
+  await expectNoAccessibilityViolations(
+    page,
+    testInfo,
+    "authenticated-workspace-320-css-pixels",
+  );
   const mobileScreenshot = testInfo.outputPath("branded-workspace-mobile.png");
   await page.screenshot({ path: mobileScreenshot, fullPage: true });
   await testInfo.attach("branded-workspace-mobile", {

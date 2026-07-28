@@ -1,5 +1,6 @@
 import js from "@eslint/js";
 import globals from "globals";
+import jsxA11y from "eslint-plugin-jsx-a11y-x";
 import reactHooks from "eslint-plugin-react-hooks";
 import reactRefresh from "eslint-plugin-react-refresh";
 import tseslint from "typescript-eslint";
@@ -13,8 +14,13 @@ export default tseslint.config(
       ecmaVersion: 2022,
       globals: globals.browser,
     },
-    plugins: { "react-hooks": reactHooks, "react-refresh": reactRefresh },
+    plugins: {
+      "jsx-a11y-x": jsxA11y,
+      "react-hooks": reactHooks,
+      "react-refresh": reactRefresh,
+    },
     rules: {
+      ...jsxA11y.configs.recommended.rules,
       ...reactHooks.configs.recommended.rules,
       // Preserve the existing data-fetching effect while upgrading the security toolchain.
       "react-hooks/set-state-in-effect": "off",

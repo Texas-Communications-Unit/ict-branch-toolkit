@@ -97,7 +97,8 @@ jobs:
           cache-dependency-path: frontend/pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
       - run: pnpm format:check
-      - run: pnpm lint
+      - name: Lint, including JSX accessibility rules
+        run: pnpm lint
       - run: pnpm typecheck
       - run: pnpm exec vitest run --coverage
       - run: pnpm build
@@ -119,7 +120,8 @@ jobs:
           cache-dependency-path: frontend/pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
       - run: pnpm exec playwright install --with-deps chromium
-      - run: pnpm test:e2e
+      - name: Run browser workflow and WCAG 2.2 AA checks
+        run: pnpm test:e2e
       - uses: actions/upload-artifact@v7
         if: always()
         with:
