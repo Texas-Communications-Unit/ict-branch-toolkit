@@ -37,6 +37,7 @@ INSTALLED_APPS = [
     "apps.rf_analysis",
     "apps.deconfliction",
     "apps.collaboration",
+    "apps.extensions",
 ]
 if ENABLE_GIS:
     INSTALLED_APPS.append("django.contrib.gis")
@@ -316,5 +317,10 @@ SPECTACULAR_SETTINGS = {
             "apps.collaboration.models.CollaborationResolution.Decision"
         ),
         "CollaborationPresenceModeEnum": "apps.collaboration.models.PresenceLease.Mode",
+        "ExtensionCapabilityKindEnum": "apps.extensions.models.ExtensionExecution.CapabilityKind",
+        "ExtensionExecutionStatusEnum": "apps.extensions.models.ExtensionExecution.Status",
+        "ExtensionOutputClassificationEnum": (
+            "apps.extensions.models.ExtensionExecution.OutputClassification"
+        ),
     },
 }

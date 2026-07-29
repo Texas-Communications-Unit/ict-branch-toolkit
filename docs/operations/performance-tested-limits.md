@@ -164,3 +164,26 @@ and client retry storms. Record query plans, p50/p95/p99 latency, CPU, memory,
 database growth, lock waits, error rate, and recovery time. The 20-second browser
 poll and 75-second lease are initial coordination settings, not a service-level
 objective.
+
+## Planning-extension workload
+
+P3.4 accepts only a declared JSON object below 16 KiB. The synthetic example
+accepts one integer from 1 through 1,000 and runs against one approved ICS-205
+revision. A handler result must match its declared schema and stay at or below
+1 MiB. Extension and execution list responses use the standard 100-record
+page. The focused SQLite regression holds the one-entry catalog to six queries
+and the incident-scoped execution list to eight queries, including
+authentication and authorization checks.
+
+Two identical synthetic runs must produce identical canonical input and result
+digests, and repeated downloads of one retained run must be byte-identical.
+Failure-isolation coverage forces the optional handler to fail, verifies a
+bounded retained failure/`503`, and then verifies health and incident-list
+routes remain available.
+
+These bounds validate the contract example, not arbitrary future tools. The
+framework currently executes synchronously and publishes no duration,
+concurrency, throughput, queue, CPU, or memory claim. Each future extension
+must define its own input/output sizes, database/query budget, duration,
+timeout, concurrency, job/cancellation/recovery behavior, and deployment load
+evidence before enablement.

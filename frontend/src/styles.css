@@ -271,6 +271,100 @@ p {
   grid-column: 1 / -1;
 }
 
+.extension-panel {
+  display: grid;
+  grid-column: 1 / -1;
+  gap: 1rem;
+  border: 1px solid var(--tx-comu-border);
+  border-radius: 8px;
+  background: var(--tx-comu-white);
+  padding: 1.2rem;
+  box-shadow: 0 4px 14px var(--tx-comu-shadow);
+}
+
+.extension-catalog,
+.extension-executions {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.extension-card,
+.extension-output,
+.extension-run-form {
+  display: grid;
+  gap: 0.75rem;
+  border: 1px solid var(--tx-comu-border);
+  border-radius: 6px;
+  padding: 0.9rem;
+}
+
+.extension-card-heading {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.extension-card-heading h3,
+.extension-card-heading h4,
+.extension-executions > h3,
+.extension-run-form h3 {
+  margin: 0;
+}
+
+.extension-card-heading span,
+.extension-card p,
+.extension-run-form p {
+  color: var(--tx-comu-slate);
+}
+
+.extension-operator-message,
+.extension-message {
+  border-left: 4px solid var(--tx-comu-blue);
+  margin: 0;
+  background: var(--tx-comu-light);
+  padding: 0.75rem;
+}
+
+.extension-contract,
+.extension-result-summary,
+.extension-digests {
+  display: grid;
+  gap: 0.6rem;
+  margin: 0;
+}
+
+.extension-contract div,
+.extension-result-summary div,
+.extension-digests div {
+  display: grid;
+  grid-template-columns: minmax(9rem, 0.3fr) 1fr;
+  gap: 0.75rem;
+}
+
+.extension-contract dt,
+.extension-result-summary dt,
+.extension-digests dt {
+  font-weight: 750;
+}
+
+.extension-contract dd,
+.extension-result-summary dd,
+.extension-digests dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.extension-run-form {
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+}
+
+.extension-run-form h3,
+.extension-run-form p,
+.extension-run-form button {
+  grid-column: 1 / -1;
+}
+
 .map-panel {
   grid-column: 1 / -1;
 }

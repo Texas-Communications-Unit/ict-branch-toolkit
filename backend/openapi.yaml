@@ -1001,6 +1001,185 @@ paths:
               schema:
                 $ref: '#/components/schemas/ElevationSnapshot'
           description: ''
+  /api/extension-executions/:
+    get:
+      operationId: extension_executions_list
+      parameters:
+      - in: query
+        name: incident
+        schema:
+          type: string
+          format: uuid
+        description: Limit retained extension executions to one incident.
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - extension-executions
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedExtensionExecutionList'
+          description: ''
+    post:
+      operationId: extension_executions_create
+      tags:
+      - extension-executions
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateExtensionExecution'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CreateExtensionExecution'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CreateExtensionExecution'
+        required: true
+      security:
+      - tokenAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExtensionExecution'
+          description: ''
+  /api/extension-executions/{id}/:
+    get:
+      operationId: extension_executions_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this extension execution.
+        required: true
+      tags:
+      - extension-executions
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExtensionExecution'
+          description: ''
+  /api/extension-executions/{id}/export/:
+    get:
+      operationId: extension_executions_export_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this extension execution.
+        required: true
+      tags:
+      - extension-executions
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: string
+                format: binary
+          description: ''
+  /api/extensions/:
+    get:
+      operationId: extensions_list
+      tags:
+      - extensions
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ExtensionCatalogEntry'
+          description: ''
+  /api/extensions/{extension_key}/disable/:
+    post:
+      operationId: extensions_disable_create
+      parameters:
+      - in: path
+        name: extension_key
+        schema:
+          type: string
+        required: true
+      tags:
+      - extensions
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExtensionInstallation'
+          description: ''
+  /api/extensions/{extension_key}/enable/:
+    post:
+      operationId: extensions_enable_create
+      parameters:
+      - in: path
+        name: extension_key
+        schema:
+          type: string
+        required: true
+      tags:
+      - extensions
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExtensionInstallation'
+          description: ''
+  /api/extensions/install/:
+    post:
+      operationId: extensions_install_create
+      tags:
+      - extensions
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExtensionInstallRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ExtensionInstallRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ExtensionInstallRequest'
+        required: true
+      security:
+      - tokenAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExtensionInstallation'
+          description: ''
   /api/external-identity/status/:
     get:
       operationId: external_identity_status_retrieve
@@ -4709,6 +4888,34 @@ components:
       - environment
       - haat_calculation
       - subscriber_rf_input_snapshot
+    CreateExtensionExecution:
+      type: object
+      properties:
+        extension_key:
+          type: string
+          maxLength: 120
+          pattern: ^[-a-zA-Z0-9_]+$
+        contract_version:
+          type: string
+          maxLength: 20
+        capability:
+          type: string
+          maxLength: 120
+          pattern: ^[-a-zA-Z0-9_]+$
+        incident:
+          type: string
+          format: uuid
+        source_revision:
+          type: string
+          format: uuid
+        inputs: {}
+      required:
+      - capability
+      - contract_version
+      - extension_key
+      - incident
+      - inputs
+      - source_revision
     CreateFieldObservation:
       type: object
       properties:
@@ -5547,6 +5754,215 @@ components:
           type: string
           format: uri
           nullable: true
+    ExtensionCapabilityKindEnum:
+      enum:
+      - tool
+      - report
+      type: string
+      description: |-
+        * `tool` - Tool
+        * `report` - Report
+    ExtensionCatalogEntry:
+      type: object
+      properties:
+        manifest:
+          type: object
+          additionalProperties: {}
+          readOnly: true
+        installed:
+          type: boolean
+          readOnly: true
+        enabled:
+          type: boolean
+          readOnly: true
+        compatible:
+          type: boolean
+          readOnly: true
+        installation_id:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
+        operator_message:
+          type: string
+          readOnly: true
+      required:
+      - compatible
+      - enabled
+      - installation_id
+      - installed
+      - manifest
+      - operator_message
+    ExtensionExecution:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        extension_key:
+          type: string
+          readOnly: true
+          pattern: ^[-a-zA-Z0-9_]+$
+        extension_version:
+          type: string
+          readOnly: true
+        contract_version:
+          type: string
+          readOnly: true
+        capability:
+          type: string
+          readOnly: true
+          pattern: ^[-a-zA-Z0-9_]+$
+        capability_kind:
+          allOf:
+          - $ref: '#/components/schemas/ExtensionCapabilityKindEnum'
+          readOnly: true
+        incident:
+          type: string
+          format: uuid
+          readOnly: true
+        source_revision:
+          type: string
+          format: uuid
+          readOnly: true
+        source_revision_number:
+          type: integer
+          readOnly: true
+        input_snapshot:
+          readOnly: true
+        input_sha256:
+          type: string
+          readOnly: true
+        result_snapshot:
+          readOnly: true
+        result_sha256:
+          type: string
+          readOnly: true
+        output_classification:
+          allOf:
+          - $ref: '#/components/schemas/ExtensionOutputClassificationEnum'
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/ExtensionExecutionStatusEnum'
+          readOnly: true
+        failure_code:
+          type: string
+          readOnly: true
+        failure_message:
+          type: string
+          readOnly: true
+        created_by:
+          type: integer
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - capability
+      - capability_kind
+      - contract_version
+      - created_at
+      - created_by
+      - extension_key
+      - extension_version
+      - failure_code
+      - failure_message
+      - id
+      - incident
+      - input_sha256
+      - input_snapshot
+      - output_classification
+      - result_sha256
+      - result_snapshot
+      - source_revision
+      - source_revision_number
+      - status
+    ExtensionExecutionStatusEnum:
+      enum:
+      - complete
+      - failed
+      type: string
+      description: |-
+        * `complete` - Complete
+        * `failed` - Failed
+    ExtensionInstallRequest:
+      type: object
+      properties:
+        extension_key:
+          type: string
+          maxLength: 120
+          pattern: ^[-a-zA-Z0-9_]+$
+        contract_version:
+          type: string
+          maxLength: 20
+      required:
+      - contract_version
+      - extension_key
+    ExtensionInstallation:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        extension_key:
+          type: string
+          readOnly: true
+          pattern: ^[-a-zA-Z0-9_]+$
+        extension_version:
+          type: string
+          readOnly: true
+        contract_version:
+          type: string
+          readOnly: true
+        manifest_snapshot:
+          readOnly: true
+        manifest_sha256:
+          type: string
+          readOnly: true
+        enabled:
+          type: boolean
+          readOnly: true
+        installed_by:
+          type: integer
+          readOnly: true
+        installed_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_by:
+          type: integer
+          readOnly: true
+          nullable: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - contract_version
+      - enabled
+      - extension_key
+      - extension_version
+      - id
+      - installed_at
+      - installed_by
+      - manifest_sha256
+      - manifest_snapshot
+      - updated_at
+      - updated_by
+    ExtensionOutputClassificationEnum:
+      enum:
+      - draft
+      - decision_support
+      - official
+      type: string
+      description: |-
+        * `draft` - Draft
+        * `decision_support` - Decision support
+        * `official` - Official
     ExternalIdentityStatus:
       type: object
       properties:
@@ -6571,6 +6987,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/DirectionalCoverageAnalysis'
+    PaginatedExtensionExecutionList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExtensionExecution'
     PaginatedFieldObservationList:
       type: object
       required:

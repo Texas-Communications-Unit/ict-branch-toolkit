@@ -132,6 +132,13 @@ After restoration:
 4. test sign-in, incident-scoped authorization, and a synthetic export;
 5. re-enable external access only after maintainer approval.
 
+For deployments containing P3.4 extension records, also verify the installed
+manifest/version/digest state and recompute retained extension execution input
+and result digests. A code/manifest mismatch must leave the extension
+incompatible and unavailable; restore does not authorize reinstalling or
+enabling it. Complete the synthetic byte-identical export check in the
+[extension operations guide](planning-extension-framework.md#retention-backup-and-restore).
+
 ## Application and migration rollback
 
 Do not force-push, rewrite shared history, delete the database volume, or assume
