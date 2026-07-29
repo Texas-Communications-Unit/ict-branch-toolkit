@@ -20,6 +20,7 @@ from apps.deconfliction.rules import (
     RULE_SET_VERSION,
     evaluate,
 )
+from apps.deconfliction.services import canonical_digest
 from apps.incidents.models import Incident, IncidentMembership, OperationalPeriod
 from apps.plans.models import Assignment, ICS205Plan, PlanRevision
 from apps.plans.services import approve_revision
@@ -521,6 +522,9 @@ def test_analysis_lifecycle_is_reproducible_audited_and_fail_closed(client):
     serialized_details = json.dumps(created_event.details)
     assert "155000000" not in serialized_details
     assert "31.000000" not in serialized_details
+    assert "PL 100.0" not in serialized_details
+    assert "NAC 293" not in serialized_details
+    assert "Synthetic operating area" not in serialized_details
 
 
 @pytest.mark.django_db
@@ -582,6 +586,7 @@ def test_finding_dispositions_are_append_only_incident_scoped_and_audited(client
     )
     assert event.details["finding_key"] == finding["finding_key"]
     assert "explanation" not in event.details
+    assert "Later synthetic review requires a revised plan." not in json.dumps(event.details)
 
     invalid = client.post(
         f"/api/deconfliction-analyses/{created.json()['id']}/dispositions/",
@@ -705,3 +710,110 @@ def test_analysis_models_are_retained_and_immutable(client):
         analysis.save()
     with pytest.raises(DjangoValidationError, match="retained"):
         analysis.delete()
+
+
+@pytest.mark.django_db
+def test_analysis_api_denies_mutation_and_preserves_legacy_v1_history(client):
+    owner = user_with_role("deconfliction-retention", Role.COML)
+    incident, revision = create_analysis_context(owner, "RETENTION")
+    headers = auth_header(owner)
+    created = client.post(
+        "/api/deconfliction-analyses/",
+        {
+            "incident": str(incident.id),
+            "approved_revision": str(revision.id),
+        },
+        content_type="application/json",
+        **headers,
+    )
+    assert created.status_code == 201, created.content
+    detail_url = f"/api/deconfliction-analyses/{created.json()['id']}/"
+
+    assert client.put(detail_url, {}, content_type="application/json", **headers).status_code == 405
+    assert (
+        client.patch(detail_url, {}, content_type="application/json", **headers).status_code == 405
+    )
+    assert client.delete(detail_url, **headers).status_code == 405
+    assert DeconflictionAnalysis.objects.filter(pk=created.json()["id"]).exists()
+
+    legacy_input = {
+        "schema_version": "rf-deconfliction-input-v1",
+        "approved_revision": {"id": str(revision.id), "number": revision.number},
+        "assignments": [{"channel_name": "SYN LEGACY", "tx_frequency_hz": 155_000_000}],
+    }
+    legacy_result = {
+        "schema_version": "rf-deconfliction-result-v1",
+        "input_sha256": canonical_digest(legacy_input),
+        "warning_count": 1,
+        "warnings": [
+            {
+                "rule_id": "RF-005",
+                "severity": "caution",
+                "explanation": "Synthetic retained legacy evidence.",
+            }
+        ],
+        "disclaimer": DISCLAIMER,
+    }
+    legacy = DeconflictionAnalysis.objects.create(
+        incident=incident,
+        approved_revision=revision,
+        rule_set_id="rf-deconfliction",
+        rule_set_version="rf-deconfliction-v1-provisional",
+        input_snapshot=legacy_input,
+        input_sha256=canonical_digest(legacy_input),
+        result_snapshot=legacy_result,
+        result_sha256=canonical_digest(legacy_result),
+        warning_count=1,
+        created_by=owner,
+    )
+
+    retained = client.get(f"/api/deconfliction-analyses/{legacy.id}/", **headers)
+    assert retained.status_code == 200
+    assert retained.json()["rule_set_version"] == "rf-deconfliction-v1-provisional"
+    assert retained.json()["input_snapshot"] == legacy_input
+    assert retained.json()["result_snapshot"] == legacy_result
+    assert retained.json()["result_snapshot"]["warnings"][0]["rule_id"] == "RF-005"
+
+
+@pytest.mark.parametrize(
+    ("snapshot_field", "expected_error"),
+    [
+        ("input_snapshot", "input digest is invalid"),
+        ("result_snapshot", "result digest is invalid"),
+    ],
+)
+@pytest.mark.django_db
+@override_settings(ICT_APPROVED_DECONFLICTION_RULESETS=[RULE_SET_VERSION])
+def test_analysis_approval_rejects_tampered_retained_snapshots(
+    client,
+    snapshot_field,
+    expected_error,
+):
+    owner = user_with_role(f"deconfliction-tamper-{snapshot_field}", Role.COML)
+    incident, revision = create_analysis_context(owner, f"TAMPER-{snapshot_field.upper()}")
+    headers = auth_header(owner)
+    created = client.post(
+        "/api/deconfliction-analyses/",
+        {
+            "incident": str(incident.id),
+            "approved_revision": str(revision.id),
+        },
+        content_type="application/json",
+        **headers,
+    )
+    assert created.status_code == 201, created.content
+
+    DeconflictionAnalysis.objects.filter(pk=created.json()["id"]).update(
+        **{snapshot_field: {"tampered": True}}
+    )
+    rejected = client.post(
+        f"/api/deconfliction-analyses/{created.json()['id']}/approve/",
+        **headers,
+    )
+    assert rejected.status_code == 400
+    assert expected_error in json.dumps(rejected.json()).lower()
+    assert not AuditEvent.objects.filter(action="deconfliction_analysis.approved").exists()
+    assert (
+        DeconflictionAnalysis.objects.get(pk=created.json()["id"]).status
+        == DeconflictionAnalysis.Status.DRAFT
+    )
