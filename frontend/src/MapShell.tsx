@@ -18,6 +18,7 @@ import {
   createManualRing,
   createRadioSite,
   createSiteAssignment,
+  deleteSiteAssignment,
   downloadSpatialExport,
   listCoverageEstimates,
   listDirectionalCoverageAnalyses,
@@ -705,6 +706,29 @@ export function MapShell({ incident }: { incident?: Incident }) {
     }
   }
 
+  async function handleUnlink(link: SiteAssignment) {
+    if (
+      !window.confirm(
+        `Remove the link between ${link.site_name} and ${link.assignment_label}? The site and assignment will remain available.`,
+      )
+    ) {
+      return;
+    }
+    try {
+      await deleteSiteAssignment(link.id);
+      setMessage(
+        `Removed the link between ${link.site_name} and ${link.assignment_label}.`,
+      );
+      await refresh();
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : "Unable to remove the site association.",
+      );
+    }
+  }
+
   function exportRevision(format: "map" | "kml" | "geojson" | "csv") {
     if (!revision) return;
     void downloadSpatialExport(revision.id, format).catch((error: Error) =>
@@ -852,18 +876,42 @@ export function MapShell({ incident }: { incident?: Incident }) {
             {sites.length === 0 ? (
               <p className="empty">No sites have been placed.</p>
             ) : (
-              sites.map((site) => (
-                <article className="site-card" key={site.id}>
-                  <strong>{site.name}</strong>
-                  <span>{site.coordinate_formats.decimal}</span>
-                  <small>{site.coordinate_formats.mgrs}</small>
-                  <small>
-                    {site.rings.length} ring(s) ·{" "}
-                    {links.filter((link) => link.site === site.id).length}{" "}
-                    assignment(s)
-                  </small>
-                </article>
-              ))
+              sites.map((site) => {
+                const siteLinks = links.filter((link) => link.site === site.id);
+                return (
+                  <article className="site-card" key={site.id}>
+                    <strong>{site.name}</strong>
+                    <span>{site.coordinate_formats.decimal}</span>
+                    <small>{site.coordinate_formats.mgrs}</small>
+                    <small>
+                      {site.rings.length} ring(s) · {siteLinks.length}{" "}
+                      assignment(s)
+                    </small>
+                    {canEdit &&
+                      revision?.status === "draft" &&
+                      siteLinks.length > 0 && (
+                        <ul
+                          className="site-link-list"
+                          aria-label={`Assignment links for ${site.name}`}
+                        >
+                          {siteLinks.map((link) => (
+                            <li key={link.id}>
+                              <span>{link.assignment_label}</span>
+                              <button
+                                type="button"
+                                className="secondary-button"
+                                aria-label={`Remove ${link.assignment_label} from ${site.name}`}
+                                onClick={() => void handleUnlink(link)}
+                              >
+                                Remove link
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                  </article>
+                );
+              })
             )}
             {canEdit && sites.length > 0 && (
               <form onSubmit={handleCoordinateUpdate}>

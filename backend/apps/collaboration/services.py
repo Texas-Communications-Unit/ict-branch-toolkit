@@ -2,11 +2,14 @@ import hashlib
 import json
 
 from django.db import transaction
+from django.db.models.deletion import ProtectedError
 from rest_framework.exceptions import PermissionDenied, ValidationError
 
+from apps.accounts.policy import SITE_VIEW, user_has_permission
 from apps.audit.services import record_event
 from apps.plans.models import Assignment, PlanRevision
 from apps.plans.serializers import AssignmentSerializer, PlanRevisionSerializer
+from apps.sites.models import SiteAssignment
 
 from .models import CollaborationChange
 
@@ -127,7 +130,16 @@ def _conflict(*, actor, revision, payload, digest, current_snapshot) -> Collabor
     )
 
 
-def _rejected(*, actor, revision, payload, digest, current_snapshot, detail):
+def _rejected(
+    *,
+    actor,
+    revision,
+    payload,
+    digest,
+    current_snapshot,
+    detail,
+    result=None,
+):
     return _create_change(
         actor=actor,
         revision=revision,
@@ -135,7 +147,7 @@ def _rejected(*, actor, revision, payload, digest, current_snapshot, detail):
         payload_sha256=digest,
         disposition=CollaborationChange.Disposition.REJECTED,
         current_snapshot=current_snapshot,
-        result={"detail": detail},
+        result={**(result or {}), "detail": detail},
     )
 
 
@@ -318,10 +330,54 @@ def apply_mutation(*, actor, request, payload: dict) -> CollaborationChange:
                     detail="Delete does not accept changed fields.",
                 )
             object_id = str(assignment.id)
-            assignment.delete()
+            site_links = list(
+                SiteAssignment.objects.select_for_update()
+                .select_related("site")
+                .filter(assignment=assignment)
+                .order_by("id")
+            )
+            current["site_link_count"] = len(site_links)
+            if site_links:
+                plural = "link" if len(site_links) == 1 else "links"
+                authorized_link_details = {}
+                if user_has_permission(actor, SITE_VIEW, revision.plan.incident):
+                    authorized_link_details = {
+                        "linked_site_assignment_ids": [str(link.id) for link in site_links],
+                        "linked_site_ids": [str(link.site_id) for link in site_links],
+                    }
+                return _rejected(
+                    actor=actor,
+                    revision=revision,
+                    payload=payload,
+                    digest=digest,
+                    current_snapshot=current,
+                    detail=(
+                        f"This draft assignment has {len(site_links)} radio-site {plural}. "
+                        "Review and remove the linked site associations in Radio site "
+                        "planning before deleting the assignment."
+                    ),
+                    result={
+                        "linked_site_count": len(site_links),
+                        **authorized_link_details,
+                    },
+                )
+            try:
+                assignment.delete()
+            except ProtectedError:
+                return _rejected(
+                    actor=actor,
+                    revision=revision,
+                    payload=payload,
+                    digest=digest,
+                    current_snapshot=current,
+                    detail=(
+                        "This draft assignment is linked to retained records that must be "
+                        "removed before the assignment can be deleted."
+                    ),
+                )
             revision.collaboration_version += 1
             revision.save(update_fields=["collaboration_version", "updated_at"])
-            return _create_change(
+            change = _create_change(
                 actor=actor,
                 revision=revision,
                 payload=payload,
@@ -334,6 +390,16 @@ def apply_mutation(*, actor, request, payload: dict) -> CollaborationChange:
                     "revision_version": revision.collaboration_version,
                 },
             )
+            record_event(
+                actor=actor,
+                action="plan_assignment.deleted",
+                target=revision,
+                details={
+                    "assignment_id": object_id,
+                    "collaboration_change_id": str(change.id),
+                },
+            )
+            return change
         serializer = AssignmentSerializer(
             assignment,
             data=changes,

@@ -8,6 +8,7 @@ const api = vi.hoisted(() => ({
   createManualRing: vi.fn(),
   createRadioSite: vi.fn(),
   createSiteAssignment: vi.fn(),
+  deleteSiteAssignment: vi.fn(),
   downloadSpatialExport: vi.fn(),
   listCoverageEstimates: vi.fn(),
   listDirectionalCoverageAnalyses: vi.fn(),
@@ -73,6 +74,7 @@ beforeEach(() => {
     radius_m: 1_000,
     label: "Synthetic operating area",
   });
+  api.deleteSiteAssignment.mockResolvedValue(undefined);
 });
 
 async function prepareSiteForm(user: ReturnType<typeof userEvent.setup>) {
@@ -172,5 +174,95 @@ test("retains manual-ring form values when the save fails", async () => {
   expect(within(form!).getByLabelText("Radius in meters")).toHaveValue(1000);
   expect(within(form!).getByLabelText("Label")).toHaveValue(
     "Synthetic operating area",
+  );
+});
+
+test("requires confirmation before removing a visible assignment link", async () => {
+  const user = userEvent.setup();
+  vi.spyOn(window, "confirm").mockReturnValue(false);
+  api.listRadioSites.mockResolvedValue([site]);
+  api.listPlans.mockResolvedValue([
+    {
+      id: "plan-map-1",
+      incident: incident.id,
+      operational_period: "period-map-1",
+      title: "Synthetic ICS-205",
+      revisions: [
+        {
+          id: "revision-map-1",
+          status: "draft",
+          assignments: [],
+        },
+      ],
+    },
+  ]);
+  api.listSiteAssignments.mockResolvedValue([
+    {
+      id: "site-assignment-map-1",
+      site: site.id,
+      site_name: site.name,
+      assignment: "assignment-map-1",
+      assignment_label: "1. Command — SYN CALL",
+      site_snapshot: {},
+    },
+  ]);
+
+  render(<MapShell incident={incident} />);
+  await user.click(
+    await screen.findByRole("button", {
+      name: "Remove 1. Command — SYN CALL from Synthetic Command Site",
+    }),
+  );
+
+  expect(window.confirm).toHaveBeenCalledWith(
+    "Remove the link between Synthetic Command Site and 1. Command — SYN CALL? The site and assignment will remain available.",
+  );
+  expect(api.deleteSiteAssignment).not.toHaveBeenCalled();
+});
+
+test("removes a confirmed assignment link and retains both linked records", async () => {
+  const user = userEvent.setup();
+  vi.spyOn(window, "confirm").mockReturnValue(true);
+  api.listRadioSites.mockResolvedValue([site]);
+  api.listPlans.mockResolvedValue([
+    {
+      id: "plan-map-1",
+      incident: incident.id,
+      operational_period: "period-map-1",
+      title: "Synthetic ICS-205",
+      revisions: [
+        {
+          id: "revision-map-1",
+          status: "draft",
+          assignments: [],
+        },
+      ],
+    },
+  ]);
+  api.listSiteAssignments.mockResolvedValue([
+    {
+      id: "site-assignment-map-1",
+      site: site.id,
+      site_name: site.name,
+      assignment: "assignment-map-1",
+      assignment_label: "1. Command — SYN CALL",
+      site_snapshot: {},
+    },
+  ]);
+
+  render(<MapShell incident={incident} />);
+  await user.click(
+    await screen.findByRole("button", {
+      name: "Remove 1. Command — SYN CALL from Synthetic Command Site",
+    }),
+  );
+
+  await waitFor(() =>
+    expect(api.deleteSiteAssignment).toHaveBeenCalledWith(
+      "site-assignment-map-1",
+    ),
+  );
+  expect(await screen.findByRole("status")).toHaveTextContent(
+    "Removed the link between Synthetic Command Site and 1. Command — SYN CALL.",
   );
 });

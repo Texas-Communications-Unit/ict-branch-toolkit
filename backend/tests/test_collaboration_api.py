@@ -3,6 +3,7 @@ from datetime import timedelta
 
 import pytest
 from django.contrib.auth import get_user_model
+from django.db.models.deletion import ProtectedError
 from django.test import override_settings
 from django.utils import timezone
 from rest_framework.authtoken.models import Token
@@ -21,6 +22,7 @@ from apps.collaboration.models import (
 )
 from apps.incidents.models import Incident, IncidentMembership, OperationalPeriod
 from apps.plans.models import Assignment, ICS205Plan, PlanRevision
+from apps.sites.models import RadioSite, SiteAssignment
 
 
 def auth_header(user):
@@ -281,6 +283,237 @@ def test_approved_revision_rejects_and_retains_online_mutation(client):
     assert response.json()["disposition"] == CollaborationChange.Disposition.REJECTED
     revision.refresh_from_db()
     assert revision.prepared_by_position == ""
+
+
+@pytest.mark.django_db
+def test_linked_draft_assignment_delete_is_rejected_with_authorized_link_details(client):
+    admin, incident, revision = setup_workspace()
+    assignment = create_assignment(revision, 1, "SYN CALL")
+    site = RadioSite.objects.create(
+        incident=incident,
+        name="Synthetic Command Site",
+        latitude="31.000000",
+        longitude="-99.000000",
+        created_by=admin,
+    )
+    link = SiteAssignment.objects.create(site=site, assignment=assignment)
+
+    response = client.post(
+        "/api/collaboration/mutations/",
+        mutation_payload(
+            revision,
+            "assignment.delete",
+            assignment.collaboration_version,
+            {},
+            object_id=assignment.id,
+        ),
+        content_type="application/json",
+        **auth_header(admin),
+    )
+
+    assert response.status_code == 400, response.content
+    assert response.json()["disposition"] == CollaborationChange.Disposition.REJECTED
+    assert response.json()["current_snapshot"]["site_link_count"] == 1
+    assert response.json()["result"]["linked_site_count"] == 1
+    assert response.json()["result"]["linked_site_assignment_ids"] == [str(link.id)]
+    assert response.json()["result"]["linked_site_ids"] == [str(site.id)]
+    assert response.json()["result"]["detail"] == (
+        "This draft assignment has 1 radio-site link. Review and remove the linked "
+        "site associations in Radio site planning before deleting the assignment."
+    )
+    assert Assignment.objects.filter(pk=assignment.id).exists()
+    assert SiteAssignment.objects.filter(pk=link.id).exists()
+    assert not AuditEvent.objects.filter(action="site_assignment.deleted").exists()
+
+
+@pytest.mark.django_db
+def test_explicit_site_unlink_allows_assignment_delete_and_audits_each_action(client):
+    admin, incident, revision = setup_workspace()
+    assignment = create_assignment(revision, 1, "SYN CALL")
+    site = RadioSite.objects.create(
+        incident=incident,
+        name="Synthetic Command Site",
+        latitude="31.000000",
+        longitude="-99.000000",
+        created_by=admin,
+    )
+    link = SiteAssignment.objects.create(site=site, assignment=assignment)
+    headers = auth_header(admin)
+
+    unlinked = client.delete(f"/api/site-assignments/{link.id}/", **headers)
+    assert unlinked.status_code == 204, unlinked.content
+    assert not SiteAssignment.objects.filter(pk=link.id).exists()
+
+    deleted = client.post(
+        "/api/collaboration/mutations/",
+        mutation_payload(
+            revision,
+            "assignment.delete",
+            assignment.collaboration_version,
+            {},
+            object_id=assignment.id,
+        ),
+        content_type="application/json",
+        **headers,
+    )
+
+    assert deleted.status_code == 200, deleted.content
+    assert deleted.json()["disposition"] == CollaborationChange.Disposition.SAVED
+    assert deleted.json()["current_snapshot"]["site_link_count"] == 0
+    assert not Assignment.objects.filter(pk=assignment.id).exists()
+    assert (
+        AuditEvent.objects.filter(
+            action="site_assignment.deleted",
+            target_id=str(link.id),
+        ).count()
+        == 1
+    )
+    assignment_event = AuditEvent.objects.get(action="plan_assignment.deleted")
+    assert assignment_event.target_id == str(revision.id)
+    assert assignment_event.details["assignment_id"] == str(assignment.id)
+    assert assignment_event.details["collaboration_change_id"] == deleted.json()["id"]
+
+
+@pytest.mark.django_db
+def test_unlinked_draft_assignment_delete_reports_zero_removed_site_links(client):
+    admin, _, revision = setup_workspace()
+    assignment = create_assignment(revision, 1, "SYN CALL")
+
+    response = client.post(
+        "/api/collaboration/mutations/",
+        mutation_payload(
+            revision,
+            "assignment.delete",
+            assignment.collaboration_version,
+            {},
+            object_id=assignment.id,
+        ),
+        content_type="application/json",
+        **auth_header(admin),
+    )
+
+    assert response.status_code == 200, response.content
+    assert response.json()["current_snapshot"]["site_link_count"] == 0
+    assert not Assignment.objects.filter(pk=assignment.id).exists()
+    event = AuditEvent.objects.get(action="plan_assignment.deleted")
+    assert event.details["assignment_id"] == str(assignment.id)
+
+
+@pytest.mark.django_db
+def test_unauthorized_user_cannot_delete_linked_assignment(client):
+    admin, incident, revision = setup_workspace()
+    assignment = create_assignment(revision, 1, "SYN CALL")
+    site = RadioSite.objects.create(
+        incident=incident,
+        name="Synthetic Command Site",
+        latitude="31.000000",
+        longitude="-99.000000",
+        created_by=admin,
+    )
+    link = SiteAssignment.objects.create(site=site, assignment=assignment)
+    viewer = get_user_model().objects.create_user(
+        "collaboration-viewer",
+        password="safe-test-password",
+    )
+    UserRoleAssignment.objects.create(user=viewer, role=Role.READ_ONLY)
+    IncidentMembership.objects.create(
+        incident=incident,
+        user=viewer,
+        role=Role.READ_ONLY,
+        assigned_by=admin,
+    )
+
+    response = client.post(
+        "/api/collaboration/mutations/",
+        mutation_payload(
+            revision,
+            "assignment.delete",
+            assignment.collaboration_version,
+            {},
+            object_id=assignment.id,
+        ),
+        content_type="application/json",
+        **auth_header(viewer),
+    )
+
+    assert response.status_code == 403
+    assert Assignment.objects.filter(pk=assignment.id).exists()
+    assert SiteAssignment.objects.filter(pk=link.id).exists()
+    assert CollaborationChange.objects.count() == 0
+
+
+@pytest.mark.django_db
+def test_approved_revision_delete_is_rejected_without_removing_site_link(client):
+    admin, incident, revision = setup_workspace()
+    assignment = create_assignment(revision, 1, "SYN CALL")
+    site = RadioSite.objects.create(
+        incident=incident,
+        name="Synthetic Command Site",
+        latitude="31.000000",
+        longitude="-99.000000",
+        created_by=admin,
+    )
+    link = SiteAssignment.objects.create(site=site, assignment=assignment)
+    revision.status = PlanRevision.Status.APPROVED
+    revision.approved_by = admin
+    revision.approved_at = timezone.now()
+    revision.save()
+
+    response = client.post(
+        "/api/collaboration/mutations/",
+        mutation_payload(
+            revision,
+            "assignment.delete",
+            assignment.collaboration_version,
+            {},
+            object_id=assignment.id,
+        ),
+        content_type="application/json",
+        **auth_header(admin),
+    )
+
+    assert response.status_code == 400
+    assert response.json()["disposition"] == CollaborationChange.Disposition.REJECTED
+    assert response.json()["result"]["detail"] == (
+        "Approved revisions are immutable. Copy the revision to a new draft."
+    )
+    assert Assignment.objects.filter(pk=assignment.id).exists()
+    assert SiteAssignment.objects.filter(pk=link.id).exists()
+
+
+@pytest.mark.django_db
+def test_unexpected_protected_reference_returns_actionable_rejection_atomically(
+    client,
+    monkeypatch,
+):
+    admin, _, revision = setup_workspace()
+    assignment = create_assignment(revision, 1, "SYN CALL")
+
+    def protected_delete(instance, *args, **kwargs):
+        raise ProtectedError("Synthetic protected reference.", {instance})
+
+    monkeypatch.setattr(Assignment, "delete", protected_delete)
+    response = client.post(
+        "/api/collaboration/mutations/",
+        mutation_payload(
+            revision,
+            "assignment.delete",
+            assignment.collaboration_version,
+            {},
+            object_id=assignment.id,
+        ),
+        content_type="application/json",
+        **auth_header(admin),
+    )
+
+    assert response.status_code == 400
+    assert response.json()["disposition"] == CollaborationChange.Disposition.REJECTED
+    assert response.json()["result"]["detail"] == (
+        "This draft assignment is linked to retained records that must be removed "
+        "before the assignment can be deleted."
+    )
+    assert Assignment.objects.filter(pk=assignment.id).exists()
+    assert not AuditEvent.objects.filter(action="site_assignment.deleted").exists()
 
 
 @pytest.mark.django_db

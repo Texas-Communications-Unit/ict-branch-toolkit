@@ -319,3 +319,95 @@ test("requires explicit confirmation for a transmit-only assignment", async () =
     ),
   );
 });
+
+test("does not delete an assignment when site-link impact is not confirmed", async () => {
+  const user = userEvent.setup();
+  api.listCollaborationChanges.mockResolvedValue([]);
+  const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
+
+  render(<PlanWorkspace incident={incident} />);
+  await user.click(await screen.findByRole("button", { name: "Delete" }));
+
+  expect(confirm).toHaveBeenCalledWith(
+    "Delete SYN CALL? This removes the assignment from the current draft only. Approved revisions and prior analysis snapshots are not changed.",
+  );
+  expect(api.sendCollaborationMutation).not.toHaveBeenCalled();
+});
+
+test("confirms deletion of an unlinked draft assignment", async () => {
+  const user = userEvent.setup();
+  api.listCollaborationChanges.mockResolvedValue([]);
+  const confirm = vi.spyOn(window, "confirm").mockReturnValue(true);
+  api.sendCollaborationMutation.mockResolvedValue({
+    ...conflict,
+    id: "change-saved-delete",
+    operation: "assignment.delete",
+    object_id: "assignment-collaboration-1",
+    base_version: 2,
+    resulting_version: 4,
+    proposed_snapshot: {},
+    current_snapshot: {
+      id: "assignment-collaboration-1",
+      channel_name: "SYN CALL",
+      site_link_count: 1,
+      collaboration_version: 2,
+    },
+    disposition: "saved",
+    result: {
+      deleted_assignment: "assignment-collaboration-1",
+      revision_version: 4,
+    },
+  });
+
+  render(<PlanWorkspace incident={incident} />);
+  await user.click(await screen.findByRole("button", { name: "Delete" }));
+
+  await waitFor(() =>
+    expect(api.sendCollaborationMutation).toHaveBeenCalledWith(
+      expect.objectContaining({
+        operation: "assignment.delete",
+        object_id: "assignment-collaboration-1",
+        base_version: 2,
+        changes: {},
+      }),
+    ),
+  );
+  expect(confirm).toHaveBeenCalledTimes(1);
+  expect(await screen.findByText("Assignment deleted.")).toBeVisible();
+});
+
+test("shows the unlink-first guidance returned for a linked assignment", async () => {
+  const user = userEvent.setup();
+  api.listCollaborationChanges.mockResolvedValue([]);
+  vi.spyOn(window, "confirm").mockReturnValue(true);
+  api.sendCollaborationMutation.mockResolvedValue({
+    ...conflict,
+    id: "change-rejected-delete-linked",
+    operation: "assignment.delete",
+    object_id: "assignment-collaboration-1",
+    base_version: 2,
+    resulting_version: null,
+    proposed_snapshot: {},
+    current_snapshot: {
+      id: "assignment-collaboration-1",
+      channel_name: "SYN CALL",
+      site_link_count: 1,
+      collaboration_version: 2,
+    },
+    disposition: "rejected",
+    result: {
+      linked_site_count: 1,
+      linked_site_assignment_ids: ["site-assignment-1"],
+      linked_site_ids: ["site-1"],
+      detail:
+        "This draft assignment has 1 radio-site link. Review and remove the linked site associations in Radio site planning before deleting the assignment.",
+    },
+  });
+
+  render(<PlanWorkspace incident={incident} />);
+  await user.click(await screen.findByRole("button", { name: "Delete" }));
+
+  expect(
+    await screen.findByText(/review and remove the linked site associations/i),
+  ).toBeVisible();
+});

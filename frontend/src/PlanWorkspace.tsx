@@ -392,6 +392,24 @@ export function PlanWorkspace({ incident }: { incident?: Incident }) {
     });
   }
 
+  async function deleteAssignment(row: PlanAssignment) {
+    if (
+      !window.confirm(
+        `Delete ${row.channel_name}? This removes the assignment from the current draft only. Approved revisions and prior analysis snapshots are not changed.`,
+      )
+    ) {
+      return;
+    }
+    const outcome = await runMutation({
+      operation: "assignment.delete",
+      objectId: row.id,
+      baseVersion: row.collaboration_version,
+      changes: {},
+    });
+    if (outcome?.disposition !== "saved") return;
+    setMessage("Assignment deleted.");
+  }
+
   async function discardConflict() {
     if (!activeConflict) return;
     try {
@@ -767,14 +785,7 @@ export function PlanWorkspace({ incident }: { incident?: Incident }) {
                     </button>
                     <button
                       type="button"
-                      onClick={() =>
-                        void runMutation({
-                          operation: "assignment.delete",
-                          objectId: row.id,
-                          baseVersion: row.collaboration_version,
-                          changes: {},
-                        })
-                      }
+                      onClick={() => void deleteAssignment(row)}
                     >
                       Delete
                     </button>
