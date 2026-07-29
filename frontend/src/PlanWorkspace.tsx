@@ -12,11 +12,15 @@ import {
   listCollaborationChanges,
   listCollaborationPresence,
   listPlans,
+  listSubscriberProfiles,
+  listSubscriberProfileVersions,
   releaseCollaborationPresence,
   resolveCollaborationConflict,
   sendCollaborationMutation,
 } from "./api";
 import type {
+  AssignmentOperatingClassification,
+  AssignmentTechnologySubtype,
   CollaborationChange,
   CollaborationOperation,
   CollaborationPresence,
@@ -24,7 +28,34 @@ import type {
   Incident,
   PlanAssignment,
   RevisionComparison,
+  SubscriberProfileVersion,
 } from "./types";
+
+const OPERATING_CLASSIFICATIONS: {
+  value: AssignmentOperatingClassification;
+  label: string;
+}[] = [
+  { value: "fixed_pair", label: "Fixed-frequency pair" },
+  { value: "transmit_only", label: "Broadcast/transmit-only" },
+  { value: "receive_only", label: "Receive-only" },
+  {
+    value: "named_system",
+    label: "Named system channel — frequencies intentionally omitted",
+  },
+  { value: "dynamic_pool", label: "Dynamic/multi-channel pool" },
+  { value: "not_determined", label: "Not yet determined (draft only)" },
+];
+
+const TECHNOLOGY_SUBTYPES: {
+  value: Exclude<AssignmentTechnologySubtype, "">;
+  label: string;
+}[] = [
+  { value: "trunked_talkgroup", label: "Trunked talkgroup" },
+  { value: "lte_5g", label: "LTE/5G" },
+  { value: "scada", label: "SCADA" },
+  { value: "spread_spectrum", label: "Spread-spectrum" },
+  { value: "other", label: "Other system" },
+];
 
 export function PlanWorkspace({ incident }: { incident?: Incident }) {
   const [plans, setPlans] = useState<ICS205Plan[]>([]);
@@ -35,6 +66,9 @@ export function PlanWorkspace({ incident }: { incident?: Incident }) {
   const [activeConflict, setActiveConflict] =
     useState<CollaborationChange | null>(null);
   const [collaborationStatus, setCollaborationStatus] = useState("");
+  const [subscriberProfileVersions, setSubscriberProfileVersions] = useState<
+    { version: SubscriberProfileVersion; label: string }[]
+  >([]);
   const [message, setMessage] = useState("");
 
   const refresh = useCallback(async () => {
@@ -55,6 +89,40 @@ export function PlanWorkspace({ incident }: { incident?: Incident }) {
           if (active) setPlans([]);
         });
     }
+    return () => {
+      active = false;
+    };
+  }, [incident]);
+
+  useEffect(() => {
+    let active = true;
+    if (!incident) {
+      setSubscriberProfileVersions([]);
+      return;
+    }
+    void listSubscriberProfiles(incident.id)
+      .then(async (profiles) => {
+        const versions = await Promise.all(
+          profiles.map(async (profile) => ({
+            profile,
+            versions: await listSubscriberProfileVersions(profile.id),
+          })),
+        );
+        if (!active) return;
+        setSubscriberProfileVersions(
+          versions.flatMap(({ profile, versions: profileVersions }) =>
+            profileVersions
+              .filter((version) => version.status === "approved")
+              .map((version) => ({
+                version,
+                label: `${profile.name} · version ${version.number}`,
+              })),
+          ),
+        );
+      })
+      .catch(() => {
+        if (active) setSubscriberProfileVersions([]);
+      });
     return () => {
       active = false;
     };
@@ -206,6 +274,83 @@ export function PlanWorkspace({ incident }: { incident?: Incident }) {
     event.preventDefault();
     const form = event.currentTarget;
     const data = new FormData(form);
+    const rxFrequency = data.get("rxMHz")
+      ? Math.round(Number(data.get("rxMHz")) * 1_000_000)
+      : null;
+    const txFrequency = data.get("txMHz")
+      ? Math.round(Number(data.get("txMHz")) * 1_000_000)
+      : null;
+    const operatingClassification = String(
+      data.get("operatingClassification"),
+    ) as AssignmentOperatingClassification;
+    const technologySubtype = String(
+      data.get("technologySubtype") ?? "",
+    ) as AssignmentTechnologySubtype;
+
+    if (
+      operatingClassification === "fixed_pair" &&
+      (rxFrequency === null || txFrequency === null)
+    ) {
+      setMessage(
+        "Fixed-frequency pair requires both receive and transmit frequencies.",
+      );
+      return;
+    }
+    if (
+      operatingClassification === "transmit_only" &&
+      (rxFrequency !== null || txFrequency === null)
+    ) {
+      setMessage(
+        "Broadcast/transmit-only requires a transmit frequency and a blank receive frequency.",
+      );
+      return;
+    }
+    if (
+      operatingClassification === "receive_only" &&
+      (rxFrequency === null || txFrequency !== null)
+    ) {
+      setMessage(
+        "Receive-only requires a receive frequency and a blank transmit frequency.",
+      );
+      return;
+    }
+    if (
+      ["named_system", "dynamic_pool"].includes(operatingClassification) &&
+      (rxFrequency !== null || txFrequency !== null)
+    ) {
+      setMessage(
+        "Named-system and dynamic-pool assignments intentionally omit fixed receive and transmit frequencies.",
+      );
+      return;
+    }
+    if (operatingClassification === "named_system" && !technologySubtype) {
+      setMessage("Select the technology subtype for a named system channel.");
+      return;
+    }
+    if (
+      operatingClassification !== "named_system" &&
+      technologySubtype !== ""
+    ) {
+      setMessage("Technology subtype applies only to a named system channel.");
+      return;
+    }
+    if (
+      operatingClassification === "transmit_only" &&
+      !window.confirm(
+        "Receive frequency is blank. Confirm that this assignment is intentionally broadcast/transmit-only.",
+      )
+    ) {
+      return;
+    }
+    if (
+      operatingClassification === "receive_only" &&
+      !window.confirm(
+        "Transmit frequency is blank. Confirm that this assignment is intentionally receive-only.",
+      )
+    ) {
+      return;
+    }
+
     const outcome = await runMutation({
       operation: "assignment.create",
       baseVersion: revision!.collaboration_version,
@@ -214,12 +359,14 @@ export function PlanWorkspace({ incident }: { incident?: Incident }) {
         function: String(data.get("function")),
         channel_name: String(data.get("channelName")),
         assignment: String(data.get("assignment")),
-        rx_frequency_hz: data.get("rxMHz")
-          ? Math.round(Number(data.get("rxMHz")) * 1_000_000)
-          : null,
-        tx_frequency_hz: data.get("txMHz")
-          ? Math.round(Number(data.get("txMHz")) * 1_000_000)
-          : null,
+        operating_classification: operatingClassification,
+        technology_subtype: technologySubtype,
+        subscriber_profile_version:
+          String(data.get("subscriberProfileVersion") ?? "") || null,
+        rx_frequency_hz: rxFrequency,
+        rx_squelch: String(data.get("rxAccessCode") ?? "").trim(),
+        tx_frequency_hz: txFrequency,
+        tx_squelch: String(data.get("txAccessCode") ?? "").trim(),
         mode: String(data.get("mode")),
         structured_note: String(data.get("structuredNote")),
         remarks: String(data.get("remarks")),
@@ -447,13 +594,72 @@ export function PlanWorkspace({ incident }: { incident?: Incident }) {
                 <input name="assignment" />
               </label>
               <label>
+                Operating classification
+                <select name="operatingClassification" required defaultValue="">
+                  <option value="" disabled>
+                    Select classification
+                  </option>
+                  {OPERATING_CLASSIFICATIONS.map((classification) => (
+                    <option
+                      key={classification.value}
+                      value={classification.value}
+                    >
+                      {classification.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Named-system subtype
+                <select name="technologySubtype" defaultValue="">
+                  <option value="">Not applicable</option>
+                  {TECHNOLOGY_SUBTYPES.map((subtype) => (
+                    <option key={subtype.value} value={subtype.value}>
+                      {subtype.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
                 RX MHz
                 <input name="rxMHz" type="number" step="0.000001" min="0" />
+              </label>
+              <label>
+                RX access code
+                <input
+                  name="rxAccessCode"
+                  maxLength={40}
+                  placeholder="CTCSS, DCS, NAC, or equivalent"
+                />
               </label>
               <label>
                 TX MHz
                 <input name="txMHz" type="number" step="0.000001" min="0" />
               </label>
+              <label>
+                TX access code
+                <input
+                  name="txAccessCode"
+                  maxLength={40}
+                  placeholder="CTCSS, DCS, NAC, or equivalent"
+                />
+              </label>
+              <label>
+                Approved subscriber programming profile
+                <select name="subscriberProfileVersion" defaultValue="">
+                  <option value="">No profile selected</option>
+                  {subscriberProfileVersions.map(({ version, label }) => (
+                    <option key={version.id} value={version.id}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <p className="form-note">
+                If exactly one frequency is blank, the Toolkit will ask you to
+                confirm transmit-only or receive-only intent. Named systems and
+                dynamic pools intentionally omit both fixed frequencies.
+              </p>
               <label>
                 Mode
                 <input name="mode" />
@@ -515,12 +721,31 @@ export function PlanWorkspace({ incident }: { incident?: Incident }) {
                 <div>
                   <strong>{row.function}</strong>
                   <span>{row.channel_name}</span>
+                  <small>
+                    {OPERATING_CLASSIFICATIONS.find(
+                      (classification) =>
+                        classification.value === row.operating_classification,
+                    )?.label ?? row.operating_classification}
+                    {row.technology_subtype
+                      ? ` · ${
+                          TECHNOLOGY_SUBTYPES.find(
+                            (subtype) =>
+                              subtype.value === row.technology_subtype,
+                          )?.label ?? row.technology_subtype
+                        }`
+                      : ""}
+                  </small>
                 </div>
                 <span>{row.assignment}</span>
                 <span>
+                  RX{" "}
                   {row.rx_frequency_hz
                     ? `${(row.rx_frequency_hz / 1_000_000).toFixed(6)} MHz`
-                    : "No RX"}
+                    : "not used"}
+                  {" · "}TX{" "}
+                  {row.tx_frequency_hz
+                    ? `${(row.tx_frequency_hz / 1_000_000).toFixed(6)} MHz`
+                    : "not used"}
                 </span>
                 {canEdit && (
                   <div className="row-actions">

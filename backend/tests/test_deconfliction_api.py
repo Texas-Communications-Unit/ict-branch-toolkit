@@ -10,9 +10,12 @@ from rest_framework.authtoken.models import Token
 
 from apps.accounts.models import Role, UserRoleAssignment
 from apps.audit.models import AuditEvent
-from apps.deconfliction.models import DeconflictionAnalysis
+from apps.deconfliction.models import (
+    DeconflictionAnalysis,
+    DeconflictionFindingDisposition,
+)
 from apps.deconfliction.rules import (
-    ADJACENT_THRESHOLD_HZ,
+    CLOSE_FREQUENCY_THRESHOLD_HZ,
     DISCLAIMER,
     RULE_SET_VERSION,
     evaluate,
@@ -21,6 +24,7 @@ from apps.incidents.models import Incident, IncidentMembership, OperationalPerio
 from apps.plans.models import Assignment, ICS205Plan, PlanRevision
 from apps.plans.services import approve_revision
 from apps.resources.models import ConventionalChannel, ResourceRelease, ResourceSource
+from apps.rf_analysis.models import SubscriberProfile, SubscriberProfileVersion
 from apps.sites.models import ManualRing, RadioSite, SiteAssignment
 
 
@@ -47,16 +51,23 @@ def assignment_input(
     areas=True,
     rx_squelch="",
     tx_squelch="",
-    resource_id=None,
+    operating_classification="fixed_pair",
+    technology_subtype="",
+    expected_access_code_source=None,
 ):
     return {
         "id": identifier,
+        "position": 1,
+        "function": "Synthetic function",
         "channel_name": name,
+        "assignment": "Synthetic assignment",
+        "operating_classification": operating_classification,
+        "technology_subtype": technology_subtype,
         "rx_frequency_hz": rx_frequency_hz,
         "tx_frequency_hz": tx_frequency_hz,
         "rx_squelch": rx_squelch,
         "tx_squelch": tx_squelch,
-        "resource_id": resource_id,
+        "expected_access_code_source": expected_access_code_source,
         "areas": (
             [
                 {
@@ -79,12 +90,16 @@ def assignment_input(
     ("separation_hz", "longitude", "expected_rule"),
     [
         (0, "-97.000000", "RF-001"),
-        (ADJACENT_THRESHOLD_HZ, "-97.000000", "RF-002"),
-        (ADJACENT_THRESHOLD_HZ + 1, "-97.000000", None),
+        (CLOSE_FREQUENCY_THRESHOLD_HZ, "-97.000000", "RF-002"),
+        (CLOSE_FREQUENCY_THRESHOLD_HZ + 1, "-97.000000", None),
         (0, "-99.000000", None),
     ],
 )
-def test_cochannel_and_adjacent_boundary_table(separation_hz, longitude, expected_rule):
+def test_cochannel_and_close_frequency_boundary_table(
+    separation_hz,
+    longitude,
+    expected_rule,
+):
     first = assignment_input(
         "first",
         "SYN FIRST",
@@ -101,12 +116,17 @@ def test_cochannel_and_adjacent_boundary_table(separation_hz, longitude, expecte
         tx_squelch="NAC 293",
     )
 
-    warnings = evaluate([first, second], [])
-    frequency_rules = {warning["rule_id"] for warning in warnings if warning["rule_id"] <= "RF-002"}
+    evaluation = evaluate([first, second])
+    frequency_rules = {
+        warning["rule_id"]
+        for warning in evaluation["warnings"]
+        if warning["rule_id"] in {"RF-001", "RF-002"}
+    }
     assert frequency_rules == ({expected_rule} if expected_rule else set())
     if expected_rule:
-        warning = next(item for item in warnings if item["rule_id"] == expected_rule)
-        assert warning["evidence"]["squelch_values_differ"] is True
+        warning = next(item for item in evaluation["warnings"] if item["rule_id"] == expected_rule)
+        assert warning["evidence"]["access_code_values_differ"] is True
+        assert warning["blocking"] is False
         assert warning["disclaimer"] == DISCLAIMER
         assert warning["compared_inputs"][0]["tx_squelch"] == "PL 100.0"
 
@@ -132,13 +152,16 @@ def test_area_overlap_includes_exact_combined_radius_boundary():
         radius_m=10_000,
     )
 
-    warning = next(item for item in evaluate([first, second], []) if item["rule_id"] == "RF-001")
+    warning = next(
+        item for item in evaluate([first, second])["warnings"] if item["rule_id"] == "RF-001"
+    )
     overlap = warning["evidence"]["area_overlap"]
     assert overlap["center_distance_m"] == overlap["combined_radius_m"] == 20_000
     assert overlap["overlap_test"] == "center_distance_m <= combined_radius_m"
+    assert overlap["boundary_is_inclusive"] is True
 
 
-def test_rule_table_detects_reversed_duplicate_missing_and_omitted_resources():
+def test_reversed_duplicate_and_scope_status_table():
     assignments = [
         assignment_input(
             "repeater-a",
@@ -146,7 +169,6 @@ def test_rule_table_detects_reversed_duplicate_missing_and_omitted_resources():
             rx_frequency_hz=155_100_000,
             tx_frequency_hz=155_700_000,
             areas=False,
-            resource_id="assigned-resource",
         ),
         assignment_input(
             "repeater-b",
@@ -163,49 +185,121 @@ def test_rule_table_detects_reversed_duplicate_missing_and_omitted_resources():
             areas=False,
         ),
         assignment_input(
-            "missing",
-            "SYN MISSING",
-            rx_frequency_hz=156_000_000,
+            "named",
+            "SYN TALKGROUP",
+            rx_frequency_hz=None,
             tx_frequency_hz=None,
             areas=False,
+            operating_classification="named_system",
+            technology_subtype="trunked_talkgroup",
         ),
     ]
-    resources = [
-        {
-            "id": "assigned-resource",
-            "identifier": "SYN-ASSIGNED",
-            "name": "Synthetic assigned",
-            "rx_frequency_hz": 155_100_000,
-            "tx_frequency_hz": 155_700_000,
-            "rx_squelch": "",
-            "tx_squelch": "",
-            "release": "synthetic-v1",
-            "content_sha256": "a" * 64,
+
+    evaluation = evaluate(assignments)
+    rule_ids = {warning["rule_id"] for warning in evaluation["warnings"]}
+    assert {"RF-003", "RF-004"} <= rule_ids
+    assert "RF-005" not in rule_ids
+    assert "RF-006" not in rule_ids
+    area_status = next(
+        status for status in evaluation["analysis_statuses"] if status["status_id"] == "RF-007"
+    )
+    assert area_status["outcome"] == "not_evaluated"
+    assert area_status["affected_rule_ids"] == ["RF-001", "RF-002"]
+    not_applicable = next(
+        status
+        for status in evaluation["analysis_statuses"]
+        if status["status_id"] == "RF-STATUS-001" and status["assignment"]["id"] == "named"
+    )
+    assert not_applicable["outcome"] == "not_applicable"
+
+
+def test_directional_access_code_mismatch_and_unknown_expected_values():
+    assignment = assignment_input(
+        "access",
+        "SYN ACCESS",
+        rx_frequency_hz=155_000_000,
+        tx_frequency_hz=155_000_000,
+        rx_squelch="NAC 293",
+        tx_squelch="PL 100.0",
+        expected_access_code_source={
+            "source_type": "selected_versioned_channel_definition",
+            "source_id": "synthetic-channel",
+            "source_name": "Synthetic channel",
+            "source_revision": "synthetic-v1",
+            "source_content_sha256": "a" * 64,
+            "rx": "NAC 293",
+            "tx": "PL 123.0",
         },
+    )
+
+    evaluation = evaluate([assignment])
+    mismatch = next(warning for warning in evaluation["warnings"] if warning["rule_id"] == "RF-008")
+    assert mismatch["severity"] == "critical"
+    assert mismatch["blocking"] is False
+    assert mismatch["evidence"]["mismatches"] == [
         {
-            "id": "omitted-resource",
-            "identifier": "SYN-OMITTED",
-            "name": "Synthetic omitted",
-            "rx_frequency_hz": 158_000_000,
-            "tx_frequency_hz": 158_000_000,
-            "rx_squelch": "",
-            "tx_squelch": "",
-            "release": "synthetic-v1",
-            "content_sha256": "a" * 64,
-        },
+            "direction": "tx",
+            "entered_value": "PL 100.0",
+            "expected_value": "PL 123.0",
+            "comparison": "normalized case-insensitive literal comparison",
+        }
     ]
 
-    warnings = evaluate(assignments, resources)
-    rule_ids = {warning["rule_id"] for warning in warnings}
-    assert {"RF-003", "RF-004", "RF-005", "RF-006", "RF-007"} <= rule_ids
-    omitted = next(warning for warning in warnings if warning["rule_id"] == "RF-006")
-    assert omitted["evidence"]["resource_identifier"] == "SYN-OMITTED"
-    missing = next(warning for warning in warnings if warning["rule_id"] == "RF-005")
-    assert missing["evidence"]["missing_fields"] == ["tx_frequency_hz"]
-    assert "will not invent" in missing["explanation"]
+    assignment["expected_access_code_source"]["tx"] = ""
+    unknown = evaluate([assignment])
+    assert not any(warning["rule_id"] == "RF-008" for warning in unknown["warnings"])
+    status = next(
+        item for item in unknown["analysis_statuses"] if item["status_id"] == "RF-STATUS-002"
+    )
+    assert status["evidence"]["unevaluated_directions"] == ["tx"]
 
 
-def create_analysis_context(owner, suffix="BASE"):
+def test_access_code_comparison_uses_only_the_one_way_operating_direction():
+    transmit_only = assignment_input(
+        "transmit-only-access",
+        "SYN BROADCAST",
+        rx_frequency_hz=None,
+        tx_frequency_hz=155_000_000,
+        rx_squelch="",
+        tx_squelch="NAC 293",
+        operating_classification="transmit_only",
+        expected_access_code_source={
+            "source_type": "selected_versioned_channel_definition",
+            "source_id": "synthetic-channel",
+            "source_name": "Synthetic channel",
+            "source_revision": "synthetic-v1",
+            "source_content_sha256": "a" * 64,
+            "rx": "PL 100.0",
+            "tx": "NAC 293",
+        },
+    )
+    receive_only = assignment_input(
+        "receive-only-access",
+        "SYN MONITOR",
+        rx_frequency_hz=155_000_000,
+        tx_frequency_hz=None,
+        rx_squelch="PL 100.0",
+        tx_squelch="",
+        operating_classification="receive_only",
+        expected_access_code_source={
+            "source_type": "approved_subscriber_programming_profile",
+            "source_id": "synthetic-profile",
+            "source_name": "Synthetic profile",
+            "source_revision": "1",
+            "source_content_sha256": "b" * 64,
+            "rx": "PL 100.0",
+            "tx": "NAC 293",
+        },
+    )
+
+    evaluation = evaluate([transmit_only, receive_only])
+    assert not any(warning["rule_id"] == "RF-008" for warning in evaluation["warnings"])
+    assert not any(
+        status["status_id"] == "RF-STATUS-002" for status in evaluation["analysis_statuses"]
+    )
+
+
+def create_analysis_context(owner, suffix="BASE", *, include_access_sources=False):
     incident = Incident.objects.create(
         name=f"Synthetic Deconfliction Exercise {suffix}",
         incident_number=f"SYN-DECON-{suffix}",
@@ -232,16 +326,63 @@ def create_analysis_context(owner, suffix="BASE"):
     )
     revision = PlanRevision.objects.create(plan=plan, number=1, created_by=owner)
 
+    conventional_channel = None
+    subscriber_profile_version = None
+    if include_access_sources:
+        source = ResourceSource.objects.create(
+            slug=f"synthetic-deconfliction-{suffix.lower()}",
+            name=f"Synthetic Deconfliction Source {suffix}",
+            source_type=ResourceSource.Type.SYNTHETIC,
+        )
+        release = ResourceRelease.objects.create(
+            source=source,
+            version="synthetic-v1",
+            effective_status=ResourceRelease.Status.EFFECTIVE,
+            content_sha256="a" * 64,
+            permitted_use="Synthetic automated test fixture only.",
+            imported_by=owner,
+        )
+        conventional_channel = ConventionalChannel.objects.create(
+            release=release,
+            identifier=f"SYN-{suffix}",
+            name="SYN CALL",
+            rx_frequency_hz=155_000_000,
+            tx_frequency_hz=155_000_000,
+            mode=ConventionalChannel.Mode.P25,
+            rx_squelch="NAC 293",
+            tx_squelch="NAC 293",
+        )
+        subscriber_profile = SubscriberProfile.objects.create(
+            incident=incident,
+            name=f"Synthetic Subscriber Profile {suffix}",
+            profile_type=SubscriberProfile.ProfileType.PORTABLE,
+            created_by=owner,
+        )
+        subscriber_profile_version = SubscriberProfileVersion.objects.create(
+            profile=subscriber_profile,
+            number=1,
+            status=SubscriberProfileVersion.Status.APPROVED,
+            rx_access_code="PL 100.0",
+            tx_access_code="PL 100.0",
+            input_sha256="b" * 64,
+            created_by=owner,
+            approved_by=owner,
+            approved_at="2026-07-29T12:00:00Z",
+        )
+
     first = Assignment.objects.create(
         revision=revision,
         position=1,
         function="Command",
         channel_name="SYN CALL",
         assignment="Synthetic command",
+        operating_classification=Assignment.OperatingClassification.FIXED_PAIR,
         rx_frequency_hz=155_000_000,
         tx_frequency_hz=155_000_000,
         rx_squelch="PL 100.0",
         tx_squelch="PL 100.0",
+        conventional_channel=conventional_channel,
+        subscriber_profile_version=subscriber_profile_version,
         resource_snapshot={"type": "incident", "name": "SYN CALL"},
     )
     second = Assignment.objects.create(
@@ -250,6 +391,7 @@ def create_analysis_context(owner, suffix="BASE"):
         function="Operations",
         channel_name="SYN TAC",
         assignment="Synthetic operations",
+        operating_classification=Assignment.OperatingClassification.FIXED_PAIR,
         rx_frequency_hz=155_000_000,
         tx_frequency_hz=155_000_000,
         rx_squelch="NAC 293",
@@ -273,47 +415,67 @@ def create_analysis_context(owner, suffix="BASE"):
     SiteAssignment.objects.create(site=site, assignment=first)
     SiteAssignment.objects.create(site=site, assignment=second)
     revision = approve_revision(revision, owner)
+    return incident, revision
 
-    source = ResourceSource.objects.create(
-        slug=f"synthetic-deconfliction-{suffix.lower()}",
-        name=f"Synthetic Deconfliction Source {suffix}",
-        source_type=ResourceSource.Type.SYNTHETIC,
+
+@pytest.mark.django_db
+def test_analysis_freezes_access_code_source_hierarchy_and_uses_channel_first(client):
+    owner = user_with_role("deconfliction-access-source", Role.COML)
+    incident, revision = create_analysis_context(
+        owner,
+        "ACCESS-SOURCE",
+        include_access_sources=True,
     )
-    release = ResourceRelease.objects.create(
-        source=source,
-        version="synthetic-v1",
-        effective_status=ResourceRelease.Status.EFFECTIVE,
-        content_sha256="a" * 64,
-        permitted_use="Synthetic tests only.",
-        imported_by=owner,
+    response = client.post(
+        "/api/deconfliction-analyses/",
+        {
+            "incident": str(incident.id),
+            "approved_revision": str(revision.id),
+        },
+        content_type="application/json",
+        **auth_header(owner),
     )
-    omitted_resource = ConventionalChannel.objects.create(
-        release=release,
-        identifier="SYN-OMITTED",
-        name="Synthetic omitted active resource",
-        rx_frequency_hz=158_000_000,
-        tx_frequency_hz=158_000_000,
-        mode=ConventionalChannel.Mode.ANALOG_FM,
+    assert response.status_code == 201, response.content
+
+    assignment = response.json()["input_snapshot"]["assignments"][0]
+    assert assignment["expected_access_code_source"]["source_type"] == (
+        "selected_versioned_channel_definition"
     )
-    return incident, revision, omitted_resource
+    assert [source["source_type"] for source in assignment["available_access_code_sources"]] == [
+        "selected_versioned_channel_definition",
+        "approved_subscriber_programming_profile",
+    ]
+    mismatch = next(
+        warning
+        for warning in response.json()["result_snapshot"]["warnings"]
+        if warning["rule_id"] == "RF-008"
+        and warning["compared_inputs"][0]["id"] == assignment["id"]
+    )
+    assert mismatch["evidence"]["comparison_source"]["source_type"] == (
+        "selected_versioned_channel_definition"
+    )
+    assert {item["direction"] for item in mismatch["evidence"]["mismatches"]} == {
+        "rx",
+        "tx",
+    }
 
 
 @pytest.mark.django_db
 def test_analysis_lifecycle_is_reproducible_audited_and_fail_closed(client):
     owner = user_with_role("deconfliction-owner", Role.COML)
-    incident, revision, omitted_resource = create_analysis_context(owner)
+    incident, revision = create_analysis_context(owner)
     headers = auth_header(owner)
 
     status_response = client.get("/api/deconfliction-status/", **headers)
     assert status_response.status_code == 200
     assert status_response.json()["rule_set_version"] == RULE_SET_VERSION
     assert status_response.json()["approved_for_operational_use"] is False
+    assert status_response.json()["close_frequency_threshold_hz"] == 12_500
     assert "never suppress" in status_response.json()["squelch_rule"]
 
     payload = {
         "incident": str(incident.id),
         "approved_revision": str(revision.id),
-        "active_resources": [str(omitted_resource.id)],
     }
     response = client.post(
         "/api/deconfliction-analyses/",
@@ -326,10 +488,16 @@ def test_analysis_lifecycle_is_reproducible_audited_and_fail_closed(client):
     assert body["status"] == "draft"
     assert body["rule_set_version"] == RULE_SET_VERSION
     assert body["input_snapshot"]["approved_revision"]["number"] == 1
+    assert body["input_snapshot"]["schema_version"] == "rf-deconfliction-input-v2"
+    assert "selected_active_resources" not in body["input_snapshot"]
     assert body["result_snapshot"]["input_sha256"] == body["input_sha256"]
     assert body["result_snapshot"]["warning_count"] == body["warning_count"]
-    assert {"RF-001", "RF-004", "RF-006"} <= {
+    assert {"RF-001", "RF-004"} <= {
         warning["rule_id"] for warning in body["result_snapshot"]["warnings"]
+    }
+    assert body["result_snapshot"]["analysis_status_count"] == 2
+    assert {status["status_id"] for status in body["result_snapshot"]["analysis_statuses"]} == {
+        "RF-STATUS-002"
     }
 
     repeated = client.post(
@@ -349,23 +517,96 @@ def test_analysis_lifecycle_is_reproducible_audited_and_fail_closed(client):
     created_event = AuditEvent.objects.filter(action="deconfliction_analysis.created").first()
     assert created_event
     assert created_event.details["input_sha256"] == body["input_sha256"]
+    assert created_event.details["analysis_status_count"] == 2
     serialized_details = json.dumps(created_event.details)
     assert "155000000" not in serialized_details
     assert "31.000000" not in serialized_details
 
 
 @pytest.mark.django_db
-@override_settings(ICT_APPROVED_DECONFLICTION_RULESETS=[RULE_SET_VERSION])
-def test_qualified_ruleset_gate_allows_approval_and_records_digest_only(client):
-    owner = user_with_role("deconfliction-approver", Role.COML)
-    incident, revision, omitted_resource = create_analysis_context(owner, "APPROVE")
+def test_finding_dispositions_are_append_only_incident_scoped_and_audited(client):
+    owner = user_with_role("deconfliction-disposition", Role.COML)
+    incident, revision = create_analysis_context(owner, "DISPOSITION")
     headers = auth_header(owner)
     created = client.post(
         "/api/deconfliction-analyses/",
         {
             "incident": str(incident.id),
             "approved_revision": str(revision.id),
-            "active_resources": [str(omitted_resource.id)],
+        },
+        content_type="application/json",
+        **headers,
+    )
+    finding = next(
+        warning
+        for warning in created.json()["result_snapshot"]["warnings"]
+        if warning["rule_id"] == "RF-001"
+    )
+
+    recorded = client.post(
+        f"/api/deconfliction-analyses/{created.json()['id']}/dispositions/",
+        {
+            "finding_key": finding["finding_key"],
+            "disposition": "reviewed_no_change",
+            "explanation": "Synthetic exercise relationship reviewed.",
+        },
+        content_type="application/json",
+        **headers,
+    )
+    assert recorded.status_code == 201, recorded.content
+    assert recorded.json()["rule_id"] == "RF-001"
+    assert recorded.json()["finding_key"] == finding["finding_key"]
+
+    follow_up = client.post(
+        f"/api/deconfliction-analyses/{created.json()['id']}/dispositions/",
+        {
+            "finding_key": finding["finding_key"],
+            "disposition": "plan_change_required",
+            "explanation": "Later synthetic review requires a revised plan.",
+        },
+        content_type="application/json",
+        **headers,
+    )
+    assert follow_up.status_code == 201
+    assert DeconflictionFindingDisposition.objects.count() == 2
+
+    first = DeconflictionFindingDisposition.objects.first()
+    first.explanation = "Forbidden rewrite"
+    with pytest.raises(DjangoValidationError, match="append-only"):
+        first.save()
+    with pytest.raises(DjangoValidationError, match="retained"):
+        first.delete()
+
+    event = AuditEvent.objects.filter(action="deconfliction_finding.disposition_recorded").latest(
+        "occurred_at"
+    )
+    assert event.details["finding_key"] == finding["finding_key"]
+    assert "explanation" not in event.details
+
+    invalid = client.post(
+        f"/api/deconfliction-analyses/{created.json()['id']}/dispositions/",
+        {
+            "finding_key": "a" * 64,
+            "disposition": "reviewed_no_change",
+            "explanation": "Synthetic invalid finding.",
+        },
+        content_type="application/json",
+        **headers,
+    )
+    assert invalid.status_code == 400
+
+
+@pytest.mark.django_db
+@override_settings(ICT_APPROVED_DECONFLICTION_RULESETS=[RULE_SET_VERSION])
+def test_qualified_ruleset_gate_allows_approval_and_records_digest_only(client):
+    owner = user_with_role("deconfliction-approver", Role.COML)
+    incident, revision = create_analysis_context(owner, "APPROVE")
+    headers = auth_header(owner)
+    created = client.post(
+        "/api/deconfliction-analyses/",
+        {
+            "incident": str(incident.id),
+            "approved_revision": str(revision.id),
         },
         content_type="application/json",
         **headers,
@@ -386,7 +627,7 @@ def test_qualified_ruleset_gate_allows_approval_and_records_digest_only(client):
 def test_analysis_rejects_draft_cross_incident_and_unauthorized_sources(client):
     owner = user_with_role("deconfliction-scope-owner", Role.COML)
     outsider = user_with_role("deconfliction-outsider", Role.READ_ONLY)
-    incident, revision, omitted_resource = create_analysis_context(owner, "SCOPE")
+    incident, revision = create_analysis_context(owner, "SCOPE")
     other_incident = Incident.objects.create(
         name="Other Synthetic Incident",
         incident_number="SYN-OTHER",
@@ -405,14 +646,12 @@ def test_analysis_rejects_draft_cross_incident_and_unauthorized_sources(client):
         {
             "incident": str(other_incident.id),
             "approved_revision": str(revision.id),
-            "active_resources": [str(omitted_resource.id)],
         },
         content_type="application/json",
         **headers,
     )
     assert cross_incident.status_code == 400
 
-    revision.status = PlanRevision.Status.DRAFT
     PlanRevision.objects.filter(pk=revision.pk).update(
         status=PlanRevision.Status.DRAFT,
         approved_by=None,
@@ -423,7 +662,6 @@ def test_analysis_rejects_draft_cross_incident_and_unauthorized_sources(client):
         {
             "incident": str(incident.id),
             "approved_revision": str(revision.id),
-            "active_resources": [],
         },
         content_type="application/json",
         **headers,
@@ -441,7 +679,6 @@ def test_analysis_rejects_draft_cross_incident_and_unauthorized_sources(client):
         {
             "incident": str(incident.id),
             "approved_revision": str(revision.id),
-            "active_resources": [],
         },
         content_type="application/json",
         **auth_header(outsider),
@@ -452,13 +689,12 @@ def test_analysis_rejects_draft_cross_incident_and_unauthorized_sources(client):
 @pytest.mark.django_db
 def test_analysis_models_are_retained_and_immutable(client):
     owner = user_with_role("deconfliction-immutable", Role.COML)
-    incident, revision, omitted_resource = create_analysis_context(owner, "IMMUTABLE")
+    incident, revision = create_analysis_context(owner, "IMMUTABLE")
     created = client.post(
         "/api/deconfliction-analyses/",
         {
             "incident": str(incident.id),
             "approved_revision": str(revision.id),
-            "active_resources": [str(omitted_resource.id)],
         },
         content_type="application/json",
         **auth_header(owner),

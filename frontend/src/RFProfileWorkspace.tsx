@@ -36,6 +36,8 @@ const PROFILE_TYPES: {
 const EMPTY_RF_INPUTS: EditableRFInputFields = {
   tx_frequency_hz: null,
   rx_frequency_hz: null,
+  tx_access_code: "",
+  rx_access_code: "",
   transmitter_power_w: null,
   effective_radiated_power_w: null,
   erp_source: "unknown",
@@ -90,6 +92,18 @@ const RF_FIELD_GROUPS: RFFieldGroup[] = [
         name: "rx_frequency_hz",
         label: "Receive frequency (Hz)",
         kind: "integer",
+      },
+      {
+        name: "tx_access_code",
+        label: "Transmit access code",
+        kind: "text",
+        help: "Expected transmit CTCSS, DCS, NAC, or equivalent programming value.",
+      },
+      {
+        name: "rx_access_code",
+        label: "Receive access code",
+        kind: "text",
+        help: "Expected receive CTCSS, DCS, NAC, or equivalent programming value.",
       },
       {
         name: "transmitter_power_w",
@@ -292,6 +306,8 @@ function rfInputsFromForm(data: FormData): EditableRFInputFields {
   return {
     tx_frequency_hz: nullableInteger(data, "tx_frequency_hz"),
     rx_frequency_hz: nullableInteger(data, "rx_frequency_hz"),
+    tx_access_code: String(data.get("tx_access_code") ?? "").trim(),
+    rx_access_code: String(data.get("rx_access_code") ?? "").trim(),
     transmitter_power_w: nullableString(data, "transmitter_power_w"),
     effective_radiated_power_w:
       erpSource === "entered"

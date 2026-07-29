@@ -84,7 +84,12 @@ def render_ics205(revision):
     rows = [headers]
     for item in revision.assignments.all():
         note = item.get_structured_note_display() if item.structured_note else ""
-        remarks = " - ".join(part for part in [note, item.remarks] if part)
+        operating_note = ""
+        if item.operating_classification != item.OperatingClassification.FIXED_PAIR:
+            operating_note = item.get_operating_classification_display()
+            if item.technology_subtype:
+                operating_note = f"{operating_note}: {item.get_technology_subtype_display()}"
+        remarks = " - ".join(part for part in [operating_note, note, item.remarks] if part)
         rows.append(
             [
                 str(item.position),

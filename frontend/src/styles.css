@@ -1455,6 +1455,25 @@ footer a {
   margin-top: 1rem;
 }
 
+.deconfliction-status-list {
+  border-top: 1px solid var(--tx-comu-border);
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  padding-top: 1rem;
+}
+
+.deconfliction-status {
+  border-left: 0.35rem solid var(--tx-comu-blue);
+  padding-left: 0.9rem;
+}
+
+.deconfliction-status pre {
+  max-height: 18rem;
+  overflow: auto;
+  white-space: pre-wrap;
+}
+
 .deconfliction-warning {
   border-left: 0.35rem solid var(--tx-comu-border);
 }
@@ -1512,6 +1531,30 @@ footer a {
   max-height: 18rem;
   overflow: auto;
   white-space: pre-wrap;
+}
+
+.finding-dispositions {
+  border-top: 1px solid var(--tx-comu-border);
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+}
+
+.finding-dispositions h5 {
+  margin: 0 0 0.5rem;
+}
+
+.finding-disposition-form {
+  align-items: end;
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: minmax(12rem, 0.8fr) minmax(16rem, 1.5fr) auto;
+  margin-top: 0.75rem;
+}
+
+@media (max-width: 800px) {
+  .finding-disposition-form {
+    grid-template-columns: 1fr;
+  }
 }
 
 .terrain-form h3,

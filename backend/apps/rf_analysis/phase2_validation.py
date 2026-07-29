@@ -92,6 +92,13 @@ def _plan_snapshot(revision: PlanRevision) -> dict[str, Any]:
                 "channel_name": assignment.channel_name,
                 "assignment": assignment.assignment,
                 "resource_snapshot": assignment.resource_snapshot,
+                "operating_classification": assignment.operating_classification,
+                "technology_subtype": assignment.technology_subtype,
+                "subscriber_profile_version_id": (
+                    str(assignment.subscriber_profile_version_id)
+                    if assignment.subscriber_profile_version_id
+                    else None
+                ),
                 "rx_frequency_hz": assignment.rx_frequency_hz,
                 "rx_squelch": assignment.rx_squelch,
                 "tx_frequency_hz": assignment.tx_frequency_hz,

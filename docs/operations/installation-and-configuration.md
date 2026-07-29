@@ -169,9 +169,10 @@ results of these checks:
     source identity, datum/transformation, limits, missing/boundary behavior,
     retained digests, and Phase 2 comparison through the
     [terrain analysis guide](terrain-analysis.md).
-15. RF deconfliction approval remains disabled unless the exact rule set passed the qualified
-    COML, COMT, COMC, and frequency-coordination gate. Verify the positive, negative, boundary,
-    squelch, immutability, digest, authorization, and audit cases through the
+15. RF deconfliction approval remains disabled unless the exact rule set passed qualified
+    practitioner review and complete integrated validation. Verify operating classifications,
+    positive, negative, exact-boundary, access-code source, one-way direction, legacy-history,
+    append-only disposition, immutability, digest, authorization, and audit cases through the
     [RF deconfliction guide](rf-deconfliction.md).
 
 If any check fails, leave external access disabled, preserve sanitized evidence,

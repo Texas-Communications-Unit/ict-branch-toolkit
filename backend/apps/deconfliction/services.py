@@ -12,11 +12,11 @@ from django.utils import timezone
 from rest_framework.exceptions import ValidationError
 
 from apps.plans.models import PlanRevision
-from apps.resources.models import ConventionalChannel
 
 from .models import DeconflictionAnalysis
 from .rules import (
-    ADJACENT_THRESHOLD_HZ,
+    ANALYSIS_STATUS_DEFINITIONS,
+    CLOSE_FREQUENCY_THRESHOLD_HZ,
     DISCLAIMER,
     RULE_DEFINITIONS,
     RULE_SET_ID,
@@ -97,7 +97,8 @@ def _area_snapshot(assignment) -> list[dict[str, Any]]:
 
 def _assignment_snapshot(revision: PlanRevision) -> list[dict[str, Any]]:
     assignments = revision.assignments.select_related(
-        "conventional_channel__release__source"
+        "conventional_channel__release__source",
+        "subscriber_profile_version__profile",
     ).prefetch_related("site_links")
     snapshots = []
     for assignment in assignments.order_by("position", "id"):
@@ -106,6 +107,33 @@ def _assignment_snapshot(revision: PlanRevision) -> list[dict[str, Any]]:
             if assignment.conventional_channel_id
             else assignment.resource_snapshot.get("resource_id")
         )
+        access_code_sources = []
+        if assignment.conventional_channel_id:
+            channel = assignment.conventional_channel
+            access_code_sources.append(
+                {
+                    "source_type": "selected_versioned_channel_definition",
+                    "source_id": str(channel.id),
+                    "source_name": channel.name,
+                    "source_revision": channel.release.version,
+                    "source_content_sha256": channel.release.content_sha256,
+                    "rx": channel.rx_squelch,
+                    "tx": channel.tx_squelch,
+                }
+            )
+        if assignment.subscriber_profile_version_id:
+            profile_version = assignment.subscriber_profile_version
+            access_code_sources.append(
+                {
+                    "source_type": "approved_subscriber_programming_profile",
+                    "source_id": str(profile_version.id),
+                    "source_name": profile_version.profile.name,
+                    "source_revision": str(profile_version.number),
+                    "source_content_sha256": profile_version.input_sha256,
+                    "rx": profile_version.rx_access_code,
+                    "tx": profile_version.tx_access_code,
+                }
+            )
         snapshots.append(
             {
                 "id": str(assignment.id),
@@ -115,6 +143,17 @@ def _assignment_snapshot(revision: PlanRevision) -> list[dict[str, Any]]:
                 "assignment": assignment.assignment,
                 "resource_id": resource_id,
                 "resource_snapshot": deepcopy(assignment.resource_snapshot),
+                "operating_classification": assignment.operating_classification,
+                "technology_subtype": assignment.technology_subtype,
+                "subscriber_profile_version_id": (
+                    str(assignment.subscriber_profile_version_id)
+                    if assignment.subscriber_profile_version_id
+                    else None
+                ),
+                "expected_access_code_source": (
+                    access_code_sources[0] if access_code_sources else None
+                ),
+                "available_access_code_sources": access_code_sources,
                 "rx_frequency_hz": assignment.rx_frequency_hz,
                 "tx_frequency_hz": assignment.tx_frequency_hz,
                 "rx_squelch": assignment.rx_squelch,
@@ -126,44 +165,11 @@ def _assignment_snapshot(revision: PlanRevision) -> list[dict[str, Any]]:
     return snapshots
 
 
-def _resource_snapshot(resources: list[ConventionalChannel]) -> list[dict[str, Any]]:
-    snapshots = []
-    for resource in resources:
-        if not resource.is_active:
-            raise ValidationError({"active_resources": f"Resource {resource.id} is not active."})
-        if resource.release.effective_status != resource.release.Status.EFFECTIVE:
-            raise ValidationError(
-                {
-                    "active_resources": (
-                        f"Resource {resource.id} does not belong to an effective release."
-                    )
-                }
-            )
-        snapshots.append(
-            {
-                "id": str(resource.id),
-                "identifier": resource.identifier,
-                "name": resource.name,
-                "rx_frequency_hz": resource.rx_frequency_hz,
-                "tx_frequency_hz": resource.tx_frequency_hz,
-                "rx_squelch": resource.rx_squelch,
-                "tx_squelch": resource.tx_squelch,
-                "mode": resource.mode,
-                "release": resource.release.version,
-                "source": resource.release.source.slug,
-                "source_type": resource.release.source.source_type,
-                "content_sha256": resource.release.content_sha256,
-            }
-        )
-    return sorted(snapshots, key=lambda resource: resource["id"])
-
-
 @transaction.atomic
 def create_deconfliction_analysis(
     *,
     incident,
     approved_revision: PlanRevision,
-    active_resources: list[ConventionalChannel],
     actor,
 ) -> DeconflictionAnalysis:
     if incident.archived_at is not None:
@@ -185,24 +191,10 @@ def create_deconfliction_analysis(
         raise ValidationError(
             {"approved_revision": "The approved revision contains no assignments."}
         )
-    if len(active_resources) > 500:
-        raise ValidationError({"active_resources": "Select no more than 500 active resources."})
-    if len({resource.id for resource in active_resources}) != len(active_resources):
-        raise ValidationError({"active_resources": "Each active resource may be selected once."})
-    locked_resources = list(
-        ConventionalChannel.objects.select_related("release__source")
-        .select_for_update()
-        .filter(pk__in=[resource.pk for resource in active_resources])
-    )
-    if len(locked_resources) != len(active_resources):
-        raise ValidationError(
-            {"active_resources": "One or more selected resources no longer exist."}
-        )
 
     assignment_snapshot = _assignment_snapshot(revision)
-    resource_snapshot = _resource_snapshot(locked_resources)
     input_snapshot = {
-        "schema_version": "rf-deconfliction-input-v1",
+        "schema_version": "rf-deconfliction-input-v2",
         "incident_id": str(incident.id),
         "approved_revision": {
             "id": str(revision.id),
@@ -213,20 +205,37 @@ def create_deconfliction_analysis(
         },
         "rule_set_id": RULE_SET_ID,
         "rule_set_version": RULE_SET_VERSION,
-        "adjacent_channel_threshold_hz": ADJACENT_THRESHOLD_HZ,
+        "close_frequency_threshold_hz": CLOSE_FREQUENCY_THRESHOLD_HZ,
+        "access_code_source_hierarchy": [
+            "selected_versioned_channel_definition",
+            "approved_subscriber_programming_profile",
+        ],
         "assignments": assignment_snapshot,
-        "selected_active_resources": resource_snapshot,
     }
     input_sha256 = canonical_digest(input_snapshot)
-    warnings = evaluate(assignment_snapshot, resource_snapshot)
+    evaluation = evaluate(assignment_snapshot)
+    warnings = evaluation["warnings"]
+    for warning in warnings:
+        warning["finding_key"] = canonical_digest(
+            {
+                "rule_set_version": RULE_SET_VERSION,
+                "rule_id": warning["rule_id"],
+                "compared_input_ids": [item["id"] for item in warning["compared_inputs"]],
+                "evidence": warning["evidence"],
+            }
+        )
+    analysis_statuses = evaluation["analysis_statuses"]
     result_snapshot = {
-        "schema_version": "rf-deconfliction-result-v1",
+        "schema_version": "rf-deconfliction-result-v2",
         "rule_set_id": RULE_SET_ID,
         "rule_set_version": RULE_SET_VERSION,
         "input_sha256": input_sha256,
         "rule_definitions": RULE_DEFINITIONS,
+        "analysis_status_definitions": ANALYSIS_STATUS_DEFINITIONS,
         "warning_count": len(warnings),
         "warnings": warnings,
+        "analysis_status_count": len(analysis_statuses),
+        "analysis_statuses": analysis_statuses,
         "disclaimer": DISCLAIMER,
     }
     return DeconflictionAnalysis.objects.create(

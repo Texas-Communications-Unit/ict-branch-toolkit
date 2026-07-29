@@ -39,9 +39,17 @@ Phase 1 is an operational-planning prototype. It must prove a controlled workflo
 ## P1.4 explainable deconfliction
 
 - Implement a versioned rule engine with stable rule IDs, severity, evidence, assumptions, and plain-language explanation.
-- Detect co-channel, adjacent-channel, reversed input/output, duplicate-name/frequency, missing-value, and plan-omission conditions.
+- Detect co-channel, close-frequency, reversed input/output, duplicate-name/frequency, and
+  directional subscriber access-code mismatch conditions.
+- Record fixed-pair, transmit-only, receive-only, named-system, dynamic-pool, and
+  not-yet-determined operating intent explicitly.
+- Report missing area or authoritative subscriber evidence as not evaluated and nonconventional
+  classifications as not applicable; never invent missing evidence.
 - Never suppress RF warnings solely because CTCSS, DCS, or NAC values differ.
-- Gate: domain review by qualified incident communications and frequency-coordination practitioners.
+- Retain immutable analyses, deterministic finding keys, and append-only finding dispositions.
+- Gate: domain review by qualified incident communications and frequency-coordination
+  practitioners, followed by complete integrated environment validation before operational
+  allowlisting.
 
 ## P1.5 export integrity
 

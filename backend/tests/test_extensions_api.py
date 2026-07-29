@@ -70,6 +70,7 @@ def create_context(owner, suffix="BASE"):
         function="Command",
         channel_name="SYN CALL",
         assignment="Synthetic command",
+        operating_classification=Assignment.OperatingClassification.FIXED_PAIR,
         rx_frequency_hz=155_000_000,
         tx_frequency_hz=155_000_000,
         contact_name="Sensitive Test Contact",
@@ -82,6 +83,8 @@ def create_context(owner, suffix="BASE"):
         function="Operations",
         channel_name="SYN TAC",
         assignment="Synthetic operations",
+        operating_classification=Assignment.OperatingClassification.NAMED_SYSTEM,
+        technology_subtype=Assignment.TechnologySubtype.OTHER,
         rx_frequency_hz=None,
         tx_frequency_hz=None,
         resource_snapshot={"type": "synthetic", "name": "SYN TAC"},
@@ -255,8 +258,8 @@ def test_tool_and_report_runs_are_deterministic_retained_redacted_and_audited(cl
     assert first_body["status"] == "complete"
     assert first_body["output_classification"] == "decision_support"
     assert first_body["result_snapshot"]["assignment_count"] == 2
-    assert first_body["result_snapshot"]["missing_frequency_count"] == 1
-    assert first_body["result_snapshot"]["readiness_state"] == "attention"
+    assert first_body["result_snapshot"]["missing_frequency_count"] == 0
+    assert first_body["result_snapshot"]["readiness_state"] == "ready"
     assert first_body["input_sha256"] == second_body["input_sha256"]
     assert first_body["result_sha256"] == second_body["result_sha256"]
     serialized = json.dumps(first_body)

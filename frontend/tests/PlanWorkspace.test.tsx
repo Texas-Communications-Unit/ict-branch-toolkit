@@ -16,6 +16,8 @@ const api = vi.hoisted(() => ({
   listCollaborationChanges: vi.fn(),
   listCollaborationPresence: vi.fn(),
   listPlans: vi.fn(),
+  listSubscriberProfiles: vi.fn(),
+  listSubscriberProfileVersions: vi.fn(),
   releaseCollaborationPresence: vi.fn(),
   resolveCollaborationConflict: vi.fn(),
   sendCollaborationMutation: vi.fn(),
@@ -57,6 +59,9 @@ const plan: ICS205Plan = {
           function: "Command",
           channel_name: "SYN CALL",
           assignment: "Synthetic exercise",
+          operating_classification: "fixed_pair",
+          technology_subtype: "",
+          subscriber_profile_version: null,
           rx_frequency_hz: 155_000_000,
           rx_squelch: "",
           tx_frequency_hz: 155_000_000,
@@ -102,6 +107,8 @@ const conflict: CollaborationChange = {
 beforeEach(() => {
   vi.clearAllMocks();
   api.listPlans.mockResolvedValue([plan]);
+  api.listSubscriberProfiles.mockResolvedValue([]);
+  api.listSubscriberProfileVersions.mockResolvedValue([]);
   api.heartbeatCollaborationPresence.mockResolvedValue({
     id: "presence-1",
     revision: "revision-collaboration-1",
@@ -234,6 +241,10 @@ test("submits a new assignment with the loaded revision version", async () => {
     }),
     "SYN TAC",
   );
+  await user.selectOptions(
+    within(assignmentForm!).getByLabelText("Operating classification"),
+    "not_determined",
+  );
   await user.click(form);
 
   await waitFor(() =>
@@ -246,6 +257,63 @@ test("submits a new assignment with the loaded revision version", async () => {
           position: 2,
           function: "Tactical",
           channel_name: "SYN TAC",
+        }),
+      }),
+    ),
+  );
+});
+
+test("requires explicit confirmation for a transmit-only assignment", async () => {
+  const user = userEvent.setup();
+  api.listCollaborationChanges.mockResolvedValue([]);
+  api.sendCollaborationMutation.mockResolvedValue({
+    ...conflict,
+    id: "change-saved-transmit-only",
+    operation: "assignment.create",
+    object_id: null,
+    base_version: 3,
+    resulting_version: 4,
+    proposed_snapshot: {},
+    current_snapshot: {},
+    disposition: "saved",
+    result: {
+      assignment: "assignment-transmit-only",
+      version: 1,
+      revision_version: 4,
+    },
+  });
+  const confirm = vi.spyOn(window, "confirm").mockReturnValue(true);
+
+  render(<PlanWorkspace incident={incident} />);
+  const submit = await screen.findByRole("button", {
+    name: "Insert assignment row",
+  });
+  const form = submit.closest("form")!;
+  await user.type(
+    within(form).getByRole("textbox", { name: "Function" }),
+    "Alerting",
+  );
+  await user.type(
+    within(form).getByRole("textbox", { name: "Channel or talkgroup" }),
+    "SYN BROADCAST",
+  );
+  await user.selectOptions(
+    within(form).getByLabelText("Operating classification"),
+    "transmit_only",
+  );
+  await user.type(within(form).getByLabelText("TX MHz"), "155.25");
+  await user.click(submit);
+
+  expect(confirm).toHaveBeenCalledWith(
+    "Receive frequency is blank. Confirm that this assignment is intentionally broadcast/transmit-only.",
+  );
+  await waitFor(() =>
+    expect(api.sendCollaborationMutation).toHaveBeenCalledWith(
+      expect.objectContaining({
+        changes: expect.objectContaining({
+          operating_classification: "transmit_only",
+          rx_frequency_hz: null,
+          tx_frequency_hz: 155_250_000,
         }),
       }),
     ),

@@ -87,3 +87,70 @@ class DeconflictionAnalysis(models.Model):
     @property
     def is_locked(self):
         return self.status == self.Status.APPROVED
+
+
+class DeconflictionFindingDisposition(models.Model):
+    class Disposition(models.TextChoices):
+        REVIEWED_NO_CHANGE = "reviewed_no_change", "Reviewed — no plan change"
+        PLAN_CHANGE_REQUIRED = "plan_change_required", "Plan change required"
+        SPECIAL_ACCOMMODATION_REQUIRED = (
+            "special_accommodation_required",
+            "Special accommodation required",
+        )
+        SOURCE_REVIEW_REQUIRED = "source_review_required", "Source review required"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    analysis = models.ForeignKey(
+        DeconflictionAnalysis,
+        related_name="finding_dispositions",
+        on_delete=models.PROTECT,
+    )
+    finding_key = models.CharField(max_length=64)
+    rule_id = models.CharField(max_length=16)
+    disposition = models.CharField(max_length=40, choices=Disposition.choices)
+    explanation = models.CharField(max_length=1000)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        related_name="deconfliction_finding_dispositions",
+        on_delete=models.PROTECT,
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["created_at", "id"]
+        indexes = [
+            models.Index(
+                fields=["analysis", "finding_key", "created_at"],
+                name="deconf_finding_review_idx",
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.rule_id}:{self.finding_key}:{self.disposition}"
+
+    def save(self, *args, **kwargs):
+        if not self._state.adding:
+            raise ValidationError("Finding dispositions are append-only.")
+        self.full_clean()
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError("Finding dispositions are retained.")
+
+    def clean(self):
+        if not self.analysis_id:
+            return
+        warning = next(
+            (
+                item
+                for item in self.analysis.result_snapshot.get("warnings", [])
+                if item.get("finding_key") == self.finding_key
+            ),
+            None,
+        )
+        if warning is None:
+            raise ValidationError(
+                {"finding_key": "The finding does not belong to this retained analysis."}
+            )
+        if warning.get("rule_id") != self.rule_id:
+            raise ValidationError({"rule_id": "The rule ID does not match the retained finding."})

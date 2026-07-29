@@ -45,6 +45,8 @@ function version(
     approved_at: null,
     tx_frequency_hz: null,
     rx_frequency_hz: null,
+    tx_access_code: "",
+    rx_access_code: "",
     transmitter_power_w: null,
     effective_radiated_power_w: null,
     erp_source: "unknown",
@@ -196,6 +198,8 @@ test("creates all supported profile types and preserves exact draft values", asy
         description: "Synthetic values only",
         initial_version: expect.objectContaining({
           tx_frequency_hz: null,
+          tx_access_code: "",
+          rx_access_code: "",
           transmitter_power_w: null,
           antenna_center_agl_m: null,
           erp_source: "unknown",
@@ -214,6 +218,8 @@ test("creates all supported profile types and preserves exact draft values", asy
     screen.getByLabelText("Transmit frequency (Hz)"),
     "155000000",
   );
+  await user.type(screen.getByLabelText("Transmit access code"), "PL 100.0");
+  await user.type(screen.getByLabelText("Receive access code"), "NAC 293");
   await user.type(screen.getByLabelText("Transmitter power (W)"), "5.2500");
   const erpSource = screen.getByLabelText("ERP source");
   expect(erpSource).toBeInstanceOf(HTMLSelectElement);
@@ -242,6 +248,8 @@ test("creates all supported profile types and preserves exact draft values", asy
       expect.objectContaining({
         tx_frequency_hz: 155000000,
         rx_frequency_hz: null,
+        tx_access_code: "PL 100.0",
+        rx_access_code: "NAC 293",
         transmitter_power_w: "5.2500",
         erp_source: "entered",
         antenna_center_agl_m: "12.50",

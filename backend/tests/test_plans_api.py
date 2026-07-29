@@ -1,3 +1,4 @@
+import json
 from io import BytesIO
 
 import pytest
@@ -62,6 +63,7 @@ def add_assignment(client, admin, revision, position, name):
             "function": "Command",
             "channel_name": name,
             "assignment": "Synthetic exercise",
+            "operating_classification": "fixed_pair",
             "rx_frequency_hz": 155000000 + position * 1000,
             "tx_frequency_hz": 155000000 + position * 1000,
             "mode": "Analog FM",
@@ -123,11 +125,29 @@ def test_plan_approval_locks_children_and_copy_forward_preserves_history(client)
     draft_first = draft.assignments.get(position=1)
     changed = client.patch(
         f"/api/plan-assignments/{draft_first.id}/",
-        {"remarks": "New draft change"},
+        {
+            "remarks": "New draft change",
+            "operating_classification": "transmit_only",
+            "rx_frequency_hz": None,
+            "rx_squelch": "",
+            "tx_squelch": "NAC 293",
+        },
         content_type="application/json",
         **auth_header(admin),
     )
     assert changed.status_code == 200
+    comparison = client.get(
+        f"/api/plan-revisions/{revision.id}/compare/?other={draft.id}",
+        **auth_header(admin),
+    )
+    assert comparison.status_code == 200
+    changed_fields = comparison.json()["changes"][0]["changed_fields"]
+    assert {
+        "operating_classification",
+        "rx_frequency_hz",
+        "tx_squelch",
+        "remarks",
+    } <= set(changed_fields)
     first.refresh_from_db()
     assert first.remarks == "Synthetic data only"
     assert plan.revisions.count() == 2
@@ -151,6 +171,92 @@ def test_patch_relationship_requires_two_rows_from_same_revision(client):
     )
     assert invalid.status_code == 400
     assert AssignmentRelationship.objects.count() == 0
+
+
+@pytest.mark.django_db
+def test_operating_classification_requires_explicit_consistent_intent(client):
+    admin, incident, period = setup_incident()
+    _, revision = create_plan(client, admin, incident, period)
+    base = {
+        "revision": str(revision.id),
+        "position": 1,
+        "function": "Alerting",
+        "channel_name": "SYN BROADCAST",
+        "tx_frequency_hz": 155_000_000,
+    }
+
+    missing_classification = client.post(
+        "/api/plan-assignments/",
+        base,
+        content_type="application/json",
+        **auth_header(admin),
+    )
+    assert missing_classification.status_code == 400
+    assert "operating_classification" in missing_classification.json()
+
+    inconsistent = client.post(
+        "/api/plan-assignments/",
+        {**base, "operating_classification": "receive_only"},
+        content_type="application/json",
+        **auth_header(admin),
+    )
+    assert inconsistent.status_code == 400
+
+    created = client.post(
+        "/api/plan-assignments/",
+        {**base, "operating_classification": "transmit_only"},
+        content_type="application/json",
+        **auth_header(admin),
+    )
+    assert created.status_code == 201, created.content
+    assert created.json()["operating_classification"] == "transmit_only"
+
+    copied = client.post(
+        f"/api/plan-revisions/{revision.id}/approve/",
+        **auth_header(admin),
+    )
+    assert copied.status_code == 200, copied.content
+
+
+@pytest.mark.django_db
+def test_named_system_is_approvable_but_not_determined_is_not(client):
+    admin, incident, period = setup_incident()
+    _, revision = create_plan(client, admin, incident, period)
+    named = client.post(
+        "/api/plan-assignments/",
+        {
+            "revision": str(revision.id),
+            "position": 1,
+            "function": "Operations",
+            "channel_name": "SYN TALKGROUP",
+            "operating_classification": "named_system",
+            "technology_subtype": "trunked_talkgroup",
+        },
+        content_type="application/json",
+        **auth_header(admin),
+    )
+    assert named.status_code == 201, named.content
+
+    undetermined = client.post(
+        "/api/plan-assignments/",
+        {
+            "revision": str(revision.id),
+            "position": 2,
+            "function": "Planning",
+            "channel_name": "SYN TBD",
+            "operating_classification": "not_determined",
+        },
+        content_type="application/json",
+        **auth_header(admin),
+    )
+    assert undetermined.status_code == 201, undetermined.content
+
+    blocked = client.post(
+        f"/api/plan-revisions/{revision.id}/approve/",
+        **auth_header(admin),
+    )
+    assert blocked.status_code == 400
+    assert "no determined operating classification" in json.dumps(blocked.json()).lower()
 
 
 @pytest.mark.django_db

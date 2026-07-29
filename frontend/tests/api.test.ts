@@ -8,6 +8,7 @@ import {
   copySubscriberProfileVersion,
   createCalibrationSet,
   createDeconflictionAnalysis,
+  createDeconflictionFindingDisposition,
   createExtensionExecution,
   createFieldObservation,
   createHAATCalculation,
@@ -124,6 +125,8 @@ test("uses the incident-scoped RF profile and immutable snapshot endpoints", asy
   const initialVersion: EditableRFInputFields = {
     tx_frequency_hz: 155000000,
     rx_frequency_hz: null,
+    tx_access_code: "PL 100.0",
+    rx_access_code: "",
     transmitter_power_w: "5.2500",
     effective_radiated_power_w: null,
     erp_source: "entered",
@@ -437,7 +440,11 @@ test("uses the versioned deconfliction status, analysis, and approval endpoints"
   await createDeconflictionAnalysis({
     incident: "incident-1",
     approved_revision: "revision-1",
-    active_resources: ["resource-1"],
+  });
+  await createDeconflictionFindingDisposition("analysis-1", {
+    finding_key: "d".repeat(64),
+    disposition: "reviewed_no_change",
+    explanation: "Synthetic practitioner review.",
   });
   await approveDeconflictionAnalysis("analysis-1");
 
@@ -453,11 +460,23 @@ test("uses the versioned deconfliction status, analysis, and approval endpoints"
       body: JSON.stringify({
         incident: "incident-1",
         approved_revision: "revision-1",
-        active_resources: ["resource-1"],
       }),
     }),
   );
   expect(String(fetchMock.mock.calls[3][0])).toBe(
+    "http://localhost:8000/api/deconfliction-analyses/analysis-1/dispositions/",
+  );
+  expect(fetchMock.mock.calls[3][1]).toEqual(
+    expect.objectContaining({
+      method: "POST",
+      body: JSON.stringify({
+        finding_key: "d".repeat(64),
+        disposition: "reviewed_no_change",
+        explanation: "Synthetic practitioner review.",
+      }),
+    }),
+  );
+  expect(String(fetchMock.mock.calls[4][0])).toBe(
     "http://localhost:8000/api/deconfliction-analyses/analysis-1/approve/",
   );
 });

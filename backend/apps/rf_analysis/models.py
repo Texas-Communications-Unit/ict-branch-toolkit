@@ -126,6 +126,8 @@ class SubscriberProfileVersion(models.Model):
         blank=True,
         validators=[MinValueValidator(1), MaxValueValidator(FREQUENCY_MAX_HZ)],
     )
+    tx_access_code = models.CharField(max_length=40, blank=True)
+    rx_access_code = models.CharField(max_length=40, blank=True)
     transmitter_power_w = models.DecimalField(
         max_digits=14,
         decimal_places=6,

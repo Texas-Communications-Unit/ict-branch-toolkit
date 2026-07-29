@@ -80,6 +80,7 @@ def _summary_context(source_revision, parameters: dict[str, Any]) -> dict[str, A
     assignments = list(
         source_revision.assignments.order_by("position", "id").values(
             "function",
+            "operating_classification",
             "rx_frequency_hz",
             "tx_frequency_hz",
         )
@@ -90,7 +91,7 @@ def _summary_context(source_revision, parameters: dict[str, Any]) -> dict[str, A
     for assignment in assignments:
         function_name = assignment["function"].strip() or "Unspecified"
         function_counts[function_name] = function_counts.get(function_name, 0) + 1
-        if assignment["rx_frequency_hz"] is None and assignment["tx_frequency_hz"] is None:
+        if assignment["operating_classification"] == "not_determined":
             missing_frequency_count += 1
     return {
         "assignment_count": len(assignments),

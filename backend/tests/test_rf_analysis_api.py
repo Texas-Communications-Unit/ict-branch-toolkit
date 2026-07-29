@@ -52,6 +52,8 @@ def unknown_version_payload():
     return {
         "tx_frequency_hz": None,
         "rx_frequency_hz": None,
+        "tx_access_code": "",
+        "rx_access_code": "",
         "transmitter_power_w": None,
         "effective_radiated_power_w": None,
         "erp_source": "unknown",
@@ -81,6 +83,8 @@ def calculated_version_payload():
         **unknown_version_payload(),
         "tx_frequency_hz": 155_001_000,
         "rx_frequency_hz": 155_001_000,
+        "tx_access_code": "NAC 293",
+        "rx_access_code": "NAC 293",
         "transmitter_power_w": "10.000000",
         "erp_source": "calculated",
         "receiver_sensitivity_dbm": "-116.000",
@@ -134,6 +138,8 @@ def test_profile_lifecycle_uses_nested_initial_version_and_numbered_copy(client)
     assert body["versions"][0]["profile"] == body["id"]
     assert body["versions"][0]["number"] == 1
     assert body["versions"][0]["status"] == "draft"
+    assert body["versions"][0]["tx_access_code"] == ""
+    assert body["versions"][0]["rx_access_code"] == ""
     assert body["versions"][0]["antenna_model"] is None
     assert body["versions"][0]["erp_calculation_path"] == {"method": "unknown"}
 

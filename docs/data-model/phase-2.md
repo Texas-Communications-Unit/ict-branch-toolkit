@@ -467,35 +467,40 @@ See [ADR-0016](../adr/0016-phase-2-validation-evidence-bundles.md) and the
 ## `DeconflictionAnalysis`
 
 Each retained analysis belongs to one active incident and references one approved ICS-205
-revision. The create request may also select up to 500 unique active conventional-channel
-resources from effective releases for explicit omission checking. The aggregate stores:
+revision. The aggregate stores:
 
 - draft or approved/locked lifecycle;
 - exact rule-set identity and version;
 - canonical input snapshot and SHA-256;
 - the approved revision identity, number, approver, and approval time;
-- every assignment's plan fields, frequency/squelch values, resource snapshot, and frozen
-  operational or coordination areas;
-- the exact selected active-resource snapshots, source/release metadata, and content digests;
+- every assignment's plan fields, operating classification, frequency/access-code values,
+  versioned comparison-source provenance, resource snapshot, and frozen operational or
+  coordination areas;
 - threshold and complete stable rule definitions;
 - every warning's rule ID/version, severity, compared inputs, evidence, assumptions,
   plain-language explanation, and disclaimer;
-- warning count, canonical result snapshot and SHA-256; and
+- warning and status counts, canonical result snapshot and SHA-256; and
 - creator/approver identity and timestamps.
 
 Analyses are immutable and cannot be deleted. Approval is an atomic lifecycle transition that
 requires the exact rule-set version in `ICT_APPROVED_DECONFLICTION_RULESETS` and reproducible input
-and result digests. A changed plan, source release, selected resource, frozen area, threshold, or
-rule behavior creates another analysis.
+and result digests. A changed plan, source, frozen area, threshold, or rule behavior creates
+another analysis.
 
-`rf-deconfliction-v1-provisional` evaluates co-channel and adjacent-channel relationships only
-when frozen areas overlap, with an inclusive provisional 12,500 Hz adjacent threshold. It also
-reports reversed repeater pairs, duplicate pairs under different names, missing RX/TX values,
-selected active resources omitted from the approved revision, and assignments with no approved
-area. Squelch differences remain evidence and never suppress warnings. Missing locations remain
+`rf-deconfliction-v2-reviewed` evaluates co-channel and close-frequency relationships only when
+frozen areas overlap, with inclusive area boundaries and an inclusive 12,500 Hz threshold. It
+also reports reversed fixed repeater pairs, duplicate fixed pairs under different names, and
+directional subscriber access-code mismatches. Missing areas or expected values are retained as
+not evaluated; nonconventional classifications are retained as not applicable. Squelch
+differences remain evidence and never suppress frequency warnings. Missing evidence remains
 missing.
 
-See [ADR-0015](../adr/0015-versioned-rf-deconfliction-decision-support.md) and the
+Each warning includes a deterministic finding key. `DeconflictionFindingDisposition` is an
+append-only child record containing the finding key, rule ID, controlled disposition, explanation,
+actor, and time. It cannot change the frozen analysis or approved plan and cannot be edited or
+deleted.
+
+See [ADR-0021](../adr/0021-practitioner-reviewed-rf-deconfliction.md) and the
 [RF deconfliction operations guide](../operations/rf-deconfliction.md).
 
 ## `RFAnalysisInputSnapshot`
