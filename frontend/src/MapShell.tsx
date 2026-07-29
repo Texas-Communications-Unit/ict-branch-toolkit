@@ -591,7 +591,8 @@ export function MapShell({ incident }: { incident?: Incident }) {
   async function handleSite(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!incident) return;
-    const data = new FormData(event.currentTarget);
+    const form = event.currentTarget;
+    const data = new FormData(form);
     try {
       await createRadioSite({
         incident: incident.id,
@@ -607,7 +608,7 @@ export function MapShell({ incident }: { incident?: Incident }) {
             }
           : {}),
       });
-      event.currentTarget.reset();
+      form.reset();
       setCoordinateText("");
       setParsed(undefined);
       setAddressSelection(undefined);
@@ -642,7 +643,8 @@ export function MapShell({ incident }: { incident?: Incident }) {
 
   async function handleRing(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const data = new FormData(event.currentTarget);
+    const form = event.currentTarget;
+    const data = new FormData(form);
     try {
       await createManualRing({
         site: String(data.get("site")),
@@ -650,7 +652,7 @@ export function MapShell({ incident }: { incident?: Incident }) {
         radius_m: Number(data.get("radiusM")),
         label: String(data.get("ringLabel")),
       });
-      event.currentTarget.reset();
+      form.reset();
       setMessage("Manual planning ring saved.");
       await refresh();
     } catch (error) {
