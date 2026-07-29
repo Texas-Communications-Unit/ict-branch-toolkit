@@ -62,7 +62,7 @@ jobs:
       - run: python manage.py migrate --noinput
       - name: Validate recovery scripts
         run: >-
-          shellcheck ../scripts/database-recovery.sh
+          shellcheck ../scripts/database-recovery.sh ../scripts/deploy-shared-test.sh
           ../scripts/test-postgresql-recovery.sh
       - name: Test PostgreSQL backup and isolated restore
         run: >-
