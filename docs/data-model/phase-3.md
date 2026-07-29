@@ -114,3 +114,33 @@ metadata and digests instead of copying protected values.
 
 See [ADR-0018](../adr/0018-online-collaboration-and-disabled-external-identity.md)
 and the [operator guide](../operations/online-collaboration.md).
+
+## P3.4 governed tools and reports
+
+P3.4 adds a code-defined extension registry and retained execution boundary:
+
+| Record                  | Purpose                                                                                                                                                                                                                 |
+| ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ExtensionInstallation` | Stores an Administrator-installed manifest snapshot, exact extension/contract versions, manifest digest, enabled state, actors, and timestamps. Installations begin disabled and cannot be deleted.                     |
+| `ExtensionExecution`    | Retains the incident, approved source revision, exact extension/capability/version, canonical input/result snapshots and digests, output classification, actor/time, and complete or bounded failed state. Executions are immutable and cannot be deleted. |
+
+The manifest declares capability, permission, incident/revision scope,
+input/output schema, validation, audit, export, source records, approval
+requirements, sensitivity, retention, version, failure isolation,
+accessibility, and official-output state. The registry has no arbitrary
+executable upload or dynamic import path.
+
+The initial `synthetic-readiness-summary` entry provides one non-operational
+tool and report. It reads approved ICS-205 assignment metadata/counts and never
+copies frequency values or protected contact fields into output. Output is
+always `decision_support`; the example cannot create an official form or
+approval.
+
+Contract `1.0` is negotiated explicitly. A run fails closed when the requested
+contract, installed version, or installed manifest digest differs from the
+current registry. Every run rechecks active incident membership and
+`extension.run`; export rechecks `extension.view`. General audit detail records
+only identifiers, versions, classifications, and digests.
+
+See [ADR-0019](../adr/0019-governed-planning-extension-framework.md) and the
+[operator guide](../operations/planning-extension-framework.md).
