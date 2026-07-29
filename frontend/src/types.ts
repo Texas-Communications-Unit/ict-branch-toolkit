@@ -161,6 +161,84 @@ export interface ICS205Plan {
   revisions: PlanRevision[];
 }
 
+export interface ExtensionCapability {
+  id: string;
+  name: string;
+  kind: "tool" | "report";
+  required_permission: "extension.run";
+  scope: "incident_revision";
+  inputs: Record<string, unknown>;
+  outputs: {
+    schema: string;
+    classification: "draft" | "decision_support" | "official";
+  };
+  validation: string;
+  audit: string;
+  export: {
+    formats: string[];
+    deterministic: boolean;
+  };
+}
+
+export interface ExtensionManifest {
+  key: string;
+  name: string;
+  description: string;
+  version: string;
+  contract_version: string;
+  provider: string;
+  capabilities: ExtensionCapability[];
+  source_records: string[];
+  approval_requirements: string;
+  sensitivity: string;
+  retention: string;
+  failure_isolation: string;
+  accessibility: string;
+  official_output: false;
+}
+
+export interface ExtensionCatalogEntry {
+  manifest: ExtensionManifest;
+  installed: boolean;
+  enabled: boolean;
+  compatible: boolean;
+  installation_id: string | null;
+  operator_message: string;
+}
+
+export interface ExtensionExecution {
+  id: string;
+  extension_key: string;
+  extension_version: string;
+  contract_version: string;
+  capability: string;
+  capability_kind: "tool" | "report";
+  incident: string;
+  source_revision: string;
+  source_revision_number: number;
+  input_snapshot: Record<string, unknown>;
+  input_sha256: string;
+  result_snapshot: Record<string, unknown>;
+  result_sha256: string;
+  output_classification: "draft" | "decision_support" | "official";
+  status: "complete" | "failed";
+  failure_code: string;
+  failure_message: string;
+  created_by: number;
+  created_at: string;
+}
+
+export interface CreateExtensionExecutionPayload {
+  extension_key: string;
+  contract_version: string;
+  capability: string;
+  incident: string;
+  source_revision: string;
+  inputs: {
+    minimum_assignment_count: number;
+  };
+}
+
 export interface RevisionComparison {
   revision: number;
   other_revision: number;

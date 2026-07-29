@@ -1,0 +1,7 @@
+from django.apps import AppConfig
+
+
+class ExtensionsConfig(AppConfig):
+    default_auto_field = "django.db.models.BigAutoField"
+    name = "apps.extensions"
+    verbose_name = "ICT planning extensions"

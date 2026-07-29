@@ -22,6 +22,9 @@ import type {
   CurrentUser,
   EditableRFInputFields,
   ElevationProviderStatus,
+  ExtensionCatalogEntry,
+  ExtensionExecution,
+  CreateExtensionExecutionPayload,
   ExternalIdentityStatus,
   FieldObservation,
   GeocoderSearchResult,
@@ -928,4 +931,82 @@ export function approveTerrainAnalysis(id: string): Promise<TerrainAnalysis> {
   return request<TerrainAnalysis>(`/api/terrain-analyses/${id}/approve/`, {
     method: "POST",
   });
+}
+
+export function listExtensionCatalog(): Promise<ExtensionCatalogEntry[]> {
+  return request<ExtensionCatalogEntry[]>("/api/extensions/");
+}
+
+export function installExtension(
+  extensionKey: string,
+  contractVersion: string,
+): Promise<void> {
+  return request<void>("/api/extensions/install/", {
+    method: "POST",
+    body: JSON.stringify({
+      extension_key: extensionKey,
+      contract_version: contractVersion,
+    }),
+  });
+}
+
+export function enableExtension(extensionKey: string): Promise<void> {
+  return request<void>(
+    `/api/extensions/${encodeURIComponent(extensionKey)}/enable/`,
+    { method: "POST" },
+  );
+}
+
+export function disableExtension(extensionKey: string): Promise<void> {
+  return request<void>(
+    `/api/extensions/${encodeURIComponent(extensionKey)}/disable/`,
+    { method: "POST" },
+  );
+}
+
+export async function listExtensionExecutions(
+  incident: string,
+): Promise<ExtensionExecution[]> {
+  const result = await request<Paginated<ExtensionExecution>>(
+    `/api/extension-executions/?incident=${encodeURIComponent(incident)}`,
+  );
+  return result.results;
+}
+
+export function createExtensionExecution(
+  payload: CreateExtensionExecutionPayload,
+): Promise<ExtensionExecution> {
+  return request<ExtensionExecution>("/api/extension-executions/", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  }).catch((error: unknown) => {
+    if (
+      error instanceof ApiError &&
+      error.status === 503 &&
+      typeof error.data === "object" &&
+      error.data !== null &&
+      "status" in error.data &&
+      error.data.status === "failed"
+    ) {
+      return error.data as ExtensionExecution;
+    }
+    throw error;
+  });
+}
+
+export async function downloadExtensionExecution(
+  execution: ExtensionExecution,
+): Promise<void> {
+  const token = tokenForRequest();
+  const response = await fetch(
+    `${API_BASE}/api/extension-executions/${execution.id}/export/`,
+    { headers: token ? { Authorization: `Token ${token}` } : {} },
+  );
+  if (!response.ok) throw new Error(await response.text());
+  const url = URL.createObjectURL(await response.blob());
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = `${execution.extension_key}-${execution.capability}.json`;
+  anchor.click();
+  URL.revokeObjectURL(url);
 }
