@@ -22,11 +22,18 @@ from .models import Assignment, AssignmentRelationship, ICS205Plan, PlanRevision
 from .pdf import render_ics205
 from .serializers import (
     AssignmentSerializer,
+    PlanApprovalSerializer,
     PlanRevisionSerializer,
     PlanSerializer,
     RelationshipSerializer,
 )
-from .services import approve_revision, copy_revision, ensure_draft
+from .services import (
+    approve_revision,
+    contact_publication_digest,
+    contact_publication_manifest,
+    copy_revision,
+    ensure_draft,
+)
 
 
 def scoped(queryset, user, path="plan__incident"):
@@ -98,6 +105,8 @@ class RevisionViewSet(viewsets.ModelViewSet):
         "partial_update": PLAN_EDIT,
         "copy": PLAN_EDIT,
         "approve": PLAN_APPROVE,
+        "approval_preview": PLAN_APPROVE,
+        "publication_summary": PLAN_APPROVE,
         "compare": PLAN_VIEW,
         "pdf": PLAN_EXPORT,
     }
@@ -147,7 +156,47 @@ class RevisionViewSet(viewsets.ModelViewSet):
         revision = self.get_object()
         if not user_has_permission(request.user, PLAN_APPROVE, revision.plan.incident):
             raise PermissionDenied("Your incident role cannot approve plans.")
-        return Response(self.get_serializer(approve_revision(revision, request.user)).data)
+        serializer = PlanApprovalSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        return Response(
+            self.get_serializer(
+                approve_revision(
+                    revision,
+                    request.user,
+                    confirm_contact_publication=serializer.validated_data[
+                        "confirm_contact_publication"
+                    ],
+                    publication_digest_confirmation=serializer.validated_data.get(
+                        "publication_digest", ""
+                    ),
+                )
+            ).data
+        )
+
+    @action(detail=True, methods=["get"], url_path="publication-summary")
+    def publication_summary(self, request, pk=None):
+        revision = self.get_object()
+        ensure_draft(revision)
+        manifest = contact_publication_manifest(revision)
+        return Response(
+            {
+                "digest": contact_publication_digest(revision),
+                "has_published_contacts": bool(manifest),
+                "contact_publications": manifest,
+            }
+        )
+
+    @action(detail=True, methods=["get"], url_path="approval-preview")
+    def approval_preview(self, request, pk=None):
+        revision = self.get_object()
+        ensure_draft(revision)
+        content = render_ics205(revision, approval_preview=True)
+        response = HttpResponse(content, content_type="application/pdf")
+        response["Content-Disposition"] = (
+            f'inline; filename="ics-205-revision-{revision.number}-approval-preview.pdf"'
+        )
+        response["X-ICT-Contact-Publication-Digest"] = contact_publication_digest(revision)
+        return response
 
     @action(detail=True, methods=["get"])
     def compare(self, request, pk=None):

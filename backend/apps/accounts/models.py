@@ -8,6 +8,8 @@ class Role(models.TextChoices):
     COML = "coml", "COML"
     COMC = "comc", "COMC"
     COMT = "comt", "COMT"
+    AUXCOMM = "auxcomm", "AUXCOMM"
+    INCM = "incm", "INCM"
     CONTRIBUTOR = "contributor", "Contributor"
     READ_ONLY = "read_only", "Read-only"
 
@@ -95,3 +97,39 @@ class ExternalIdentity(models.Model):
 
     def __str__(self) -> str:
         return f"{self.provider}:{self.external_subject} -> {self.user_id}"
+
+
+class LocalContingencyAccount(models.Model):
+    """Individually attributable local access for an approved continuity need."""
+
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        primary_key=True,
+        related_name="local_contingency_account",
+        on_delete=models.PROTECT,
+    )
+    reason = models.CharField(max_length=500)
+    must_change_password = models.BooleanField(default=True)
+    is_synthetic_hidden = models.BooleanField(default=False)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        related_name="created_local_contingency_accounts",
+        on_delete=models.PROTECT,
+    )
+    disabled_at = models.DateTimeField(null=True, blank=True)
+    disabled_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        related_name="disabled_local_contingency_accounts",
+        on_delete=models.PROTECT,
+    )
+    disabled_reason = models.CharField(max_length=500, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["user__username"]
+
+    def __str__(self) -> str:
+        return f"Local contingency account: {self.user.get_username()}"

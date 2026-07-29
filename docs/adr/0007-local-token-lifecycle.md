@@ -16,7 +16,8 @@ continues to reject unimplemented identity providers.
 
 ## Decision
 
-- Local tokens expire after `ICT_TOKEN_TTL_SECONDS`; the default is 28,800 seconds (eight hours).
+- Local tokens expire after `ICT_TOKEN_TTL_SECONDS`; the Issue #23 approved default is 43,200
+  seconds (12 hours).
   The application refuses a zero or negative lifetime at startup.
 - Each successful local sign-in revokes the account's previous token and issues a new random token.
   A user therefore has at most one valid local token.

@@ -191,7 +191,8 @@ never a hard edit lock.
 
 The backend rechecks incident membership for each mutation, presence, history,
 and resolution request. Restricted assignment fields have independent server
-read/edit policy and are omitted or explicitly redacted before serialization;
+read/edit policy and are omitted or returned with the explicit `Access restricted`
+marker before serialization;
 general audit detail receives only field names, versions, disposition, and
 digests. The provisional restricted-field defaults preserve the existing
 Administrator, COML, and COMC policy while COMT, Contributor, Read-only, and new

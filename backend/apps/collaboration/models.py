@@ -31,7 +31,7 @@ COLLABORATION_SECTIONS = (
 class SensitiveFieldRule(models.Model):
     class Visibility(models.TextChoices):
         OMITTED = "omitted", "Omitted"
-        REDACTED = "redacted", "Redacted"
+        RESTRICTED = "restricted", "Access restricted"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     incident = models.ForeignKey(
@@ -253,6 +253,8 @@ class PresenceLease(models.Model):
     )
     device_id = models.UUIDField()
     section = models.CharField(max_length=80, default="ics205")
+    object_id = models.UUIDField(null=True, blank=True)
+    field_name = models.CharField(max_length=80, blank=True)
     mode = models.CharField(max_length=12, choices=Mode.choices)
     sequence = models.PositiveBigIntegerField(default=1)
     expires_at = models.DateTimeField()

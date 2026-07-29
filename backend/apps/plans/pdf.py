@@ -19,8 +19,8 @@ def _mhz(value):
     return "" if value is None else f"{value / 1_000_000:.6f}"
 
 
-def render_ics205(revision):
-    if not revision.is_locked:
+def render_ics205(revision, *, approval_preview=False):
+    if not revision.is_locked and not approval_preview:
         raise ValueError("Official PDF export requires an approved revision.")
     output = BytesIO()
     document = SimpleDocTemplate(
@@ -82,6 +82,7 @@ def render_ics205(revision):
         "Remarks",
     ]
     rows = [headers]
+    special_instruction_lines = []
     for item in revision.assignments.all():
         note = item.get_structured_note_display() if item.structured_note else ""
         operating_note = ""
@@ -89,7 +90,38 @@ def render_ics205(revision):
             operating_note = item.get_operating_classification_display()
             if item.technology_subtype:
                 operating_note = f"{operating_note}: {item.get_technology_subtype_display()}"
-        remarks = " - ".join(part for part in [operating_note, note, item.remarks] if part)
+        published_contact_labels = {
+            "contact_name": "Contact",
+            "site_address": "Site address",
+            "phone_numbers": "Phone",
+            "contact_24_hour": "24-hour contact",
+        }
+        published_contacts = [
+            f"{published_contact_labels[field]}: {getattr(item, field)}"
+            for field in item.published_contact_fields
+            if field in published_contact_labels and getattr(item, field)
+        ]
+        if published_contacts:
+            published_contacts.append(f"Publication purpose: {item.contact_publication_purpose}")
+        row_contacts = published_contacts
+        if (
+            item.contact_publication_placement
+            == item.ContactPublicationPlacement.SPECIAL_INSTRUCTIONS
+        ):
+            row_contacts = []
+            special_instruction_lines.append(
+                f"Row {item.position} ({item.channel_name}) — " + " - ".join(published_contacts)
+            )
+        remarks = " - ".join(
+            part
+            for part in [
+                operating_note,
+                note,
+                item.remarks,
+                *row_contacts,
+            ]
+            if part
+        )
         rows.append(
             [
                 str(item.position),
@@ -133,18 +165,31 @@ def render_ics205(revision):
         ),
     )
     story.append(table)
+    if special_instruction_lines:
+        story.extend(
+            [
+                Spacer(1, 8),
+                Paragraph(
+                    "<b>Special Instructions</b><br/>"
+                    + "<br/>".join(escape(line) for line in special_instruction_lines),
+                    styles["Normal"],
+                ),
+            ]
+        )
     story.extend(
         [
             Spacer(1, 10),
             Paragraph(
                 f"<b>Prepared by:</b> {escape(revision.prepared_by_name)} &nbsp;&nbsp; "
                 f"<b>Position:</b> {escape(revision.prepared_by_position)} &nbsp;&nbsp; "
-                f"<b>Approved revision:</b> {revision.number}",
+                f"<b>{'Approval preview' if approval_preview else 'Approved revision'}:</b> "
+                f"{revision.number}",
                 styles["Normal"],
             ),
             Spacer(1, 3),
             Paragraph(
-                f"<b>Status:</b> APPROVED &nbsp;&nbsp; <b>Approved at:</b> "
+                f"<b>Status:</b> {'DRAFT APPROVAL PREVIEW' if approval_preview else 'APPROVED'} "
+                f"&nbsp;&nbsp; <b>Approved at:</b> "
                 f"{escape(revision.approved_at.isoformat() if revision.approved_at else '')} "
                 f"&nbsp;&nbsp; <b>App version:</b> {escape(settings.APP_VERSION)}",
                 styles["Normal"],

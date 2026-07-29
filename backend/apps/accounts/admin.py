@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import ExternalIdentity, UserRoleAssignment
+from .models import ExternalIdentity, LocalContingencyAccount, UserRoleAssignment
 
 
 @admin.register(UserRoleAssignment)
@@ -28,6 +28,28 @@ class ExternalIdentityAdmin(admin.ModelAdmin):
     list_filter = ("provider", "eligibility", "mapped_role")
     search_fields = ("user__username", "external_subject", "civicrm_contact_id")
     readonly_fields = [field.name for field in ExternalIdentity._meta.fields]
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(LocalContingencyAccount)
+class LocalContingencyAccountAdmin(admin.ModelAdmin):
+    list_display = (
+        "user",
+        "must_change_password",
+        "created_by",
+        "created_at",
+        "disabled_at",
+    )
+    search_fields = ("user__username", "user__first_name", "reason")
+    readonly_fields = [field.name for field in LocalContingencyAccount._meta.fields]
 
     def has_add_permission(self, request):
         return False
