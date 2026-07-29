@@ -15,7 +15,9 @@ import type {
   CreateSubscriberProfilePayload,
   CreateFieldObservationPayload,
   CreateDeconflictionAnalysisPayload,
+  CreateDeconflictionFindingDispositionPayload,
   DeconflictionAnalysis,
+  DeconflictionFindingDisposition,
   DeconflictionRuleSetStatus,
   DirectionalAnalysisStatus,
   DirectionalCoverageAnalysis,
@@ -796,6 +798,19 @@ export function approveDeconflictionAnalysis(
   return request<DeconflictionAnalysis>(
     `/api/deconfliction-analyses/${id}/approve/`,
     { method: "POST" },
+  );
+}
+
+export function createDeconflictionFindingDisposition(
+  analysisId: string,
+  payload: CreateDeconflictionFindingDispositionPayload,
+): Promise<DeconflictionFindingDisposition> {
+  return request<DeconflictionFindingDisposition>(
+    `/api/deconfliction-analyses/${analysisId}/dispositions/`,
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+    },
   );
 }
 

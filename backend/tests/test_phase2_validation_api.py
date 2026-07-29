@@ -132,6 +132,7 @@ def phase2_sources(owner):
         function="Synthetic command",
         channel_name="SYN CALL",
         assignment="Synthetic test only",
+        operating_classification=Assignment.OperatingClassification.FIXED_PAIR,
         resource_snapshot={"type": "synthetic", "identifier": "SYN-CALL"},
         rx_frequency_hz=155_000_000,
         tx_frequency_hz=155_000_000,

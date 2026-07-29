@@ -317,6 +317,12 @@ SPECTACULAR_SETTINGS = {
             "apps.collaboration.models.CollaborationResolution.Decision"
         ),
         "CollaborationPresenceModeEnum": "apps.collaboration.models.PresenceLease.Mode",
+        "CollaborationChangeDispositionEnum": (
+            "apps.collaboration.models.CollaborationChange.Disposition"
+        ),
+        "DeconflictionFindingDispositionEnum": (
+            "apps.deconfliction.models.DeconflictionFindingDisposition.Disposition"
+        ),
         "ExtensionCapabilityKindEnum": "apps.extensions.models.ExtensionExecution.CapabilityKind",
         "ExtensionExecutionStatusEnum": "apps.extensions.models.ExtensionExecution.Status",
         "ExtensionOutputClassificationEnum": (

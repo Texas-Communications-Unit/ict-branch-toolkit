@@ -661,9 +661,9 @@ test("administrator signs in and sees the incident planning workspace", async ({
     route.fulfill({
       json: {
         rule_set_id: "rf-deconfliction",
-        rule_set_version: "rf-deconfliction-v1-provisional",
+        rule_set_version: "rf-deconfliction-v2-reviewed",
         approved_for_operational_use: false,
-        adjacent_channel_threshold_hz: 12500,
+        close_frequency_threshold_hz: 12500,
         rules: [
           {
             id: "RF-001",
@@ -672,10 +672,15 @@ test("administrator signs in and sees the incident planning workspace", async ({
             summary: "Operating frequencies match and approved areas overlap.",
           },
         ],
+        analysis_statuses: [],
+        access_code_source_hierarchy: [
+          "selected_versioned_channel_definition",
+          "approved_subscriber_programming_profile",
+        ],
         squelch_rule:
-          "CTCSS, DCS, NAC, or other squelch differences never suppress a frequency warning.",
+          "CTCSS, DCS, NAC, or equivalent access-code differences never suppress RF-001 or RF-002.",
         disclaimer:
-          "Decision support only—not a coordination decision or spectrum authorization.",
+          "Decision support only. Results do not constitute frequency coordination, spectrum authorization, an interference determination, a propagation study, or operational approval. Qualified practitioners must review the results before operational use.",
       },
     }),
   );
@@ -937,7 +942,7 @@ test("administrator signs in and sees the incident planning workspace", async ({
   });
   await expect(
     deconflictionWorkspace.getByText(
-      "Provisional rule set—qualified practitioner review required",
+      "Reviewed ruleset—integrated validation and allowlisting required",
       { exact: true },
     ),
   ).toBeVisible();

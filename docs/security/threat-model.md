@@ -41,12 +41,13 @@ only.
 - An incident-local fit overwriting an organization default or being represented as validated
   coverage.
 - A browser-only or mutable deconfliction rule producing results that cannot be reconstructed.
-- Squelch differences suppressing a co-channel or adjacent-channel warning.
+- Access-code differences suppressing a co-channel or close-frequency warning.
 - A missing operating area being replaced with an invented location or assumed non-overlap.
-- A provisional warning, severity, threshold, or zero-warning result being represented as
+- A warning, severity, threshold, not-evaluated status, or zero-warning result being represented as
   coordination, spectrum, propagation, or incident-command authority.
-- Frequencies, squelch values, coordinates, frozen site evidence, selected resources, or warning
-  contents leaking through deconfliction audit details.
+- Frequencies, access codes, coordinates, frozen site evidence, source snapshots, warning
+  contents, or disposition explanations leaking through deconfliction audit details.
+- A finding disposition being edited, deleted, or treated as an automatic plan change.
 - A browser-selected or unapproved terrain provider receiving incident path coordinates.
 - A coarse source being sampled below its declared resolution and presented with false precision.
 - Missing, boundary, out-of-coverage, or unsupported terrain being presented as a complete path.
@@ -152,13 +153,16 @@ risks. See
 [ADR-0016](../adr/0016-phase-2-validation-evidence-bundles.md).
 
 For RF deconfliction, versioned rules run only on the backend against an approved incident-scoped
-ICS-205 revision, frozen approved areas, and an explicit active-resource selection. The service
-never invents a missing location and never uses a squelch difference to suppress a frequency
-warning. It retains canonical input/result snapshots and digests; later changes create a new
-analysis rather than rewriting evidence. Approval fails closed until the exact rule version passes
-qualified review. Audit details retain only identifiers, versions, counts, and digests rather than
-frequency, squelch, coordinate, site, resource, or warning content. See
-[ADR-0015](../adr/0015-versioned-rf-deconfliction-decision-support.md).
+ICS-205 revision and frozen approved areas. Explicit operating classifications prevent valid
+one-way, named-system, or dynamic-pool assignments from becoming false missing-frequency
+findings. The service never invents a missing location or authoritative access code and never uses
+an access-code difference to suppress a frequency warning. It retains canonical input/result
+snapshots and digests; later changes create a new analysis rather than rewriting evidence.
+Finding dispositions are append-only and audit recorded. Approval fails closed until the exact
+rule version passes qualified review and integrated validation. Audit details retain only bounded
+identifiers, versions, counts, digests, finding key, rule ID, and controlled disposition rather
+than sensitive evidence or free text. See
+[ADR-0021](../adr/0021-practitioner-reviewed-rf-deconfliction.md).
 
 For P3.1, provider and engine selection remain server-controlled and the
 disabled provider is the default. The exact source/dataset/content digest and

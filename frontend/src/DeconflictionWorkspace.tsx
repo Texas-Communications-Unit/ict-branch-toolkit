@@ -3,14 +3,16 @@ import { type FormEvent, useEffect, useMemo, useState } from "react";
 import {
   approveDeconflictionAnalysis,
   createDeconflictionAnalysis,
+  createDeconflictionFindingDisposition,
   getDeconflictionStatus,
-  listConventionalChannels,
   listDeconflictionAnalyses,
   listPlans,
 } from "./api";
 import type {
-  ConventionalChannel,
   DeconflictionAnalysis,
+  DeconflictionAnalysisStatus,
+  DeconflictionFindingDisposition,
+  DeconflictionFindingDispositionValue,
   DeconflictionRuleSetStatus,
   DeconflictionWarning,
   ICS205Plan,
@@ -23,10 +25,38 @@ function errorMessage(error: unknown, fallback: string): string {
 }
 
 function frequency(value: number | null): string {
-  return value === null ? "Missing" : `${(value / 1_000_000).toFixed(5)} MHz`;
+  return value === null
+    ? "Not used or not recorded"
+    : `${(value / 1_000_000).toFixed(5)} MHz`;
 }
 
-function WarningEvidence({ warning }: { warning: DeconflictionWarning }) {
+function WarningEvidence({
+  warning,
+  dispositions,
+  canRecordDisposition,
+  busy,
+  onRecordDisposition,
+}: {
+  warning: DeconflictionWarning;
+  dispositions: DeconflictionFindingDisposition[];
+  canRecordDisposition: boolean;
+  busy: boolean;
+  onRecordDisposition: (
+    disposition: DeconflictionFindingDispositionValue,
+    explanation: string,
+  ) => Promise<void>;
+}) {
+  async function handleDisposition(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const data = new FormData(form);
+    await onRecordDisposition(
+      String(data.get("disposition")) as DeconflictionFindingDispositionValue,
+      String(data.get("explanation")).trim(),
+    );
+    form.reset();
+  }
+
   return (
     <article className={`deconfliction-warning severity-${warning.severity}`}>
       <div className="warning-heading">
@@ -49,6 +79,8 @@ function WarningEvidence({ warning }: { warning: DeconflictionWarning }) {
           <thead>
             <tr>
               <th scope="col">Input</th>
+              <th scope="col">Function and assignment</th>
+              <th scope="col">Classification</th>
               <th scope="col">Receive</th>
               <th scope="col">Transmit</th>
               <th scope="col">Squelch evidence</th>
@@ -58,6 +90,17 @@ function WarningEvidence({ warning }: { warning: DeconflictionWarning }) {
             {warning.compared_inputs.map((input) => (
               <tr key={input.id}>
                 <th scope="row">{input.name}</th>
+                <td>
+                  {input.function || "Not recorded"}
+                  {input.assignment ? ` · ${input.assignment}` : ""}
+                </td>
+                <td>
+                  {input.operating_classification ??
+                    "Legacy classification not recorded"}
+                  {input.technology_subtype
+                    ? ` · ${input.technology_subtype}`
+                    : ""}
+                </td>
                 <td>{frequency(input.rx_frequency_hz)}</td>
                 <td>{frequency(input.tx_frequency_hz)}</td>
                 <td>
@@ -90,6 +133,103 @@ function WarningEvidence({ warning }: { warning: DeconflictionWarning }) {
           </div>
         </dl>
       </details>
+      <div className="finding-dispositions">
+        <h5>Practitioner disposition history</h5>
+        {dispositions.length === 0 ? (
+          <p>No disposition has been recorded for this retained finding.</p>
+        ) : (
+          <ol>
+            {dispositions.map((disposition) => (
+              <li key={disposition.id}>
+                <strong>{disposition.disposition.replaceAll("_", " ")}</strong>{" "}
+                — {disposition.explanation} (
+                {new Date(disposition.created_at).toLocaleString()}, recorded by
+                user {disposition.created_by})
+              </li>
+            ))}
+          </ol>
+        )}
+        {canRecordDisposition && warning.finding_key ? (
+          <form
+            className="finding-disposition-form"
+            onSubmit={handleDisposition}
+          >
+            <label>
+              Disposition
+              <select name="disposition" required defaultValue="">
+                <option value="" disabled>
+                  Select disposition
+                </option>
+                <option value="reviewed_no_change">
+                  Reviewed — no plan change
+                </option>
+                <option value="plan_change_required">
+                  Plan change required
+                </option>
+                <option value="special_accommodation_required">
+                  Special accommodation required
+                </option>
+                <option value="source_review_required">
+                  Source review required
+                </option>
+              </select>
+            </label>
+            <label>
+              Explanation
+              <textarea name="explanation" maxLength={1000} rows={2} required />
+            </label>
+            <button type="submit" disabled={busy}>
+              Record append-only disposition
+            </button>
+          </form>
+        ) : !warning.finding_key ? (
+          <p>
+            This retained legacy finding predates deterministic finding keys.
+            Its original evidence remains readable, but dispositions must be
+            recorded through the process used for that ruleset version.
+          </p>
+        ) : null}
+      </div>
+    </article>
+  );
+}
+
+function AnalysisStatusEvidence({
+  status,
+}: {
+  status: DeconflictionAnalysisStatus;
+}) {
+  return (
+    <article className="deconfliction-status">
+      <div className="warning-heading">
+        <div>
+          <span className="severity-badge">{status.outcome}</span>
+          <h4>
+            {status.status_id}: {status.status_name}
+          </h4>
+        </div>
+        <span>{status.rule_set_version}</span>
+      </div>
+      <p>{status.explanation}</p>
+      <dl className="evidence-list">
+        <div>
+          <dt>Assignment</dt>
+          <dd>
+            {status.assignment.position
+              ? `${status.assignment.position}. `
+              : ""}
+            {status.assignment.name}
+          </dd>
+        </div>
+        <div>
+          <dt>Affected rules</dt>
+          <dd>{status.affected_rule_ids.join(", ")}</dd>
+        </div>
+      </dl>
+      <details>
+        <summary>Retained status evidence</summary>
+        <pre>{JSON.stringify(status.evidence, null, 2)}</pre>
+      </details>
     </article>
   );
 }
@@ -98,12 +238,7 @@ export function DeconflictionWorkspace({ incident }: { incident?: Incident }) {
   const [ruleStatus, setRuleStatus] =
     useState<DeconflictionRuleSetStatus | null>(null);
   const [plans, setPlans] = useState<ICS205Plan[]>([]);
-  const [channels, setChannels] = useState<ConventionalChannel[]>([]);
   const [analyses, setAnalyses] = useState<DeconflictionAnalysis[]>([]);
-  const [selectedResourceIds, setSelectedResourceIds] = useState<Set<string>>(
-    new Set(),
-  );
-  const [resourceSearch, setResourceSearch] = useState("");
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -121,35 +256,12 @@ export function DeconflictionWorkspace({ incident }: { incident?: Incident }) {
         ),
     [incident?.id, plans],
   );
-  const visibleChannels = useMemo(() => {
-    const query = resourceSearch.trim().toLocaleLowerCase();
-    return channels
-      .filter(
-        (channel) =>
-          channel.is_active && channel.release.effective_status === "effective",
-      )
-      .filter((channel) =>
-        query
-          ? [
-              channel.identifier,
-              channel.name,
-              channel.channel_use,
-              channel.jurisdiction,
-              channel.release.source.name,
-            ].some((value) => value.toLocaleLowerCase().includes(query))
-          : true,
-      );
-  }, [channels, resourceSearch]);
-
   useEffect(() => {
     let active = true;
     if (!incident) {
       setRuleStatus(null);
       setPlans([]);
-      setChannels([]);
       setAnalyses([]);
-      setSelectedResourceIds(new Set());
-      setResourceSearch("");
       setError("");
       return;
     }
@@ -158,16 +270,13 @@ export function DeconflictionWorkspace({ incident }: { incident?: Incident }) {
     Promise.all([
       getDeconflictionStatus(),
       listPlans(),
-      listConventionalChannels(),
       listDeconflictionAnalyses(incident.id),
     ])
-      .then(([nextStatus, nextPlans, nextChannels, nextAnalyses]) => {
+      .then(([nextStatus, nextPlans, nextAnalyses]) => {
         if (!active) return;
         setRuleStatus(nextStatus);
         setPlans(nextPlans);
-        setChannels(nextChannels);
         setAnalyses(nextAnalyses);
-        setSelectedResourceIds(new Set());
       })
       .catch((loadError: unknown) => {
         if (active) {
@@ -189,15 +298,6 @@ export function DeconflictionWorkspace({ incident }: { incident?: Incident }) {
     setAnalyses(await listDeconflictionAnalyses(incident.id));
   }
 
-  function toggleResource(id: string) {
-    setSelectedResourceIds((current) => {
-      const next = new Set(current);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  }
-
   async function handleCreate(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!incident || !canEdit) return;
@@ -208,7 +308,6 @@ export function DeconflictionWorkspace({ incident }: { incident?: Incident }) {
       await createDeconflictionAnalysis({
         incident: incident.id,
         approved_revision: String(data.get("approved_revision")),
-        active_resources: [...selectedResourceIds],
       });
       await refreshAnalyses();
     } catch (submitError) {
@@ -249,6 +348,34 @@ export function DeconflictionWorkspace({ incident }: { incident?: Incident }) {
     }
   }
 
+  async function handleDisposition(
+    analysis: DeconflictionAnalysis,
+    warning: DeconflictionWarning,
+    disposition: DeconflictionFindingDispositionValue,
+    explanation: string,
+  ) {
+    if (!canEdit || !explanation || !warning.finding_key) return;
+    setBusy(true);
+    setError("");
+    try {
+      await createDeconflictionFindingDisposition(analysis.id, {
+        finding_key: warning.finding_key,
+        disposition,
+        explanation,
+      });
+      await refreshAnalyses();
+    } catch (dispositionError) {
+      setError(
+        errorMessage(
+          dispositionError,
+          "Unable to record the practitioner disposition.",
+        ),
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <section
       className="coverage-panel deconfliction-panel"
@@ -262,9 +389,9 @@ export function DeconflictionWorkspace({ incident }: { incident?: Incident }) {
         <span className="count">{analyses.length}</span>
       </div>
       <p className="panel-intro">
-        Evaluate an approved ICS-205 against a versioned provisional rule set.
-        Results identify evidence for qualified review; they are not frequency
-        coordination, spectrum authorization, or a propagation study.
+        Evaluate an approved ICS-205 against the versioned practitioner-reviewed
+        rule contract. Results identify evidence and unevaluated scope for
+        qualified review; they do not authorize or prohibit operations.
       </p>
 
       {!incident ? (
@@ -290,12 +417,12 @@ export function DeconflictionWorkspace({ incident }: { incident?: Incident }) {
                 <span>
                   {ruleStatus.approved_for_operational_use
                     ? "Qualified practitioner gate recorded"
-                    : "Provisional rule set—qualified practitioner review required"}
+                    : "Reviewed ruleset—integrated validation and allowlisting required"}
                 </span>
               </div>
               <p>
-                Inclusive adjacent-channel threshold:{" "}
-                {ruleStatus.adjacent_channel_threshold_hz.toLocaleString()} Hz.
+                Inclusive close-frequency screening threshold:{" "}
+                {ruleStatus.close_frequency_threshold_hz.toLocaleString()} Hz.
               </p>
               <p>{ruleStatus.squelch_rule}</p>
               <p>{ruleStatus.disclaimer}</p>
@@ -320,8 +447,8 @@ export function DeconflictionWorkspace({ incident }: { incident?: Incident }) {
               <h3>Run a frozen-plan review</h3>
               <p className="form-note">
                 The engine reads only the approved revision and its frozen site
-                rings. Select any additional active library resources that
-                should be checked for omission from the ICS-205.
+                rings, operating classifications, selected versioned channel
+                definitions, and approved subscriber programming profiles.
               </p>
               <label>
                 Approved ICS-205 revision
@@ -346,45 +473,6 @@ export function DeconflictionWorkspace({ incident }: { incident?: Incident }) {
                   )}
                 </select>
               </label>
-              <fieldset>
-                <legend>
-                  Active resources to check for omission (
-                  {selectedResourceIds.size} selected)
-                </legend>
-                <label>
-                  Search active resources
-                  <input
-                    type="search"
-                    value={resourceSearch}
-                    onChange={(event) => setResourceSearch(event.target.value)}
-                    placeholder="Channel, identifier, use, jurisdiction, or source"
-                  />
-                </label>
-                <div className="resource-checklist">
-                  {visibleChannels.length === 0 ? (
-                    <p className="empty">No matching active resources.</p>
-                  ) : (
-                    visibleChannels.map((channel) => (
-                      <div className="resource-option" key={channel.id}>
-                        <input
-                          type="checkbox"
-                          aria-label={`Select ${channel.name}`}
-                          checked={selectedResourceIds.has(channel.id)}
-                          onChange={() => toggleResource(channel.id)}
-                        />
-                        <span>
-                          <strong>{channel.name}</strong>
-                          <small>
-                            {channel.identifier} ·{" "}
-                            {frequency(channel.rx_frequency_hz)} ·{" "}
-                            {channel.release.source.name}
-                          </small>
-                        </span>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </fieldset>
               <button
                 type="submit"
                 disabled={busy || approvedRevisions.length === 0}
@@ -401,92 +489,144 @@ export function DeconflictionWorkspace({ incident }: { incident?: Incident }) {
             ) : (
               analyses.map((analysis) => (
                 <article className="haat-result-card" key={analysis.id}>
-                  <div className="haat-result-heading">
-                    <div>
-                      <h4>
-                        Revision {analysis.revision_number} ·{" "}
-                        {analysis.warning_count} warnings
-                      </h4>
-                      <p>
-                        {analysis.rule_set_version} · {analysis.status} ·{" "}
-                        {new Date(analysis.created_at).toLocaleString()}
-                      </p>
-                    </div>
-                    <div className="state-badges">
-                      <span className="state-badge">
-                        {analysis.status === "approved"
-                          ? "Approved evidence"
-                          : "Draft evidence"}
-                      </span>
-                      {analysis.status === "draft" &&
-                        canApprove &&
-                        ruleStatus?.approved_for_operational_use && (
-                          <button
-                            type="button"
-                            disabled={busy}
-                            onClick={() => void handleApprove(analysis)}
-                          >
-                            Approve and lock analysis
-                          </button>
-                        )}
-                    </div>
-                  </div>
-                  {!ruleStatus?.approved_for_operational_use &&
-                    analysis.status === "draft" && (
-                      <p className="warning-text">
-                        Approval remains disabled until COML, COMT, COMC, and
-                        frequency-coordination practitioners approve this exact
-                        rule-set version.
-                      </p>
-                    )}
-                  <details>
-                    <summary>Evidence digests and frozen input summary</summary>
-                    <dl className="digest-list">
-                      <div>
-                        <dt>Input SHA-256</dt>
-                        <dd>{analysis.input_sha256}</dd>
-                      </div>
-                      <div>
-                        <dt>Result SHA-256</dt>
-                        <dd>{analysis.result_sha256}</dd>
-                      </div>
-                      <div>
-                        <dt>Frozen assignments</dt>
-                        <dd>{analysis.input_snapshot.assignments.length}</dd>
-                      </div>
-                      <div>
-                        <dt>Selected active resources</dt>
-                        <dd>
-                          {
-                            analysis.input_snapshot.selected_active_resources
-                              .length
-                          }
-                        </dd>
-                      </div>
-                    </dl>
-                  </details>
-                  <div className="deconfliction-warning-list">
-                    {analysis.result_snapshot.warnings.length === 0 ? (
-                      <p>
-                        No warning matched this exact provisional rule set. This
-                        is not a finding of coordination or authorization.
-                      </p>
-                    ) : (
-                      analysis.result_snapshot.warnings.map(
-                        (warning, index) => (
-                          <WarningEvidence
-                            key={`${warning.rule_id}-${warning.compared_inputs
-                              .map((input) => input.id)
-                              .join("-")}-${index}`}
-                            warning={warning}
-                          />
-                        ),
-                      )
-                    )}
-                  </div>
-                  <p className="form-note">
-                    {analysis.result_snapshot.disclaimer}
-                  </p>
+                  {(() => {
+                    const analysisStatuses =
+                      analysis.result_snapshot.analysis_statuses ?? [];
+                    return (
+                      <>
+                        <div className="haat-result-heading">
+                          <div>
+                            <h4>
+                              Revision {analysis.revision_number} ·{" "}
+                              {analysis.warning_count} warnings ·{" "}
+                              {analysis.result_snapshot.analysis_status_count ??
+                                analysisStatuses.length}{" "}
+                              scope statuses
+                            </h4>
+                            <p>
+                              {analysis.rule_set_version} · {analysis.status} ·{" "}
+                              {new Date(analysis.created_at).toLocaleString()}
+                            </p>
+                          </div>
+                          <div className="state-badges">
+                            <span className="state-badge">
+                              {analysis.status === "approved"
+                                ? "Approved evidence"
+                                : "Draft evidence"}
+                            </span>
+                            {analysis.status === "draft" &&
+                              canApprove &&
+                              ruleStatus?.approved_for_operational_use &&
+                              analysis.rule_set_version ===
+                                ruleStatus.rule_set_version && (
+                                <button
+                                  type="button"
+                                  disabled={busy}
+                                  onClick={() => void handleApprove(analysis)}
+                                >
+                                  Approve and lock analysis
+                                </button>
+                              )}
+                          </div>
+                        </div>
+                        {!ruleStatus?.approved_for_operational_use &&
+                          analysis.status === "draft" && (
+                            <p className="warning-text">
+                              Approval remains disabled until integrated
+                              validation is recorded and an administrator
+                              allowlists this exact rule-set version.
+                            </p>
+                          )}
+                        <details>
+                          <summary>
+                            Evidence digests and frozen input summary
+                          </summary>
+                          <dl className="digest-list">
+                            <div>
+                              <dt>Input SHA-256</dt>
+                              <dd>{analysis.input_sha256}</dd>
+                            </div>
+                            <div>
+                              <dt>Result SHA-256</dt>
+                              <dd>{analysis.result_sha256}</dd>
+                            </div>
+                            <div>
+                              <dt>Frozen assignments</dt>
+                              <dd>
+                                {analysis.input_snapshot.assignments.length}
+                              </dd>
+                            </div>
+                          </dl>
+                        </details>
+                        <div className="deconfliction-warning-list">
+                          {analysis.result_snapshot.warnings.length === 0 ? (
+                            <p>
+                              No warning matched this exact ruleset. Review the
+                              scope statuses below; this is not a finding of
+                              coordination, authorization, or universal
+                              conflict-free operation.
+                            </p>
+                          ) : (
+                            analysis.result_snapshot.warnings.map(
+                              (warning, index) => (
+                                <WarningEvidence
+                                  key={`${warning.rule_id}-${warning.compared_inputs
+                                    .map((input) => input.id)
+                                    .join("-")}-${index}`}
+                                  warning={warning}
+                                  dispositions={analysis.finding_dispositions.filter(
+                                    (disposition) =>
+                                      warning.finding_key &&
+                                      disposition.finding_key ===
+                                        warning.finding_key,
+                                  )}
+                                  canRecordDisposition={
+                                    canEdit &&
+                                    Boolean(warning.finding_key) &&
+                                    analysis.rule_set_version ===
+                                      ruleStatus?.rule_set_version
+                                  }
+                                  busy={busy}
+                                  onRecordDisposition={(
+                                    disposition,
+                                    explanation,
+                                  ) =>
+                                    handleDisposition(
+                                      analysis,
+                                      warning,
+                                      disposition,
+                                      explanation,
+                                    )
+                                  }
+                                />
+                              ),
+                            )
+                          )}
+                        </div>
+                        <div className="deconfliction-status-list">
+                          <h4>Not applicable and not evaluated scope</h4>
+                          {analysisStatuses.length === 0 ? (
+                            <p>
+                              {analysis.result_snapshot.schema_version ===
+                              "rf-deconfliction-result-v1"
+                                ? "This retained legacy result predates explicit not-applicable and not-evaluated statuses."
+                                : "All applicable rule inputs were available for this exact evaluation scope."}
+                            </p>
+                          ) : (
+                            analysisStatuses.map((status, index) => (
+                              <AnalysisStatusEvidence
+                                key={`${status.status_id}-${status.assignment.id}-${index}`}
+                                status={status}
+                              />
+                            ))
+                          )}
+                        </div>
+                        <p className="form-note">
+                          {analysis.result_snapshot.disclaimer}
+                        </p>
+                      </>
+                    );
+                  })()}
                 </article>
               ))
             )}

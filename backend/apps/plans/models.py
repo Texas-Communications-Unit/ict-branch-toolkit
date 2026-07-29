@@ -95,6 +95,24 @@ class PlanRevision(models.Model):
 
 
 class Assignment(models.Model):
+    class OperatingClassification(models.TextChoices):
+        FIXED_PAIR = "fixed_pair", "Fixed-frequency pair"
+        TRANSMIT_ONLY = "transmit_only", "Broadcast/transmit-only"
+        RECEIVE_ONLY = "receive_only", "Receive-only"
+        NAMED_SYSTEM = (
+            "named_system",
+            "Named system channel — frequencies intentionally omitted",
+        )
+        DYNAMIC_POOL = "dynamic_pool", "Dynamic/multi-channel pool"
+        NOT_DETERMINED = "not_determined", "Not yet determined"
+
+    class TechnologySubtype(models.TextChoices):
+        TRUNKED_TALKGROUP = "trunked_talkgroup", "Trunked talkgroup"
+        LTE_5G = "lte_5g", "LTE/5G"
+        SCADA = "scada", "SCADA"
+        SPREAD_SPECTRUM = "spread_spectrum", "Spread-spectrum"
+        OTHER = "other", "Other system"
+
     class NoteType(models.TextChoices):
         NONE = "", "None"
         REMOTE_BASE = "remote_base", "Remote Base"
@@ -114,7 +132,24 @@ class Assignment(models.Model):
     trunked_talkgroup = models.ForeignKey(
         TrunkedTalkgroup, null=True, blank=True, on_delete=models.PROTECT
     )
+    subscriber_profile_version = models.ForeignKey(
+        "rf_analysis.SubscriberProfileVersion",
+        null=True,
+        blank=True,
+        related_name="plan_assignments",
+        on_delete=models.PROTECT,
+    )
     resource_snapshot = models.JSONField(default=dict)
+    operating_classification = models.CharField(
+        max_length=24,
+        choices=OperatingClassification.choices,
+        default=OperatingClassification.NOT_DETERMINED,
+    )
+    technology_subtype = models.CharField(
+        max_length=24,
+        choices=TechnologySubtype.choices,
+        blank=True,
+    )
     rx_frequency_hz = models.BigIntegerField(null=True, blank=True)
     rx_squelch = models.CharField(max_length=40, blank=True)
     tx_frequency_hz = models.BigIntegerField(null=True, blank=True)
@@ -160,6 +195,67 @@ class Assignment(models.Model):
     def clean(self):
         if self.revision_id and self.revision.is_locked:
             raise ValidationError("Approved revisions are immutable.")
+        if self.subscriber_profile_version_id:
+            profile_version = self.subscriber_profile_version
+            if profile_version.status != "approved":
+                raise ValidationError(
+                    {
+                        "subscriber_profile_version": (
+                            "Only an approved subscriber programming profile version "
+                            "may be selected."
+                        )
+                    }
+                )
+            if (
+                self.revision_id
+                and profile_version.profile.incident_id != self.revision.plan.incident_id
+            ):
+                raise ValidationError(
+                    {
+                        "subscriber_profile_version": (
+                            "The subscriber programming profile must belong to the plan incident."
+                        )
+                    }
+                )
+
+        classification = self.operating_classification
+        has_rx = self.rx_frequency_hz is not None
+        has_tx = self.tx_frequency_hz is not None
+        errors: dict[str, str] = {}
+        if classification == self.OperatingClassification.FIXED_PAIR and not (has_rx and has_tx):
+            errors["operating_classification"] = (
+                "Fixed-frequency pair requires both receive and transmit frequencies."
+            )
+        elif classification == self.OperatingClassification.TRANSMIT_ONLY and (
+            has_rx or not has_tx
+        ):
+            errors["operating_classification"] = (
+                "Broadcast/transmit-only requires a transmit frequency and a blank "
+                "receive frequency."
+            )
+        elif classification == self.OperatingClassification.RECEIVE_ONLY and (not has_rx or has_tx):
+            errors["operating_classification"] = (
+                "Receive-only requires a receive frequency and a blank transmit frequency."
+            )
+        elif classification in {
+            self.OperatingClassification.NAMED_SYSTEM,
+            self.OperatingClassification.DYNAMIC_POOL,
+        } and (has_rx or has_tx):
+            errors["operating_classification"] = (
+                "This operating classification intentionally omits fixed receive and "
+                "transmit frequencies."
+            )
+
+        if classification == self.OperatingClassification.NAMED_SYSTEM:
+            if not self.technology_subtype:
+                errors["technology_subtype"] = "Named system channels require a technology subtype."
+        elif self.technology_subtype:
+            errors["technology_subtype"] = (
+                "Technology subtype applies only to a named system channel."
+            )
+
+        if errors:
+            raise ValidationError(errors)
 
 
 class AssignmentRelationship(models.Model):

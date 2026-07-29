@@ -42,6 +42,7 @@ def setup_scenario():
         function="Command",
         channel_name="SYN CALL",
         assignment="Synthetic exercise",
+        operating_classification=Assignment.OperatingClassification.FIXED_PAIR,
         rx_frequency_hz=155_001_000,
         tx_frequency_hz=155_001_000,
         resource_snapshot={"type": "incident", "name": "SYN CALL"},

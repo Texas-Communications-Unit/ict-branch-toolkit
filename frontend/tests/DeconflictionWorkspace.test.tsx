@@ -13,6 +13,7 @@ import type {
 const api = vi.hoisted(() => ({
   approveDeconflictionAnalysis: vi.fn(),
   createDeconflictionAnalysis: vi.fn(),
+  createDeconflictionFindingDisposition: vi.fn(),
   getDeconflictionStatus: vi.fn(),
   listConventionalChannels: vi.fn(),
   listDeconflictionAnalyses: vi.fn(),
@@ -33,9 +34,9 @@ const incident: Incident = {
 
 const provisionalStatus: DeconflictionRuleSetStatus = {
   rule_set_id: "rf-deconfliction",
-  rule_set_version: "rf-deconfliction-v1-provisional",
+  rule_set_version: "rf-deconfliction-v2-reviewed",
   approved_for_operational_use: false,
-  adjacent_channel_threshold_hz: 12_500,
+  close_frequency_threshold_hz: 12_500,
   rules: [
     {
       id: "RF-001",
@@ -44,10 +45,22 @@ const provisionalStatus: DeconflictionRuleSetStatus = {
       summary: "Operating frequencies match and approved areas overlap.",
     },
   ],
+  analysis_statuses: [
+    {
+      id: "RF-007",
+      name: "Area overlap not evaluated",
+      outcome: "not_evaluated",
+      summary: "No frozen approved area was supplied.",
+    },
+  ],
+  access_code_source_hierarchy: [
+    "selected_versioned_channel_definition",
+    "approved_subscriber_programming_profile",
+  ],
   squelch_rule:
-    "CTCSS, DCS, NAC, or other squelch differences never suppress a frequency warning.",
+    "CTCSS, DCS, NAC, or equivalent access-code differences never suppress RF-001 or RF-002.",
   disclaimer:
-    "Decision support only—not a coordination decision or spectrum authorization.",
+    "Decision support only. Results do not constitute frequency coordination, spectrum authorization, an interference determination, a propagation study, or operational approval. Qualified practitioners must review the results before operational use.",
 };
 
 const plan: ICS205Plan = {
@@ -127,7 +140,7 @@ function analysis(
     rule_set_version: provisionalStatus.rule_set_version,
     status: "draft",
     input_snapshot: {
-      schema_version: "rf-deconfliction-input-v1",
+      schema_version: "rf-deconfliction-input-v2",
       approved_revision: {
         id: "revision-1",
         plan_id: "plan-1",
@@ -135,40 +148,56 @@ function analysis(
         approved_at: "2026-07-28T20:00:00Z",
         approved_by_id: "1",
       },
-      adjacent_channel_threshold_hz: 12_500,
+      close_frequency_threshold_hz: 12_500,
+      access_code_source_hierarchy:
+        provisionalStatus.access_code_source_hierarchy,
       assignments: [{ id: "assignment-1" }, { id: "assignment-2" }],
-      selected_active_resources: [{ id: "resource-1" }],
     },
     input_sha256: "b".repeat(64),
     result_snapshot: {
-      schema_version: "rf-deconfliction-result-v1",
+      schema_version: "rf-deconfliction-result-v2",
       rule_set_id: provisionalStatus.rule_set_id,
       rule_set_version: provisionalStatus.rule_set_version,
       input_sha256: "b".repeat(64),
       rule_definitions: provisionalStatus.rules,
+      analysis_status_definitions: provisionalStatus.analysis_statuses,
       warning_count: 1,
       warnings: [
         {
+          finding_key: "d".repeat(64),
           rule_id: "RF-001",
           rule_name: "Co-channel overlap",
           rule_set_version: provisionalStatus.rule_set_version,
           severity: "critical",
+          blocking: false,
           compared_inputs: [
             {
               id: "assignment-1",
+              position: 1,
+              function: "Command",
               name: "SYN CALL",
+              assignment: "Synthetic command",
+              operating_classification: "fixed_pair",
+              technology_subtype: "",
               rx_frequency_hz: 155_000_000,
               tx_frequency_hz: 155_000_000,
               rx_squelch: "PL 100.0",
               tx_squelch: "PL 100.0",
+              area_count: 1,
             },
             {
               id: "assignment-2",
+              position: 2,
+              function: "Operations",
               name: "SYN TAC",
+              assignment: "Synthetic operations",
+              operating_classification: "fixed_pair",
+              technology_subtype: "",
               rx_frequency_hz: 155_000_000,
               tx_frequency_hz: 155_000_000,
               rx_squelch: "NAC 293",
               tx_squelch: "NAC 293",
+              area_count: 1,
             },
           ],
           evidence: {
@@ -183,6 +212,34 @@ function analysis(
           disclaimer: provisionalStatus.disclaimer,
         },
       ],
+      analysis_status_count: 1,
+      analysis_statuses: [
+        {
+          status_id: "RF-STATUS-002",
+          status_name: "Subscriber access-code comparison not evaluated",
+          outcome: "not_evaluated",
+          rule_set_version: provisionalStatus.rule_set_version,
+          assignment: {
+            id: "assignment-1",
+            position: 1,
+            function: "Command",
+            name: "SYN CALL",
+            assignment: "Synthetic command",
+            operating_classification: "fixed_pair",
+            technology_subtype: "",
+            rx_frequency_hz: 155_000_000,
+            tx_frequency_hz: 155_000_000,
+            rx_squelch: "PL 100.0",
+            tx_squelch: "PL 100.0",
+            area_count: 1,
+          },
+          affected_rule_ids: ["RF-008"],
+          evidence: { unevaluated_directions: ["rx", "tx"] },
+          explanation:
+            "SYN CALL has no versioned comparison source, so RF-008 was not evaluated.",
+          disclaimer: provisionalStatus.disclaimer,
+        },
+      ],
       disclaimer: provisionalStatus.disclaimer,
     },
     result_sha256: "c".repeat(64),
@@ -192,6 +249,7 @@ function analysis(
     approved_at: null,
     created_at: "2026-07-28T21:00:00Z",
     is_locked: false,
+    finding_dispositions: [],
     ...overrides,
   };
 }
@@ -208,6 +266,16 @@ beforeEach(() => {
   api.approveDeconflictionAnalysis.mockResolvedValue(
     analysis({ status: "approved", is_locked: true }),
   );
+  api.createDeconflictionFindingDisposition.mockResolvedValue({
+    id: "disposition-1",
+    analysis: "analysis-1",
+    finding_key: "d".repeat(64),
+    rule_id: "RF-001",
+    disposition: "reviewed_no_change",
+    explanation: "Synthetic review.",
+    created_by: 1,
+    created_at: "2026-07-28T22:00:00Z",
+  });
   vi.spyOn(window, "confirm").mockReturnValue(true);
 });
 
@@ -216,12 +284,14 @@ test("shows plain-language warnings, compared inputs, assumptions, and digests",
   render(<DeconflictionWorkspace incident={incident} />);
 
   expect(
-    await screen.findByText("rf-deconfliction-v1-provisional", {
+    await screen.findByText("rf-deconfliction-v2-reviewed", {
       selector: "strong",
     }),
   ).toBeInTheDocument();
   expect(
-    screen.getByText(/differences never suppress a frequency warning/i),
+    screen.getByText(
+      /equivalent access-code differences never suppress RF-001 or RF-002/i,
+    ),
   ).toBeInTheDocument();
   expect(
     screen.getByRole("heading", {
@@ -254,18 +324,17 @@ test("shows plain-language warnings, compared inputs, assumptions, and digests",
   ).not.toBeInTheDocument();
 });
 
-test("creates an analysis from an approved revision and selected active resources", async () => {
+test("creates an analysis from an approved revision without an omission checklist", async () => {
   const user = userEvent.setup();
   render(<DeconflictionWorkspace incident={incident} />);
 
-  await screen.findByText("rf-deconfliction-v1-provisional", {
+  await screen.findByText("rf-deconfliction-v2-reviewed", {
     selector: "strong",
   });
   await user.selectOptions(
     screen.getByLabelText("Approved ICS-205 revision"),
     "revision-1",
   );
-  await user.click(screen.getByLabelText("Select Synthetic active resource"));
   await user.click(
     screen.getByRole("button", { name: "Run deconfliction review" }),
   );
@@ -273,7 +342,6 @@ test("creates an analysis from an approved revision and selected active resource
   expect(api.createDeconflictionAnalysis).toHaveBeenCalledWith({
     incident: incident.id,
     approved_revision: "revision-1",
-    active_resources: ["resource-1"],
   });
 });
 
@@ -290,4 +358,82 @@ test("allows approval only after the exact rule set passes the practitioner gate
     screen.getByRole("button", { name: "Approve and lock analysis" }),
   );
   expect(api.approveDeconflictionAnalysis).toHaveBeenCalledWith("analysis-1");
+});
+
+test("records an append-only practitioner disposition for a retained finding", async () => {
+  const user = userEvent.setup();
+  render(<DeconflictionWorkspace incident={incident} />);
+
+  await screen.findByRole("heading", {
+    level: 4,
+    name: "RF-001: Co-channel overlap",
+  });
+  await user.selectOptions(
+    screen.getByLabelText("Disposition"),
+    "special_accommodation_required",
+  );
+  await user.type(
+    screen.getByLabelText("Explanation"),
+    "Synthetic subscriber programming accommodation required.",
+  );
+  await user.click(
+    screen.getByRole("button", { name: "Record append-only disposition" }),
+  );
+
+  expect(api.createDeconflictionFindingDisposition).toHaveBeenCalledWith(
+    "analysis-1",
+    {
+      finding_key: "d".repeat(64),
+      disposition: "special_accommodation_required",
+      explanation: "Synthetic subscriber programming accommodation required.",
+    },
+  );
+});
+
+test("keeps retained v1 findings readable without applying v2 approval or disposition controls", async () => {
+  const current = analysis();
+  const legacy = analysis({
+    rule_set_version: "rf-deconfliction-v1-provisional",
+    result_snapshot: {
+      ...current.result_snapshot,
+      schema_version: "rf-deconfliction-result-v1",
+      rule_set_version: "rf-deconfliction-v1-provisional",
+      warnings: current.result_snapshot.warnings.map((warning) => ({
+        ...warning,
+        finding_key: undefined,
+        blocking: undefined,
+        compared_inputs: warning.compared_inputs.map((input) => ({
+          ...input,
+          position: undefined,
+          function: undefined,
+          assignment: undefined,
+          operating_classification: undefined,
+          technology_subtype: undefined,
+          area_count: undefined,
+        })),
+      })),
+      analysis_status_definitions: undefined,
+      analysis_status_count: undefined,
+      analysis_statuses: undefined,
+    },
+  });
+  api.listDeconflictionAnalyses.mockResolvedValue([legacy]);
+
+  render(<DeconflictionWorkspace incident={incident} />);
+
+  expect(
+    await screen.findByText(
+      "This retained legacy result predates explicit not-applicable and not-evaluated statuses.",
+    ),
+  ).toBeInTheDocument();
+  expect(
+    screen.getByText(
+      /This retained legacy finding predates deterministic finding keys/,
+    ),
+  ).toBeInTheDocument();
+  expect(
+    screen.queryByRole("button", {
+      name: "Record append-only disposition",
+    }),
+  ).not.toBeInTheDocument();
 });

@@ -109,6 +109,17 @@ export interface Paginated<T> {
   results: T[];
 }
 
+export type AssignmentOperatingClassification =
+  | "fixed_pair"
+  | "transmit_only"
+  | "receive_only"
+  | "named_system"
+  | "dynamic_pool"
+  | "not_determined";
+
+export type AssignmentTechnologySubtype =
+  "" | "trunked_talkgroup" | "lte_5g" | "scada" | "spread_spectrum" | "other";
+
 export interface PlanAssignment {
   id: string;
   revision: string;
@@ -116,6 +127,9 @@ export interface PlanAssignment {
   function: string;
   channel_name: string;
   assignment: string;
+  operating_classification: AssignmentOperatingClassification;
+  technology_subtype: AssignmentTechnologySubtype;
+  subscriber_profile_version: string | null;
   rx_frequency_hz: number | null;
   rx_squelch: string;
   tx_frequency_hz: number | null;
@@ -390,6 +404,8 @@ export type RFInputBasis =
 export interface RFInputFields {
   tx_frequency_hz: number | null;
   rx_frequency_hz: number | null;
+  tx_access_code: string;
+  rx_access_code: string;
   transmitter_power_w: string | null;
   effective_radiated_power_w: string | null;
   erp_source: ERPSource;
@@ -1090,29 +1106,73 @@ export interface DeconflictionRuleSetStatus {
   rule_set_id: string;
   rule_set_version: string;
   approved_for_operational_use: boolean;
-  adjacent_channel_threshold_hz: number;
+  close_frequency_threshold_hz: number;
   rules: DeconflictionRuleDefinition[];
+  analysis_statuses: {
+    id: string;
+    name: string;
+    outcome: "not_applicable" | "not_evaluated";
+    summary: string;
+  }[];
+  access_code_source_hierarchy: string[];
   squelch_rule: string;
   disclaimer: string;
 }
 
 export interface DeconflictionComparedInput {
   id: string;
+  position?: number | null;
+  function?: string;
   name: string;
+  assignment?: string;
+  operating_classification?: AssignmentOperatingClassification;
+  technology_subtype?: AssignmentTechnologySubtype;
   rx_frequency_hz: number | null;
   tx_frequency_hz: number | null;
   rx_squelch: string;
   tx_squelch: string;
+  area_count?: number;
 }
 
 export interface DeconflictionWarning {
+  finding_key?: string;
   rule_id: string;
   rule_name: string;
   rule_set_version: string;
   severity: DeconflictionRuleDefinition["severity"];
+  blocking?: false;
   compared_inputs: DeconflictionComparedInput[];
   evidence: Record<string, unknown>;
   assumptions: string[];
+  explanation: string;
+  disclaimer: string;
+}
+
+export type DeconflictionFindingDispositionValue =
+  | "reviewed_no_change"
+  | "plan_change_required"
+  | "special_accommodation_required"
+  | "source_review_required";
+
+export interface DeconflictionFindingDisposition {
+  id: string;
+  analysis: string;
+  finding_key: string;
+  rule_id: string;
+  disposition: DeconflictionFindingDispositionValue;
+  explanation: string;
+  created_by: number;
+  created_at: string;
+}
+
+export interface DeconflictionAnalysisStatus {
+  status_id: string;
+  status_name: string;
+  outcome: "not_applicable" | "not_evaluated";
+  rule_set_version: string;
+  assignment: DeconflictionComparedInput;
+  affected_rule_ids: string[];
+  evidence: Record<string, unknown>;
   explanation: string;
   disclaimer: string;
 }
@@ -1134,9 +1194,11 @@ export interface DeconflictionAnalysis {
       approved_at: string;
       approved_by_id: string;
     };
-    adjacent_channel_threshold_hz: number;
+    close_frequency_threshold_hz?: number;
+    adjacent_channel_threshold_hz?: number;
+    access_code_source_hierarchy?: string[];
     assignments: Record<string, unknown>[];
-    selected_active_resources: Record<string, unknown>[];
+    selected_active_resources?: Record<string, unknown>[];
   };
   input_sha256: string;
   result_snapshot: {
@@ -1145,8 +1207,11 @@ export interface DeconflictionAnalysis {
     rule_set_version: string;
     input_sha256: string;
     rule_definitions: DeconflictionRuleDefinition[];
+    analysis_status_definitions?: DeconflictionRuleSetStatus["analysis_statuses"];
     warning_count: number;
     warnings: DeconflictionWarning[];
+    analysis_status_count?: number;
+    analysis_statuses?: DeconflictionAnalysisStatus[];
     disclaimer: string;
   };
   result_sha256: string;
@@ -1156,10 +1221,16 @@ export interface DeconflictionAnalysis {
   approved_at: string | null;
   created_at: string;
   is_locked: boolean;
+  finding_dispositions: DeconflictionFindingDisposition[];
 }
 
 export interface CreateDeconflictionAnalysisPayload {
   incident: string;
   approved_revision: string;
-  active_resources: string[];
+}
+
+export interface CreateDeconflictionFindingDispositionPayload {
+  finding_key: string;
+  disposition: DeconflictionFindingDispositionValue;
+  explanation: string;
 }

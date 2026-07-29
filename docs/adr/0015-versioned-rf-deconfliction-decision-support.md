@@ -1,10 +1,16 @@
 # ADR-0015: Versioned RF deconfliction decision support
 
-- Status: Accepted for synthetic prototype evaluation
+- Status: Superseded by ADR-0021
 - Date: 2026-07-28
 - Issue: #39
 
 ## Context
+
+This record preserves the original provisional contract for interpreting retained
+`rf-deconfliction-v1-provisional` results. Practitioner review subsequently removed or
+reclassified several provisional rules and introduced explicit operating classifications and
+subscriber compatibility review. Current implementations follow
+[ADR-0021](0021-practitioner-reviewed-rf-deconfliction.md).
 
 An approved ICS-205 can contain co-channel, adjacent-channel, repeater-pair, naming, completeness,
 or resource-omission conditions that deserve deliberate practitioner review. A warning engine

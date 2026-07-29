@@ -148,21 +148,23 @@ See [ADR-0012](../adr/0012-field-observations-and-incident-local-calibration.md)
 ## RF deconfliction controls
 
 - `rf.view`, `rf.edit`, and `rf.approve` govern incident-scoped deconfliction listing, creation,
-  and approval. Browser controls are not authorization.
-- Creation requires an approved ICS-205 revision owned by the selected active incident. Active
-  resources are checked for omission only when the user explicitly selects them.
+  finding-disposition creation, and approval. Browser controls are not authorization.
+- Creation requires an approved ICS-205 revision owned by the selected active incident.
 - Analyses, input snapshots, result snapshots, and digests are retained and immutable. A changed
-  plan, resource selection, source release, frozen area, or rule version requires a new analysis.
+  plan, source, frozen area, or rule version requires a new analysis.
+- Finding dispositions are append-only. Update and delete are rejected; each disposition records
+  its actor and timestamp without modifying the retained finding or approved plan.
 - Approval fails closed unless the exact rule-set version is server-allowlisted and the retained
   input and result digests reproduce.
-- `deconfliction_analysis.created` and `deconfliction_analysis.approved` audit events record the
-  analysis, revision, rule-set version, counts, and digests. They do not copy frequencies,
-  squelch values, coordinates, site snapshots, selected-resource content, or warnings.
+- `deconfliction_analysis.created`, `deconfliction_analysis.approved`, and
+  `deconfliction_finding.disposition_recorded` audit events record identifiers, rule-set version,
+  counts, digests, finding key, rule ID, and controlled disposition. They do not copy frequencies,
+  access codes, coordinates, source snapshots, warnings, or free-text disposition explanations.
 - A warning or absence of warnings remains decision support. It does not provide frequency
   coordination, spectrum authorization, propagation evidence, interference protection, or
   incident-command approval.
 
-See [ADR-0015](../adr/0015-versioned-rf-deconfliction-decision-support.md) and the
+See [ADR-0021](../adr/0021-practitioner-reviewed-rf-deconfliction.md) and the
 [RF deconfliction operations guide](../operations/rf-deconfliction.md).
 
 ## P1.6 append-only audit review

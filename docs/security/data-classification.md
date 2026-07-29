@@ -102,17 +102,19 @@ legal-hold, access, disclosure, and destruction decisions.
 ## RF deconfliction evidence
 
 Deconfliction input and result snapshots inherit the highest classification of the incident,
-approved ICS-205 revision, frozen sites and areas, conventional-channel releases, and selected
-resources. Frequencies, squelch values, site coordinates, channel names, assignments, resource
-provenance, warning relationships, and explanations can reveal plans and operational capability.
-A SHA-256 digest identifies retained bytes; it does not anonymize or declassify them.
+approved ICS-205 revision, frozen sites and areas, selected versioned channel definitions, and
+subscriber programming profiles. Frequencies, access codes, site coordinates, channel names,
+assignments, source provenance, warning relationships, and explanations can reveal plans and
+operational capability. A SHA-256 digest identifies retained bytes; it does not anonymize or
+declassify them.
 
 Application access remains incident-scoped. Audit detail records only analysis and revision
-identifiers, rule-set version, counts, and digests; it does not copy the evidence above. Public
-fixtures, screenshots, documentation, GitHub discussion, and Actions artifacts must use clearly
-synthetic deconfliction inputs and results. Real analysis evidence, database backups, or support
-material requires an approved classification, access, retention, legal-hold, disclosure, and
-destruction plan.
+identifiers, rule-set version, counts, digests, finding key, rule ID, and controlled disposition;
+it does not copy the evidence above or a free-text disposition explanation. Public fixtures,
+screenshots, documentation, GitHub discussion, and Actions artifacts must use clearly synthetic
+deconfliction inputs and results. Real analysis evidence, database backups, or support material
+requires an approved classification, access, retention, legal-hold, disclosure, and destruction
+plan.
 
 ## Current prototype controls
 

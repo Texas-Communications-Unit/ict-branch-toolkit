@@ -28,8 +28,99 @@ class AssignmentSerializer(serializers.ModelSerializer):
             ensure_draft(revision)
         if self.instance and revision != self.instance.revision:
             raise serializers.ValidationError({"revision": "The revision cannot be changed."})
+        if self.instance is None and "operating_classification" not in attrs:
+            raise serializers.ValidationError(
+                {
+                    "operating_classification": (
+                        "Select the assignment operating classification explicitly."
+                    )
+                }
+            )
         if attrs.get("conventional_channel") and attrs.get("trunked_talkgroup"):
             raise serializers.ValidationError("Choose one resource type.")
+        profile_version = attrs.get(
+            "subscriber_profile_version",
+            getattr(self.instance, "subscriber_profile_version", None),
+        )
+        if profile_version:
+            if profile_version.status != profile_version.Status.APPROVED:
+                raise serializers.ValidationError(
+                    {
+                        "subscriber_profile_version": (
+                            "Select an approved subscriber programming profile version."
+                        )
+                    }
+                )
+            if revision and profile_version.profile.incident_id != revision.plan.incident_id:
+                raise serializers.ValidationError(
+                    {
+                        "subscriber_profile_version": (
+                            "The subscriber programming profile must belong to the plan incident."
+                        )
+                    }
+                )
+
+        classification = attrs.get(
+            "operating_classification",
+            getattr(
+                self.instance,
+                "operating_classification",
+                Assignment.OperatingClassification.NOT_DETERMINED,
+            ),
+        )
+        subtype = attrs.get(
+            "technology_subtype",
+            getattr(self.instance, "technology_subtype", ""),
+        )
+        rx_frequency_hz = attrs.get(
+            "rx_frequency_hz",
+            getattr(self.instance, "rx_frequency_hz", None),
+        )
+        tx_frequency_hz = attrs.get(
+            "tx_frequency_hz",
+            getattr(self.instance, "tx_frequency_hz", None),
+        )
+        has_rx = rx_frequency_hz is not None
+        has_tx = tx_frequency_hz is not None
+        intent_errors = {}
+        if classification == Assignment.OperatingClassification.FIXED_PAIR and not (
+            has_rx and has_tx
+        ):
+            intent_errors["operating_classification"] = (
+                "Fixed-frequency pair requires both receive and transmit frequencies."
+            )
+        elif classification == Assignment.OperatingClassification.TRANSMIT_ONLY and (
+            has_rx or not has_tx
+        ):
+            intent_errors["operating_classification"] = (
+                "Broadcast/transmit-only requires a transmit frequency and a blank "
+                "receive frequency."
+            )
+        elif classification == Assignment.OperatingClassification.RECEIVE_ONLY and (
+            not has_rx or has_tx
+        ):
+            intent_errors["operating_classification"] = (
+                "Receive-only requires a receive frequency and a blank transmit frequency."
+            )
+        elif classification in {
+            Assignment.OperatingClassification.NAMED_SYSTEM,
+            Assignment.OperatingClassification.DYNAMIC_POOL,
+        } and (has_rx or has_tx):
+            intent_errors["operating_classification"] = (
+                "This operating classification intentionally omits fixed receive and "
+                "transmit frequencies."
+            )
+        if classification == Assignment.OperatingClassification.NAMED_SYSTEM:
+            if not subtype:
+                intent_errors["technology_subtype"] = (
+                    "Named system channels require a technology subtype."
+                )
+        elif subtype:
+            intent_errors["technology_subtype"] = (
+                "Technology subtype applies only to a named system channel."
+            )
+        if intent_errors:
+            raise serializers.ValidationError(intent_errors)
         request = self.context.get("request")
         if revision and request:
             restricted_changes = {
@@ -63,11 +154,16 @@ class AssignmentSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         ensure_draft(instance.revision)
-        if "conventional_channel" in validated_data or "trunked_talkgroup" in validated_data:
+        if {
+            "conventional_channel",
+            "trunked_talkgroup",
+            "subscriber_profile_version",
+        } & validated_data.keys():
             merged = {
                 "channel_name": instance.channel_name,
                 "conventional_channel": instance.conventional_channel,
                 "trunked_talkgroup": instance.trunked_talkgroup,
+                "subscriber_profile_version": instance.subscriber_profile_version,
                 **validated_data,
             }
             validated_data["resource_snapshot"] = resource_snapshot(merged)

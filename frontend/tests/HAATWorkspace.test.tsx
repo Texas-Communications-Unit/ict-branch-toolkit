@@ -73,6 +73,8 @@ const version: SubscriberProfileVersion = {
   approved_at: null,
   tx_frequency_hz: null,
   rx_frequency_hz: null,
+  tx_access_code: "",
+  rx_access_code: "",
   transmitter_power_w: null,
   effective_radiated_power_w: null,
   erp_source: "unknown",

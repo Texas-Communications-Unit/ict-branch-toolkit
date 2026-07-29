@@ -13,6 +13,8 @@ from .models import RFAnalysisInputSnapshot, SubscriberProfileVersion
 VERSION_EDITABLE_FIELDS = (
     "tx_frequency_hz",
     "rx_frequency_hz",
+    "tx_access_code",
+    "rx_access_code",
     "transmitter_power_w",
     "effective_radiated_power_w",
     "erp_source",

@@ -845,6 +845,40 @@ paths:
               schema:
                 $ref: '#/components/schemas/DeconflictionAnalysis'
           description: ''
+  /api/deconfliction-analyses/{id}/dispositions/:
+    post:
+      operationId: deconfliction_analyses_dispositions_create
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this deconfliction analysis.
+        required: true
+      tags:
+      - deconfliction-analyses
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateDeconflictionFindingDisposition'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CreateDeconflictionFindingDisposition'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CreateDeconflictionFindingDisposition'
+        required: true
+      security:
+      - tokenAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeconflictionFindingDisposition'
+          description: ''
   /api/deconfliction-status/:
     get:
       operationId: deconfliction_status_retrieve
@@ -4144,6 +4178,12 @@ components:
           maxLength: 200
         resource_snapshot:
           readOnly: true
+        operating_classification:
+          $ref: '#/components/schemas/OperatingClassificationEnum'
+        technology_subtype:
+          oneOf:
+          - $ref: '#/components/schemas/TechnologySubtypeEnum'
+          - $ref: '#/components/schemas/BlankEnum'
         rx_frequency_hz:
           type: integer
           maximum: 9223372036854775807
@@ -4201,6 +4241,10 @@ components:
           format: uuid
           nullable: true
         trunked_talkgroup:
+          type: string
+          format: uuid
+          nullable: true
+        subscriber_profile_version:
           type: string
           format: uuid
           nullable: true
@@ -4457,7 +4501,7 @@ components:
           pattern: ^[0-9a-f]{64}$
           maxLength: 64
         disposition:
-          $ref: '#/components/schemas/DispositionEnum'
+          $ref: '#/components/schemas/CollaborationChangeDispositionEnum'
         result: {}
         resolution:
           type: object
@@ -4480,6 +4524,16 @@ components:
       - payload_sha256
       - resolution
       - revision
+    CollaborationChangeDispositionEnum:
+      enum:
+      - saved
+      - conflict
+      - rejected
+      type: string
+      description: |-
+        * `saved` - Saved
+        * `conflict` - Conflict
+        * `rejected` - Rejected
     CollaborationMutation:
       type: object
       properties:
@@ -4861,14 +4915,24 @@ components:
         approved_revision:
           type: string
           format: uuid
-        active_resources:
-          type: array
-          items:
-            type: string
-            format: uuid
       required:
       - approved_revision
       - incident
+    CreateDeconflictionFindingDisposition:
+      type: object
+      properties:
+        finding_key:
+          type: string
+          pattern: ^[0-9a-f]{64}$
+        disposition:
+          $ref: '#/components/schemas/DeconflictionFindingDispositionEnum'
+        explanation:
+          type: string
+          maxLength: 1000
+      required:
+      - disposition
+      - explanation
+      - finding_key
     CreateDirectionalCoverageAnalysis:
       type: object
       properties:
@@ -5213,12 +5277,18 @@ components:
         is_locked:
           type: boolean
           readOnly: true
+        finding_dispositions:
+          type: array
+          items:
+            $ref: '#/components/schemas/DeconflictionFindingDisposition'
+          readOnly: true
       required:
       - approved_at
       - approved_by
       - approved_revision
       - created_at
       - created_by
+      - finding_dispositions
       - id
       - incident
       - input_sha256
@@ -5231,6 +5301,58 @@ components:
       - rule_set_version
       - status
       - warning_count
+    DeconflictionFindingDisposition:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        analysis:
+          type: string
+          format: uuid
+          readOnly: true
+        finding_key:
+          type: string
+          readOnly: true
+        rule_id:
+          type: string
+          readOnly: true
+        disposition:
+          allOf:
+          - $ref: '#/components/schemas/DeconflictionFindingDispositionEnum'
+          readOnly: true
+        explanation:
+          type: string
+          readOnly: true
+        created_by:
+          type: integer
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - analysis
+      - created_at
+      - created_by
+      - disposition
+      - explanation
+      - finding_key
+      - id
+      - rule_id
+    DeconflictionFindingDispositionEnum:
+      enum:
+      - reviewed_no_change
+      - plan_change_required
+      - special_accommodation_required
+      - source_review_required
+      type: string
+      description: |-
+        * `reviewed_no_change` - Reviewed — no plan change
+        * `plan_change_required` - Plan change required
+        * `special_accommodation_required` - Special accommodation required
+        * `source_review_required` - Source review required
     DeconflictionRuleSetStatus:
       type: object
       properties:
@@ -5243,7 +5365,7 @@ components:
         approved_for_operational_use:
           type: boolean
           readOnly: true
-        adjacent_channel_threshold_hz:
+        close_frequency_threshold_hz:
           type: integer
           readOnly: true
         rules:
@@ -5252,6 +5374,17 @@ components:
             type: object
             additionalProperties: {}
           readOnly: true
+        analysis_statuses:
+          type: array
+          items:
+            type: object
+            additionalProperties: {}
+          readOnly: true
+        access_code_source_hierarchy:
+          type: array
+          items:
+            type: string
+          readOnly: true
         squelch_rule:
           type: string
           readOnly: true
@@ -5259,8 +5392,10 @@ components:
           type: string
           readOnly: true
       required:
-      - adjacent_channel_threshold_hz
+      - access_code_source_hierarchy
+      - analysis_statuses
       - approved_for_operational_use
+      - close_frequency_threshold_hz
       - disclaimer
       - rule_set_id
       - rule_set_version
@@ -5452,16 +5587,6 @@ components:
         * `complete` - Complete
         * `unsupported` - Unsupported
         * `no_overlap` - No probable two-way overlap
-    DispositionEnum:
-      enum:
-      - saved
-      - conflict
-      - rejected
-      type: string
-      description: |-
-        * `saved` - Saved
-        * `conflict` - Conflict
-        * `rejected` - Rejected
     EffectiveStatusEnum:
       enum:
       - draft
@@ -6794,6 +6919,22 @@ components:
         * `tower` - Tower
         * `mast` - Mast
         * `other` - Other
+    OperatingClassificationEnum:
+      enum:
+      - fixed_pair
+      - transmit_only
+      - receive_only
+      - named_system
+      - dynamic_pool
+      - not_determined
+      type: string
+      description: |-
+        * `fixed_pair` - Fixed-frequency pair
+        * `transmit_only` - Broadcast/transmit-only
+        * `receive_only` - Receive-only
+        * `named_system` - Named system channel — frequencies intentionally omitted
+        * `dynamic_pool` - Dynamic/multi-channel pool
+        * `not_determined` - Not yet determined
     OperationEnum:
       enum:
       - revision.update
@@ -7469,6 +7610,12 @@ components:
           maxLength: 200
         resource_snapshot:
           readOnly: true
+        operating_classification:
+          $ref: '#/components/schemas/OperatingClassificationEnum'
+        technology_subtype:
+          oneOf:
+          - $ref: '#/components/schemas/TechnologySubtypeEnum'
+          - $ref: '#/components/schemas/BlankEnum'
         rx_frequency_hz:
           type: integer
           maximum: 9223372036854775807
@@ -7526,6 +7673,10 @@ components:
           format: uuid
           nullable: true
         trunked_talkgroup:
+          type: string
+          format: uuid
+          nullable: true
+        subscriber_profile_version:
           type: string
           format: uuid
           nullable: true
@@ -7982,6 +8133,12 @@ components:
           minimum: 1
           format: int64
           nullable: true
+        tx_access_code:
+          type: string
+          maxLength: 40
+        rx_access_code:
+          type: string
+          maxLength: 40
         transmitter_power_w:
           type: string
           format: decimal
@@ -9059,6 +9216,12 @@ components:
           minimum: 1
           format: int64
           nullable: true
+        tx_access_code:
+          type: string
+          maxLength: 40
+        rx_access_code:
+          type: string
+          maxLength: 40
         transmitter_power_w:
           type: string
           format: decimal
@@ -9201,6 +9364,12 @@ components:
           minimum: 1
           format: int64
           nullable: true
+        tx_access_code:
+          type: string
+          maxLength: 40
+        rx_access_code:
+          type: string
+          maxLength: 40
         transmitter_power_w:
           type: string
           format: decimal
@@ -9284,6 +9453,20 @@ components:
         notes:
           type: string
           nullable: true
+    TechnologySubtypeEnum:
+      enum:
+      - trunked_talkgroup
+      - lte_5g
+      - scada
+      - spread_spectrum
+      - other
+      type: string
+      description: |-
+        * `trunked_talkgroup` - Trunked talkgroup
+        * `lte_5g` - LTE/5G
+        * `scada` - SCADA
+        * `spread_spectrum` - Spread-spectrum
+        * `other` - Other system
     TerrainAnalysis:
       type: object
       properties:

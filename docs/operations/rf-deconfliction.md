@@ -1,127 +1,119 @@
 # RF deconfliction decision support
 
-Issue #39 adds synthetic-only, explainable RF deconfliction decision support. It does not provide
-frequency coordination, spectrum authorization, interference protection, propagation analysis,
-or an ICS chain-of-command decision.
+Issue #39 provides explainable, retained RF planning decision support. It does not provide
+frequency coordination, spectrum authorization, an interference determination, a propagation
+study, ICS-205 approval, or operational approval.
 
-## Safe default and human gate
+## Safe default and activation gate
 
-`ICT_APPROVED_DECONFLICTION_RULESETS=[]` permits creation and review of draft synthetic analyses
-but prevents approval. The only included rule set is:
-
-```text
-rf-deconfliction-v1-provisional
-```
-
-Before an installation may add that exact value to the allowlist, qualified COML, COMT, COMC, and
-frequency-coordination practitioners must review and record a disposition for every rule,
-severity, threshold, assumption, explanation, positive case, negative case, and boundary case.
-Security and data owners must separately approve the proposed environment and data classification.
-
-If those gates are recorded, the exact version can be enabled with:
+The implemented rule set is:
 
 ```text
-ICT_APPROVED_DECONFLICTION_RULESETS=["rf-deconfliction-v1-provisional"]
+rf-deconfliction-v2-reviewed
 ```
 
-That setting permits application approval of a retained result. It does not convert the result
-into coordination or operational authority.
+`ICT_APPROVED_DECONFLICTION_RULESETS=[]` permits authorized users to create and review draft
+analyses but prevents application approval. Keep that default until all local and CI tests pass,
+the migration is exercised against the shared test database, the deployed interface is checked,
+and the integrated acceptance matrix below is recorded.
+
+Only after those gates are satisfied may an administrator set:
+
+```text
+ICT_APPROVED_DECONFLICTION_RULESETS=["rf-deconfliction-v2-reviewed"]
+```
+
+That setting permits approval of a retained result. It does not give the result operational or
+regulatory authority.
+
+## Assignment preparation
+
+Every assignment must explicitly identify its operating classification:
+
+| Classification | Intended use |
+| --- | --- |
+| Fixed pair | Conventional assignment with receive and transmit frequencies |
+| Broadcast/transmit-only | One-way transmitter; the user confirms this intent during entry |
+| Receive-only | One-way receiver; the user confirms this intent during entry |
+| Named system | Trunked, LTE/5G, SCADA, spread-spectrum, or other named service |
+| Dynamic/multi-channel pool | A system selecting from multiple possible channels |
+| Not yet determined | Draft planning only; approval is blocked |
+
+Do not invent a missing frequency, coordinate, area, access code, or classification. A candidate
+resource being considered for coverage or availability may remain in planning without appearing
+on the approved ICS-205.
 
 ## Analysis workflow
 
 1. Select an active incident and an approved ICS-205 revision.
-2. Review the frozen assignment and approved site-area evidence in that revision.
-3. Optionally select active conventional-channel resources that should be checked for omission.
-   The engine does not assume that every library resource belongs in every plan.
-4. Create a new immutable analysis.
-5. Review the exact rule-set version, threshold, compared inputs, evidence, assumptions,
-   explanation, input digest, and result digest.
-6. Resolve each warning through the applicable planning and coordination process outside the
-   engine. Do not edit an approved plan automatically.
-7. If the plan, site areas, selected resources, source release, or rule set changes, create a new
-   analysis and retain the earlier result.
-8. Approve an analysis only when the exact rule version passed the human gate and the result has
-   received the required incident review.
+2. Review the frozen assignment classifications, versioned comparison sources, and approved
+   site-area evidence.
+3. Create a new immutable analysis.
+4. Review warnings and every not-applicable or not-evaluated status. Zero warnings does not mean
+   the plan is conflict-free or compatible.
+5. Record any finding disposition. Dispositions are append-only and do not modify the plan.
+6. If the plan or any frozen source, site area, classification, rule, or threshold changes, create
+   a new analysis and retain the earlier result.
+7. Approve only when the exact rule version is allowlisted and the result has received the
+   applicable human review.
 
-Only frozen operational and coordination rings are used for overlap. A missing area produces
-`RF-007`; the engine never invents a location. A boundary touch counts as overlap. Squelch values
-are displayed as evidence but never suppress a warning.
+Only frozen operational and coordination rings are used. A boundary touch counts as overlap.
+Missing area evidence produces `RF-007` “Area overlap not evaluated.” Access-code differences
+remain evidence and never suppress an RF overlap warning.
 
-## Provisional rule register
+## Reviewed rule and status register
 
-| Rule ID | Provisional condition | Severity | Required reviewer disposition |
-| --- | --- | --- | --- |
-| `RF-001` | Equal transmit frequencies and overlapping approved areas | Critical | Pending |
-| `RF-002` | Non-equal transmit frequencies separated by 12,500 Hz or less and overlapping approved areas | Warning | Pending |
-| `RF-003` | Receive/transmit pairs are reversed between assignments | Critical | Pending |
-| `RF-004` | Different channel names use the same non-null receive/transmit pair | Warning | Pending |
-| `RF-005` | Receive or transmit frequency is missing | Caution | Pending |
-| `RF-006` | A user-selected active conventional resource is absent from the approved revision | Warning | Pending |
-| `RF-007` | An assignment has no frozen operational or coordination ring | Caution | Pending |
+| ID | Condition | Result |
+| --- | --- | --- |
+| `RF-001` | Equal transmit frequencies and overlapping approved areas | Critical, nonblocking |
+| `RF-002` | Non-equal transmit frequencies separated by 12,500 Hz or less and overlapping approved areas | Warning, nonblocking |
+| `RF-003` | Fixed-pair receive/transmit values are inverse between assignments | Critical, nonblocking |
+| `RF-004` | Different names use the same non-null fixed pair | Warning, nonblocking |
+| `RF-008` | Directional access code differs from the authoritative selected source | Critical, nonblocking |
+| `RF-007` | No frozen approved area exists | Not evaluated |
+| `RF-STATUS-001` | Fixed-frequency rule does not apply to the classification | Not applicable |
+| `RF-STATUS-002` | Authoritative expected access-code evidence is unavailable | Not evaluated |
 
-Reviewers must record the accepted or revised severity, rule wording, evidence requirements,
-operational assumptions, and rationale. Any logic-affecting revision requires a new version rather
-than changing the meaning of retained results.
+For `RF-008`, the selected versioned channel definition has priority over an explicitly selected
+approved subscriber programming profile. Receive is compared only with receive; transmit is
+compared only with transmit. A one-way assignment evaluates only its applicable operating
+direction. Unknown expected values remain not evaluated.
 
-## Domain review test table
+## Required synthetic acceptance matrix
 
-All examples must use clearly synthetic frequencies, names, coordinates, sites, incidents, and
-resources. “Warning” below means the expected rule result, not an authorization decision.
+All examples must use clearly synthetic frequencies, names, access codes, coordinates, sites, and
+incidents.
 
-| Rule | Case type | Synthetic condition | Expected result |
-| --- | --- | --- | --- |
-| `RF-001` | Positive | Equal transmit frequencies; approved rings overlap | One critical `RF-001` |
-| `RF-001` | Negative | Equal transmit frequencies; approved rings do not overlap | No `RF-001` |
-| `RF-001` | Boundary | Center distance equals combined radii | One critical `RF-001` |
-| `RF-001` | Squelch | Equal transmit frequencies and overlapping rings; squelch differs | `RF-001` remains and records the difference |
-| `RF-002` | Positive | Separation is 12,499 Hz; approved rings overlap | One warning `RF-002` |
-| `RF-002` | Negative | Separation is 12,501 Hz; approved rings overlap | No `RF-002` |
-| `RF-002` | Boundary | Separation is exactly 12,500 Hz; approved rings overlap | One warning `RF-002` |
-| `RF-002` | Area negative | Separation is within threshold; rings do not overlap | No `RF-002` |
-| `RF-003` | Positive | First RX/TX equals second TX/RX and the pair is not simplex | One critical `RF-003` |
-| `RF-003` | Negative | Only one side of the pair matches | No `RF-003` |
-| `RF-004` | Positive | Different names and identical non-null RX/TX pairs | One warning `RF-004` |
-| `RF-004` | Negative | Same name and identical pair | No `RF-004` |
-| `RF-005` | Positive | RX or TX is null | One caution `RF-005` naming every missing field |
-| `RF-005` | Negative | RX and TX are both present | No `RF-005` |
-| `RF-006` | Positive | A user-selected active resource is absent from assignments | One warning `RF-006` |
-| `RF-006` | Negative | The selected resource is linked to an assignment | No `RF-006` |
-| `RF-007` | Positive | No frozen operational or coordination ring exists | One caution `RF-007` |
-| `RF-007` | Negative | At least one valid frozen operational or coordination ring exists | No `RF-007` |
+| Rule or status | Positive/boundary case | Negative or unavailable case |
+| --- | --- | --- |
+| `RF-001` | Equal TX with overlap, including exact area-boundary touch, produces one critical finding even when access codes differ | Equal TX without overlap produces no `RF-001` |
+| `RF-002` | Non-equal TX separated by 12,499 Hz or exactly 12,500 Hz with overlap produces one warning | 12,501 Hz separation or no overlap produces no `RF-002` |
+| `RF-003` | A non-simplex fixed pair exactly inverse to another produces one critical finding | A partial match or non-fixed classification produces no `RF-003` |
+| `RF-004` | Different names with the same non-null fixed pair produce one warning | The same name, different pair, or non-fixed classification produces no `RF-004` |
+| `RF-008` | Directional normalized text differs from the authoritative source and produces one critical finding with provenance | Matching values produce no finding; missing authoritative direction produces `RF-STATUS-002` |
+| `RF-007` | Missing approved area produces a not-evaluated status | An approved operational or coordination area permits overlap evaluation |
+| Operating intent | Transmit-only, receive-only, named-system, and dynamic-pool assignments retain explicit intent without a missing-value finding | Not-yet-determined blocks revision approval |
 
-## Required review record
+## Complete environment validation
 
-The human-review record must identify:
+Before operational allowlisting, record:
 
-- exact commit and `rf-deconfliction-v1-provisional` version;
-- reviewer names, roles, qualifications, organizations, and dates;
-- each test-table result and any additional practitioner scenario;
-- accepted or rejected rule, severity, threshold, evidence, and explanation decisions;
-- unresolved limitations and the environment/data scope accepted for evaluation;
-- security and privacy disposition;
-- approval authority and effective date; and
-- the required version change when any reviewed behavior changes.
+- backend formatting, lint, Django checks, migration drift, OpenAPI validation, and the complete
+  backend test suite;
+- frontend formatting, lint, type checking, unit/component tests, production build, and the
+  complete Playwright browser suite using Node.js 24;
+- PostgreSQL/PostGIS migration and service health in the shared test environment;
+- authenticated creation from an approved incident-scoped revision and denial for cross-incident,
+  unapproved, unauthorized, update, and delete attempts;
+- all synthetic positive, negative, and exact-boundary cases above;
+- accessible text for severity, rule, status, assumptions, explanation, provenance, and
+  disclaimer without relying on color or the map;
+- deterministic input/result digests, tamper rejection, retained v1 history, immutable analyses,
+  append-only dispositions, and the audit-chain events;
+- no sensitive frequency, access-code, coordinate, source snapshot, warning explanation, or
+  disposition explanation copied into audit details; and
+- backup confirmation, deployed commit identity, clean server worktree, container/service health,
+  and public endpoint behavior after an authorized deployment.
 
-Attach the record through the project’s controlled review process. Do not place sensitive incident,
-frequency, site, credential, or practitioner personal data in a public issue or test artifact.
-
-## Verification
-
-For an approved synthetic evaluation, confirm:
-
-- a draft analysis can be created only from an approved revision in the selected active incident;
-- assignments from another incident and unapproved revisions fail;
-- rule IDs, versions, severities, compared inputs, evidence, assumptions, explanations, and the
-  disclaimer appear in both API and accessible interface output;
-- the 12,500 Hz and area-touch boundaries are inclusive;
-- a squelch difference remains visible and does not suppress `RF-001` or `RF-002`;
-- active resources are checked only when the user explicitly selects them;
-- identical inputs produce the same input and result digests;
-- the retained record cannot be updated or deleted;
-- approval fails with the default empty allowlist and succeeds only for the exact approved version;
-- changed retained input or result evidence fails digest verification; and
-- audit details contain no frequencies, squelch values, coordinates, site snapshots, or warning
-  contents.
-
-If any check fails, keep the version out of the allowlist, retain sanitized evidence, and return
-the implementation to maintainers and qualified reviewers.
+If any check fails, keep the version out of the allowlist, retain sanitized evidence, and correct
+the implementation before operational use.

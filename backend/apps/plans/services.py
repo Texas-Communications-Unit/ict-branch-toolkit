@@ -7,7 +7,7 @@ from rest_framework.exceptions import ValidationError
 
 from apps.audit.services import record_event
 
-from .models import AssignmentRelationship, PlanRevision
+from .models import Assignment, AssignmentRelationship, PlanRevision
 
 
 def ensure_draft(revision):
@@ -18,6 +18,20 @@ def ensure_draft(revision):
 def resource_snapshot(data):
     channel = data.get("conventional_channel")
     talkgroup = data.get("trunked_talkgroup")
+    profile_version = data.get("subscriber_profile_version")
+    programming_profile = (
+        {
+            "id": str(profile_version.id),
+            "profile_id": str(profile_version.profile_id),
+            "profile_name": profile_version.profile.name,
+            "version": profile_version.number,
+            "input_sha256": profile_version.input_sha256,
+            "rx_access_code": profile_version.rx_access_code,
+            "tx_access_code": profile_version.tx_access_code,
+        }
+        if profile_version
+        else None
+    )
     if channel:
         release = channel.release
         return {
@@ -29,6 +43,11 @@ def resource_snapshot(data):
             "source_type": release.source.source_type,
             "release": release.version,
             "content_sha256": release.content_sha256,
+            "expected_access_codes": {
+                "rx": channel.rx_squelch,
+                "tx": channel.tx_squelch,
+            },
+            "subscriber_programming_profile": programming_profile,
         }
     if talkgroup:
         release = talkgroup.release
@@ -41,8 +60,13 @@ def resource_snapshot(data):
             "source_type": release.source.source_type,
             "release": release.version,
             "content_sha256": release.content_sha256,
+            "subscriber_programming_profile": programming_profile,
         }
-    return {"type": "incident", "name": data.get("channel_name", "")}
+    return {
+        "type": "incident",
+        "name": data.get("channel_name", ""),
+        "subscriber_programming_profile": programming_profile,
+    }
 
 
 @transaction.atomic
@@ -91,6 +115,15 @@ def approve_revision(revision, actor):
     ensure_draft(revision)
     if not revision.assignments.exists():
         raise ValidationError("A revision must contain at least one assignment before approval.")
+    for assignment in revision.assignments.select_related(
+        "subscriber_profile_version__profile"
+    ).order_by("position", "id"):
+        if assignment.operating_classification == Assignment.OperatingClassification.NOT_DETERMINED:
+            raise ValidationError(
+                f"Assignment {assignment.position} ({assignment.channel_name}) has no "
+                "determined operating classification."
+            )
+        assignment.full_clean()
     for relationship in revision.relationships.prefetch_related("assignments"):
         members = list(relationship.assignments.all())
         if any(item.revision_id != revision.id for item in members):

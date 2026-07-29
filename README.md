@@ -46,9 +46,13 @@ The application will be independently deployable. The first hosted implementatio
 
 ### Deconfliction
 
-- Identify possible co-channel and adjacent-channel conflicts where operating or coordination areas overlap.
+- Identify possible co-channel and close-frequency conflicts where operating or coordination areas overlap.
 - Consider frequency relationships, geographic overlap, and simultaneous operation.
-- Detect reversed repeater input/output frequencies, duplicate frequencies under different names, missing technical values, and active resources not listed on the approved ICS-205.
+- Detect reversed repeater input/output frequencies, duplicate frequency pairs under different names,
+  and directional subscriber access-code mismatches.
+- Classify fixed pairs, transmit-only, receive-only, named systems, dynamic pools, and
+  not-yet-determined draft assignments explicitly instead of treating every missing frequency as
+  an error.
 - Explain why each condition was flagged instead of returning only a severity color.
 - Display CTCSS, DCS, and NAC values without treating different squelch values as protection from RF interference.
 
@@ -66,7 +70,8 @@ The permission model is expected to support COML, COMC, COMT, administrator, con
 - NIFOG, local, and incident-created resources
 - Map-based site placement and coordinate conversion
 - Manual coverage and coordination rings
-- Basic co-channel and adjacent-channel warnings
+- Reviewed co-channel, close-frequency, repeater-pair, duplicate-pair, and subscriber
+  compatibility decision support
 - ICS-205, map, KML, GeoJSON, and CSV exports
 - Revision history and approval lock
 
@@ -402,24 +407,25 @@ authorization, or operational approval. See
 
 ## Explainable RF deconfliction decision support
 
-Issue #39 evaluates one approved ICS-205 revision and an explicit selection of active
-conventional-channel resources against stable, server-side rules for co-channel and
-adjacent-channel area overlap, reversed repeater pairs, duplicate frequency pairs under different
-names, missing technical values, selected active resources omitted from the plan, and missing
-approved operating or coordination areas.
+Issue #39 evaluates one approved ICS-205 revision against stable, server-side rules for
+co-channel and close-frequency area overlap, reversed repeater pairs, duplicate frequency pairs
+under different names, and directional subscriber access-code mismatches. Assignments explicitly
+record whether they are fixed pairs, transmit-only, receive-only, named systems, dynamic pools, or
+not yet determined. Missing area or comparison evidence is reported as not evaluated, not as a
+conflict and never as an invented location.
 
 Every warning preserves its rule ID and version, severity, compared inputs, evidence, assumptions,
 plain-language explanation, and decision-support disclaimer. CTCSS, DCS, NAC, and other squelch
 differences remain visible evidence and never suppress a warning. Immutable input and result
-snapshots and SHA-256 digests preserve the exact approved revision, selected resources, frozen
-areas, rules, and output needed to reconstruct the result.
+snapshots and SHA-256 digests preserve the exact approved revision, frozen areas, versioned
+comparison sources, rules, and output needed to reconstruct the result. Subsequent finding
+dispositions are append-only and audit recorded.
 
-The initial `rf-deconfliction-v1-provisional` rule set is synthetic-evaluation decision support,
-not frequency coordination, spectrum authorization, propagation analysis, or incident-command
-authority. Approval fails closed until qualified COML, COMT, COMC, and frequency-coordination
-practitioners accept the exact rules, severities, threshold, explanations, and positive, negative,
-and boundary cases. See [ADR-0015](docs/adr/0015-versioned-rf-deconfliction-decision-support.md)
-and the [RF deconfliction operations guide](docs/operations/rf-deconfliction.md).
+The reviewed `rf-deconfliction-v2-reviewed` rule set remains configuration-gated until its full
+integrated validation is recorded. It is decision support, not frequency coordination, spectrum
+authorization, an interference determination, a propagation study, or operational approval. See
+[ADR-0021](docs/adr/0021-practitioner-reviewed-rf-deconfliction.md) and the
+[RF deconfliction operations guide](docs/operations/rf-deconfliction.md).
 
 ## Accessibility
 
