@@ -18,6 +18,7 @@ import {
   createManualRing,
   createRadioSite,
   createSiteAssignment,
+  deleteSiteAssignment,
   downloadSpatialExport,
   listCoverageEstimates,
   listDirectionalCoverageAnalyses,
@@ -591,7 +592,8 @@ export function MapShell({ incident }: { incident?: Incident }) {
   async function handleSite(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!incident) return;
-    const data = new FormData(event.currentTarget);
+    const form = event.currentTarget;
+    const data = new FormData(form);
     try {
       await createRadioSite({
         incident: incident.id,
@@ -607,7 +609,7 @@ export function MapShell({ incident }: { incident?: Incident }) {
             }
           : {}),
       });
-      event.currentTarget.reset();
+      form.reset();
       setCoordinateText("");
       setParsed(undefined);
       setAddressSelection(undefined);
@@ -642,7 +644,8 @@ export function MapShell({ incident }: { incident?: Incident }) {
 
   async function handleRing(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const data = new FormData(event.currentTarget);
+    const form = event.currentTarget;
+    const data = new FormData(form);
     try {
       await createManualRing({
         site: String(data.get("site")),
@@ -650,7 +653,7 @@ export function MapShell({ incident }: { incident?: Incident }) {
         radius_m: Number(data.get("radiusM")),
         label: String(data.get("ringLabel")),
       });
-      event.currentTarget.reset();
+      form.reset();
       setMessage("Manual planning ring saved.");
       await refresh();
     } catch (error) {
@@ -699,6 +702,29 @@ export function MapShell({ incident }: { incident?: Incident }) {
     } catch (error) {
       setMessage(
         error instanceof Error ? error.message : "Unable to associate site.",
+      );
+    }
+  }
+
+  async function handleUnlink(link: SiteAssignment) {
+    if (
+      !window.confirm(
+        `Remove the link between ${link.site_name} and ${link.assignment_label}? The site and assignment will remain available.`,
+      )
+    ) {
+      return;
+    }
+    try {
+      await deleteSiteAssignment(link.id);
+      setMessage(
+        `Removed the link between ${link.site_name} and ${link.assignment_label}.`,
+      );
+      await refresh();
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : "Unable to remove the site association.",
       );
     }
   }
@@ -850,18 +876,42 @@ export function MapShell({ incident }: { incident?: Incident }) {
             {sites.length === 0 ? (
               <p className="empty">No sites have been placed.</p>
             ) : (
-              sites.map((site) => (
-                <article className="site-card" key={site.id}>
-                  <strong>{site.name}</strong>
-                  <span>{site.coordinate_formats.decimal}</span>
-                  <small>{site.coordinate_formats.mgrs}</small>
-                  <small>
-                    {site.rings.length} ring(s) ·{" "}
-                    {links.filter((link) => link.site === site.id).length}{" "}
-                    assignment(s)
-                  </small>
-                </article>
-              ))
+              sites.map((site) => {
+                const siteLinks = links.filter((link) => link.site === site.id);
+                return (
+                  <article className="site-card" key={site.id}>
+                    <strong>{site.name}</strong>
+                    <span>{site.coordinate_formats.decimal}</span>
+                    <small>{site.coordinate_formats.mgrs}</small>
+                    <small>
+                      {site.rings.length} ring(s) · {siteLinks.length}{" "}
+                      assignment(s)
+                    </small>
+                    {canEdit &&
+                      revision?.status === "draft" &&
+                      siteLinks.length > 0 && (
+                        <ul
+                          className="site-link-list"
+                          aria-label={`Assignment links for ${site.name}`}
+                        >
+                          {siteLinks.map((link) => (
+                            <li key={link.id}>
+                              <span>{link.assignment_label}</span>
+                              <button
+                                type="button"
+                                className="secondary-button"
+                                aria-label={`Remove ${link.assignment_label} from ${site.name}`}
+                                onClick={() => void handleUnlink(link)}
+                              >
+                                Remove link
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                  </article>
+                );
+              })
             )}
             {canEdit && sites.length > 0 && (
               <form onSubmit={handleCoordinateUpdate}>

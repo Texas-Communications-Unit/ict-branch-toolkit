@@ -493,6 +493,12 @@ export function createSiteAssignment(
   });
 }
 
+export function deleteSiteAssignment(id: string): Promise<void> {
+  return request(`/api/site-assignments/${id}/`, {
+    method: "DELETE",
+  });
+}
+
 export function searchAddress(address: string): Promise<GeocoderSearchResult> {
   return request<GeocoderSearchResult>("/api/geocoder/search/", {
     method: "POST",

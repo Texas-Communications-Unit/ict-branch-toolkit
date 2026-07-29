@@ -775,6 +775,27 @@ footer {
   color: var(--tx-comu-slate);
 }
 
+.site-link-list {
+  display: grid;
+  gap: 0.4rem;
+  list-style: none;
+  margin: 0.35rem 0 0;
+  padding: 0;
+}
+
+.site-link-list li {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: space-between;
+}
+
+.site-link-list button {
+  font-size: 0.78rem;
+  padding: 0.35rem 0.55rem;
+}
+
 .coordinate-preview {
   background: var(--tx-comu-light);
   grid-column: 1 / -1;
