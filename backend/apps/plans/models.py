@@ -95,6 +95,17 @@ class PlanRevision(models.Model):
 
 
 class Assignment(models.Model):
+    PUBLISHABLE_CONTACT_FIELDS = (
+        "contact_name",
+        "site_address",
+        "phone_numbers",
+        "contact_24_hour",
+    )
+
+    class ContactPublicationPlacement(models.TextChoices):
+        REMARKS = "remarks", "Assignment remarks"
+        SPECIAL_INSTRUCTIONS = "special_instructions", "Plan-wide special instructions"
+
     class OperatingClassification(models.TextChoices):
         FIXED_PAIR = "fixed_pair", "Fixed-frequency pair"
         TRANSMIT_ONLY = "transmit_only", "Broadcast/transmit-only"
@@ -161,6 +172,13 @@ class Assignment(models.Model):
     site_address = models.TextField(blank=True)
     phone_numbers = models.CharField(max_length=240, blank=True)
     contact_24_hour = models.CharField(max_length=240, blank=True)
+    published_contact_fields = models.JSONField(default=list, blank=True)
+    contact_publication_purpose = models.CharField(max_length=240, blank=True)
+    contact_publication_placement = models.CharField(
+        max_length=24,
+        choices=ContactPublicationPlacement.choices,
+        default=ContactPublicationPlacement.REMARKS,
+    )
     collaboration_version = models.PositiveBigIntegerField(default=1)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -254,6 +272,26 @@ class Assignment(models.Model):
                 "Technology subtype applies only to a named system channel."
             )
 
+        if errors:
+            raise ValidationError(errors)
+
+        published_fields = self.published_contact_fields
+        if not isinstance(published_fields, list) or len(published_fields) != len(
+            set(published_fields)
+        ):
+            errors["published_contact_fields"] = (
+                "Provide a unique list of contact fields to publish."
+            )
+        elif any(field not in self.PUBLISHABLE_CONTACT_FIELDS for field in published_fields):
+            errors["published_contact_fields"] = "A selected contact field is not publishable."
+        elif any(not getattr(self, field, "") for field in published_fields):
+            errors["published_contact_fields"] = (
+                "Every selected contact field must contain a value."
+            )
+        if published_fields and not self.contact_publication_purpose.strip():
+            errors["contact_publication_purpose"] = (
+                "Record an operational purpose before publishing contact information."
+            )
         if errors:
             raise ValidationError(errors)
 

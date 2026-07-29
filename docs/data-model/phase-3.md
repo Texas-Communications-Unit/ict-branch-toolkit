@@ -104,7 +104,7 @@ requiring the P3.1 terrain aggregate:
 | `CollaborationChange`                | Retains client mutation UUID/device, incident/revision, actor, operation, base/resulting versions, affected field names, protected proposed/current snapshots, payload digest, result, and saved/conflict/rejected disposition. |
 | `CollaborationResolution`            | Append-only discard, reapply, or intentional replacement decision linked to one retained conflict and optional saved replacement.                                                                                               |
 | `PresenceLease`                      | Short-lived incident/revision/section viewing or editing indicator; it is not a lock.                                                                                                                                           |
-| `SensitiveFieldRule`                 | Versioned per-incident read/edit roles and omitted/redacted behavior for a documented restricted assignment field.                                                                                                              |
+| `SensitiveFieldRule`                 | Versioned per-incident read/edit roles and omitted/`Access restricted` behavior for a documented restricted assignment field.                                                                                                   |
 | `ExternalIdentity`                   | Minimal local shadow for a future approved provider; stable subject/contact linkage, eligibility, mapped role, assertion digest, refresh/validity, and disablement state.                                                       |
 
 Approved revisions remain immutable. Collaboration records and resolutions are

@@ -49,6 +49,7 @@ const plan: ICS205Plan = {
       is_locked: false,
       prepared_by_name: "",
       prepared_by_position: "",
+      copied_from: null,
       approved_at: null,
       collaboration_version: 3,
       assignments: [
@@ -69,6 +70,9 @@ const plan: ICS205Plan = {
           mode: "Analog FM",
           remarks: "Saved first",
           structured_note: "",
+          published_contact_fields: [],
+          contact_publication_purpose: "",
+          contact_publication_placement: "remarks",
           collaboration_version: 2,
           resource_snapshot: { source: "synthetic" },
         },
@@ -83,6 +87,7 @@ const conflict: CollaborationChange = {
   client_mutation_id: "00000000-0000-4000-8000-000000000010",
   revision: "revision-collaboration-1",
   actor: 2,
+  actor_display_name: "Other Planner",
   device_id: "00000000-0000-4000-8000-000000000001",
   operation: "assignment.update",
   object_id: "assignment-collaboration-1",
@@ -112,26 +117,24 @@ beforeEach(() => {
   api.heartbeatCollaborationPresence.mockResolvedValue({
     id: "presence-1",
     revision: "revision-collaboration-1",
-    device_id: "00000000-0000-4000-8000-000000000001",
     section: "ics205",
     mode: "editing",
-    sequence: 1,
-    expires_at: "2026-07-28T23:01:15Z",
-    last_seen_at: "2026-07-28T23:00:00Z",
+    object_id: null,
+    field_name: "",
     display_name: "Synthetic COML",
+    incident_role: "COML",
     is_current_user: true,
   });
   api.listCollaborationPresence.mockResolvedValue([
     {
       id: "presence-1",
       revision: "revision-collaboration-1",
-      device_id: "00000000-0000-4000-8000-000000000001",
       section: "ics205",
       mode: "editing",
-      sequence: 1,
-      expires_at: "2026-07-28T23:01:15Z",
-      last_seen_at: "2026-07-28T23:00:00Z",
+      object_id: null,
+      field_name: "",
       display_name: "Synthetic COML",
+      incident_role: "COML",
       is_current_user: true,
     },
   ]);
@@ -169,20 +172,18 @@ test("shows presence and requires an explicit conflict decision", async () => {
   render(<PlanWorkspace incident={incident} />);
 
   expect(
-    await screen.findByText(/Synthetic COML \(you\): editing/i),
+    await screen.findByText(/Synthetic COML \(COML\) \(you\): editing/i),
   ).toBeInTheDocument();
   const panel = screen.getByRole("region", {
     name: "Resolve concurrent change",
   });
-  expect(
-    within(panel).getByText(/"remarks": "Retained proposal"/i),
-  ).toBeInTheDocument();
-  expect(
-    within(panel).getByText(/"remarks": "Saved first"/i),
-  ).toBeInTheDocument();
+  expect(within(panel).getByText(/Proposed:/i)).toHaveTextContent(
+    "Retained proposal",
+  );
+  expect(within(panel).getByText(/Saved:/i)).toHaveTextContent("Saved first");
 
   await user.click(
-    within(panel).getByRole("button", { name: "Apply my proposed values" }),
+    within(panel).getByRole("button", { name: "Reapply selected fields" }),
   );
 
   await waitFor(() =>
@@ -198,8 +199,8 @@ test("shows presence and requires an explicit conflict decision", async () => {
   expect(api.resolveCollaborationConflict).toHaveBeenCalledWith(
     "change-conflict-1",
     {
-      decision: "replace",
-      explanation: "User intentionally applied the retained proposed values.",
+      decision: "reapply",
+      explanation: "User reapplied selected retained fields: remarks.",
       replacement_change: "change-saved-2",
     },
   );

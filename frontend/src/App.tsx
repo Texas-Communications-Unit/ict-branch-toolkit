@@ -2,6 +2,7 @@ import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 
 import {
   AUTHENTICATION_EXPIRED_EVENT,
+  activateLocalContingencyAccount,
   createIncident,
   createOperationalPeriod,
   archiveIncident,
@@ -14,6 +15,7 @@ import {
   login,
   logout,
 } from "./api";
+import { AccountAdministration } from "./AccountAdministration";
 import { BrandMark } from "./BrandMark";
 import { HAATWorkspace } from "./HAATWorkspace";
 import { CoverageEstimateWorkspace } from "./CoverageEstimateWorkspace";
@@ -202,6 +204,30 @@ export default function App() {
     );
   }
 
+  async function handleLocalActivation(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const data = new FormData(form);
+    const newPassword = String(data.get("newPassword"));
+    if (newPassword !== String(data.get("confirmPassword"))) {
+      setError("The new-password entries do not match.");
+      return;
+    }
+    try {
+      await activateLocalContingencyAccount(
+        String(data.get("activationUsername")),
+        String(data.get("temporaryPassword")),
+        newPassword,
+      );
+      form.reset();
+      setError("Activation complete. Sign in with the new password.");
+    } catch (caught) {
+      setError(
+        caught instanceof Error ? caught.message : "Account activation failed.",
+      );
+    }
+  }
+
   async function handleIncident(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = event.currentTarget;
@@ -314,10 +340,7 @@ export default function App() {
               <p className="short-name">ICT Toolkit</p>
             </div>
           </div>
-          <p>
-            Sign in with the local development administrator configured for this
-            installation.
-          </p>
+          <p>Sign in with your approved ICT Branch Toolkit account.</p>
           <form onSubmit={handleLogin}>
             <label>
               Username
@@ -334,6 +357,47 @@ export default function App() {
             </label>
             <button type="submit">Sign in</button>
           </form>
+          <details>
+            <summary>Activate a local contingency account</summary>
+            <form onSubmit={handleLocalActivation}>
+              <label>
+                Activation username
+                <input
+                  name="activationUsername"
+                  autoComplete="username"
+                  required
+                />
+              </label>
+              <label>
+                Temporary password
+                <input
+                  name="temporaryPassword"
+                  type="password"
+                  autoComplete="current-password"
+                  required
+                />
+              </label>
+              <label>
+                New password
+                <input
+                  name="newPassword"
+                  type="password"
+                  autoComplete="new-password"
+                  required
+                />
+              </label>
+              <label>
+                Confirm new password
+                <input
+                  name="confirmPassword"
+                  type="password"
+                  autoComplete="new-password"
+                  required
+                />
+              </label>
+              <button type="submit">Activate account</button>
+            </form>
+          </details>
           {error && (
             <p role="alert" className="error">
               {error}
@@ -497,6 +561,10 @@ export default function App() {
           )}
         </section>
         <PlanWorkspace incident={selected} />
+        <AccountAdministration
+          currentUser={currentUser}
+          incidents={incidents}
+        />
         <RFProfileWorkspace incident={selected} />
         <HAATWorkspace incident={selected} />
         <CoverageEstimateWorkspace incident={selected} />

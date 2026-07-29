@@ -2,13 +2,22 @@ from django.contrib import admin
 from django.urls import include, path
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
-from apps.accounts.views import LogoutView, ThrottledObtainAuthTokenView
+from apps.accounts.views import (
+    LocalContingencyActivationView,
+    LogoutView,
+    ThrottledObtainAuthTokenView,
+)
 from apps.incidents.views import health
 
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/auth/token/", ThrottledObtainAuthTokenView.as_view(), name="api-token"),
     path("api/auth/logout/", LogoutView.as_view(), name="api-logout"),
+    path(
+        "api/auth/activate-local/",
+        LocalContingencyActivationView.as_view(),
+        name="api-activate-local",
+    ),
     path("api/health/", health, name="health"),
     path("api/", include("apps.accounts.urls")),
     path("api/", include("apps.incidents.urls")),

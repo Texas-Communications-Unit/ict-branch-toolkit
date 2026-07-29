@@ -1,4 +1,11 @@
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import {
+  FormEvent,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
 import {
   approvePlanRevision,
@@ -8,12 +15,14 @@ import {
   createPlan,
   createPlanRelationship,
   downloadPlanPdf,
+  getPlanPublicationSummary,
   heartbeatCollaborationPresence,
   listCollaborationChanges,
   listCollaborationPresence,
   listPlans,
   listSubscriberProfiles,
   listSubscriberProfileVersions,
+  previewPlanApprovalPdf,
   releaseCollaborationPresence,
   resolveCollaborationConflict,
   sendCollaborationMutation,
@@ -57,14 +66,47 @@ const TECHNOLOGY_SUBTYPES: {
   { value: "other", label: "Other system" },
 ];
 
+const PRESENCE_FIELDS: Record<string, string> = {
+  function: "function",
+  channelName: "channel_name",
+  assignment: "assignment",
+  operatingClassification: "operating_classification",
+  technologySubtype: "technology_subtype",
+  rxMHz: "rx_frequency_hz",
+  rxAccessCode: "rx_squelch",
+  txMHz: "tx_frequency_hz",
+  txAccessCode: "tx_squelch",
+  mode: "mode",
+  structuredNote: "structured_note",
+  remarks: "remarks",
+  contactName: "contact_name",
+  siteAddress: "site_address",
+  phoneNumbers: "phone_numbers",
+  contact24Hour: "contact_24_hour",
+  contact_name: "contact_name",
+  site_address: "site_address",
+  phone_numbers: "phone_numbers",
+  contact_24_hour: "contact_24_hour",
+  publicationPurpose: "contact_publication_purpose",
+  publicationPlacement: "contact_publication_placement",
+};
+
 export function PlanWorkspace({ incident }: { incident?: Incident }) {
   const [plans, setPlans] = useState<ICS205Plan[]>([]);
+  const [selectedRevisionId, setSelectedRevisionId] = useState("");
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
   const [comparison, setComparison] = useState<RevisionComparison | null>(null);
   const [presence, setPresence] = useState<CollaborationPresence[]>([]);
   const [changes, setChanges] = useState<CollaborationChange[]>([]);
   const [activeConflict, setActiveConflict] =
     useState<CollaborationChange | null>(null);
+  const [selectedConflictFields, setSelectedConflictFields] = useState<
+    string[]
+  >([]);
+  const presenceLocation = useRef<{
+    object_id?: string | null;
+    field_name?: string;
+  }>({});
   const [collaborationStatus, setCollaborationStatus] = useState("");
   const [subscriberProfileVersions, setSubscriberProfileVersions] = useState<
     { version: SubscriberProfileVersion; label: string }[]
@@ -93,6 +135,10 @@ export function PlanWorkspace({ incident }: { incident?: Incident }) {
       active = false;
     };
   }, [incident]);
+
+  useEffect(() => {
+    setSelectedRevisionId("");
+  }, [incident?.id]);
 
   useEffect(() => {
     let active = true;
@@ -133,8 +179,11 @@ export function PlanWorkspace({ incident }: { incident?: Incident }) {
     () => [...(plan?.revisions ?? [])].sort((a, b) => b.number - a.number),
     [plan],
   );
+  const draftRevision = revisions.find((item) => item.status === "draft");
   const revision =
-    revisions.find((item) => item.status === "draft") ?? revisions[0];
+    revisions.find((item) => item.id === selectedRevisionId) ??
+    draftRevision ??
+    revisions[0];
   const canEdit =
     incident?.permissions.includes("plan.edit") && !revision?.is_locked;
   const canApprove = incident?.permissions.includes("plan.approve");
@@ -151,6 +200,11 @@ export function PlanWorkspace({ incident }: { incident?: Incident }) {
     }
     let active = true;
     const section = "ics205";
+    setPresence([]);
+    setChanges([]);
+    setActiveConflict(null);
+    setSelectedRows([]);
+    presenceLocation.current = {};
 
     async function synchronize() {
       try {
@@ -158,6 +212,7 @@ export function PlanWorkspace({ incident }: { incident?: Incident }) {
           revisionId,
           canEdit ? "editing" : "viewing",
           section,
+          presenceLocation.current,
         );
         const [currentPresence, history] = await Promise.all([
           listCollaborationPresence(revisionId, section),
@@ -208,6 +263,10 @@ export function PlanWorkspace({ incident }: { incident?: Incident }) {
       });
     };
   }, [canEdit, refresh, revisionId]);
+
+  useEffect(() => {
+    setSelectedConflictFields(activeConflict?.affected_fields ?? []);
+  }, [activeConflict]);
 
   async function run(action: () => Promise<unknown>) {
     try {
@@ -410,6 +469,37 @@ export function PlanWorkspace({ incident }: { incident?: Incident }) {
     setMessage("Assignment deleted.");
   }
 
+  async function configureContactPublication(
+    event: FormEvent<HTMLFormElement>,
+    row: PlanAssignment,
+  ) {
+    event.preventDefault();
+    const data = new FormData(event.currentTarget);
+    const publishedFields = [
+      "contact_name",
+      "site_address",
+      "phone_numbers",
+      "contact_24_hour",
+    ].filter((field) => data.get(field) === "on");
+    const outcome = await runMutation({
+      operation: "assignment.update",
+      objectId: row.id,
+      baseVersion: row.collaboration_version,
+      changes: {
+        published_contact_fields: publishedFields,
+        contact_publication_purpose: String(data.get("publicationPurpose")),
+        contact_publication_placement: String(data.get("publicationPlacement")),
+      },
+    });
+    if (outcome?.disposition === "saved") {
+      setMessage(
+        publishedFields.length
+          ? "Contact publication selection saved for approval preview."
+          : "Contact information will remain restricted and off the ICS 205.",
+      );
+    }
+  }
+
   async function discardConflict() {
     if (!activeConflict) return;
     try {
@@ -429,7 +519,10 @@ export function PlanWorkspace({ incident }: { incident?: Incident }) {
     }
   }
 
-  async function replaceWithProposedValues() {
+  async function applyConflictValues(
+    decision: "reapply" | "replace",
+    fields: string[],
+  ) {
     if (!activeConflict) return;
     const currentVersion = Number(
       activeConflict.current_snapshot.collaboration_version,
@@ -438,6 +531,28 @@ export function PlanWorkspace({ incident }: { incident?: Incident }) {
       setMessage(
         "The saved version cannot be determined. Reload the plan before resolving this conflict.",
       );
+      return;
+    }
+    const changes = Object.fromEntries(
+      fields
+        .filter((field) =>
+          Object.prototype.hasOwnProperty.call(
+            activeConflict.proposed_snapshot,
+            field,
+          ),
+        )
+        .map((field) => [field, activeConflict.proposed_snapshot[field]]),
+    );
+    if (Object.keys(changes).length === 0) {
+      setMessage("Select at least one proposed field to apply.");
+      return;
+    }
+    if (
+      decision === "replace" &&
+      !window.confirm(
+        "Intentionally replace the currently saved values with your complete retained proposal? This creates a new audited version.",
+      )
+    ) {
       return;
     }
     try {
@@ -449,7 +564,7 @@ export function PlanWorkspace({ incident }: { incident?: Incident }) {
         object_id: activeConflict.object_id,
         section: activeConflict.section,
         base_version: currentVersion,
-        changes: activeConflict.proposed_snapshot,
+        changes,
       });
       if (replacement.disposition !== "saved") {
         setActiveConflict(replacement);
@@ -459,8 +574,11 @@ export function PlanWorkspace({ incident }: { incident?: Incident }) {
         return;
       }
       await resolveCollaborationConflict(activeConflict.id, {
-        decision: "replace",
-        explanation: "User intentionally applied the retained proposed values.",
+        decision,
+        explanation:
+          decision === "replace"
+            ? "User intentionally replaced the current values with the retained proposal."
+            : `User reapplied selected retained fields: ${Object.keys(changes).join(", ")}.`,
         replacement_change: replacement.id,
       });
       setActiveConflict(null);
@@ -475,11 +593,75 @@ export function PlanWorkspace({ incident }: { incident?: Incident }) {
     }
   }
 
+  async function handleApproveRevision() {
+    if (!revision) return;
+    try {
+      const summary = await getPlanPublicationSummary(revision.id);
+      const contactNotice = summary.has_published_contacts
+        ? `\n\nRestricted contact fields selected for publication:\n${summary.contact_publications
+            .map(
+              (item) =>
+                `Row ${item.position} ${item.channel_name}: ${item.fields.join(", ")} → ${
+                  item.placement === "special_instructions"
+                    ? "Special Instructions"
+                    : "row Remarks"
+                } — ${item.purpose}`,
+            )
+            .join("\n")}`
+        : "\n\nNo restricted contact information will be published.";
+      if (
+        !window.confirm(
+          `Approve and permanently lock revision ${revision.number}? Later changes require a copied draft.${contactNotice}`,
+        )
+      ) {
+        return;
+      }
+      await approvePlanRevision(revision.id, {
+        confirm_contact_publication: summary.has_published_contacts,
+        publication_digest: summary.digest,
+      });
+      setMessage("");
+      await refresh();
+    } catch (error) {
+      setMessage(
+        error instanceof Error ? error.message : "Plan approval failed.",
+      );
+    }
+  }
+
+  async function handleCopyRevision() {
+    if (!revision) return;
+    try {
+      const copied = await copyPlanRevision(revision.id);
+      setSelectedRevisionId(copied.id);
+      setMessage(
+        `Draft revision ${copied.number} was created. Approved revision ${revision.number} remains locked and exportable.`,
+      );
+      await refresh();
+    } catch (error) {
+      setMessage(
+        error instanceof Error ? error.message : "Draft creation failed.",
+      );
+    }
+  }
+
   if (!incident)
     return <p className="empty">Select an incident to work on its ICS-205.</p>;
 
   return (
-    <section className="plan-panel" aria-labelledby="plan-heading">
+    <section
+      className="plan-panel"
+      aria-labelledby="plan-heading"
+      onFocusCapture={(event) => {
+        const target = event.target as HTMLInputElement | HTMLSelectElement;
+        const fieldName = PRESENCE_FIELDS[target.name];
+        const row = target.closest<HTMLElement>("[data-presence-object]");
+        presenceLocation.current = {
+          object_id: row?.dataset.presenceObject ?? null,
+          field_name: fieldName ?? "",
+        };
+      }}
+    >
       <div className="section-heading">
         <div>
           <p className="eyebrow">Controlled revision workflow</p>
@@ -515,6 +697,23 @@ export function PlanWorkspace({ incident }: { incident?: Incident }) {
         <>
           <div className="revision-bar">
             <strong>Revision {revision.number}</strong>
+            {revisions.length > 1 && (
+              <label>
+                View revision
+                <select
+                  value={revision.id}
+                  onChange={(event) =>
+                    setSelectedRevisionId(event.target.value)
+                  }
+                >
+                  {revisions.map((item) => (
+                    <option key={item.id} value={item.id}>
+                      R{item.number} · {item.status}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
             <span className={`status ${revision.status}`}>
               {revision.status}
             </span>
@@ -527,16 +726,33 @@ export function PlanWorkspace({ incident }: { incident?: Incident }) {
               </button>
             )}
             {revision.is_locked &&
-              incident.permissions.includes("plan.edit") && (
+              incident.permissions.includes("plan.edit") &&
+              !draftRevision && (
                 <button
                   type="button"
                   className="secondary-button"
-                  onClick={() => void run(() => copyPlanRevision(revision.id))}
+                  onClick={() => void handleCopyRevision()}
                 >
-                  Copy to new draft
+                  Create new draft from approved version
                 </button>
               )}
+            {revision.is_locked && draftRevision && (
+              <button
+                type="button"
+                className="secondary-button"
+                onClick={() => setSelectedRevisionId(draftRevision.id)}
+              >
+                Open newer draft R{draftRevision.number}
+              </button>
+            )}
           </div>
+          {revision.is_locked && draftRevision && (
+            <p className="form-note" role="status">
+              Approved revision {revision.number} remains locked and available
+              for official export. Draft revision {draftRevision.number} is the
+              current editable continuation.
+            </p>
+          )}
           <div
             className="collaboration-summary"
             role="status"
@@ -550,7 +766,11 @@ export function PlanWorkspace({ incident }: { incident?: Incident }) {
                 : presence
                     .map(
                       (person) =>
-                        `${person.display_name}${person.is_current_user ? " (you)" : ""}: ${person.mode}`,
+                        `${person.display_name} (${person.incident_role})${person.is_current_user ? " (you)" : ""}: ${person.mode}${
+                          person.field_name
+                            ? ` ${person.object_id ? `row ${person.object_id.slice(0, 8)}, ` : ""}${person.field_name.replaceAll("_", " ")}`
+                            : ""
+                        }`,
                     )
                     .join(" · ")}
             </span>
@@ -569,19 +789,43 @@ export function PlanWorkspace({ incident }: { incident?: Incident }) {
                 Nothing was overwritten. Compare your retained proposal with the
                 values currently saved, then choose what to do.
               </p>
-              <div className="conflict-comparison">
-                <div>
-                  <strong>Your proposed values</strong>
-                  <pre>
-                    {JSON.stringify(activeConflict.proposed_snapshot, null, 2)}
-                  </pre>
-                </div>
-                <div>
-                  <strong>Currently saved values</strong>
-                  <pre>
-                    {JSON.stringify(activeConflict.current_snapshot, null, 2)}
-                  </pre>
-                </div>
+              {typeof activeConflict.result.intervening_actor_display_name ===
+                "string" && (
+                <p>
+                  The saved version was changed by{" "}
+                  <strong>
+                    {String(
+                      activeConflict.result.intervening_actor_display_name,
+                    )}
+                  </strong>
+                  .
+                </p>
+              )}
+              <div className="conflict-comparison" role="group">
+                {activeConflict.affected_fields.map((field) => (
+                  <label key={field}>
+                    <input
+                      type="checkbox"
+                      checked={selectedConflictFields.includes(field)}
+                      onChange={(event) =>
+                        setSelectedConflictFields((current) =>
+                          event.target.checked
+                            ? [...current, field]
+                            : current.filter((item) => item !== field),
+                        )
+                      }
+                    />
+                    <strong>{field.replaceAll("_", " ")}</strong>
+                    <span>
+                      Proposed:{" "}
+                      {JSON.stringify(activeConflict.proposed_snapshot[field])}
+                    </span>
+                    <span>
+                      Saved:{" "}
+                      {JSON.stringify(activeConflict.current_snapshot[field])}
+                    </span>
+                  </label>
+                ))}
               </div>
               <div className="button-row">
                 <button type="button" onClick={() => void discardConflict()}>
@@ -590,9 +834,23 @@ export function PlanWorkspace({ incident }: { incident?: Incident }) {
                 <button
                   className="secondary-button"
                   type="button"
-                  onClick={() => void replaceWithProposedValues()}
+                  onClick={() =>
+                    void applyConflictValues("reapply", selectedConflictFields)
+                  }
                 >
-                  Apply my proposed values
+                  Reapply selected fields
+                </button>
+                <button
+                  className="secondary-button"
+                  type="button"
+                  onClick={() =>
+                    void applyConflictValues(
+                      "replace",
+                      activeConflict.affected_fields,
+                    )
+                  }
+                >
+                  Intentionally replace with complete proposal
                 </button>
               </div>
             </section>
@@ -720,7 +978,11 @@ export function PlanWorkspace({ incident }: { incident?: Incident }) {
           )}
           <div className="assignment-list" aria-label="ICS-205 assignment rows">
             {revision.assignments.map((row, index) => (
-              <article className="assignment-row" key={row.id}>
+              <article
+                className="assignment-row"
+                key={row.id}
+                data-presence-object={row.id}
+              >
                 {canEdit && (
                   <input
                     aria-label={`Select ${row.channel_name} for relationship`}
@@ -735,6 +997,71 @@ export function PlanWorkspace({ incident }: { incident?: Incident }) {
                     }
                   />
                 )}
+                {canEdit &&
+                  (row.contact_name ||
+                    row.site_address ||
+                    row.phone_numbers ||
+                    row.contact_24_hour) && (
+                    <form
+                      className="contact-publication-form"
+                      onSubmit={(event) =>
+                        void configureContactPublication(event, row)
+                      }
+                    >
+                      <strong>ICS 205 contact publication</strong>
+                      {[
+                        ["contact_name", "Contact name", row.contact_name],
+                        ["site_address", "Site address", row.site_address],
+                        ["phone_numbers", "Phone numbers", row.phone_numbers],
+                        [
+                          "contact_24_hour",
+                          "24-hour contact",
+                          row.contact_24_hour,
+                        ],
+                      ].map(
+                        ([field, label, value]) =>
+                          value && (
+                            <label key={field}>
+                              <input
+                                type="checkbox"
+                                name={field}
+                                defaultChecked={row.published_contact_fields.includes(
+                                  field as
+                                    | "contact_name"
+                                    | "site_address"
+                                    | "phone_numbers"
+                                    | "contact_24_hour",
+                                )}
+                              />
+                              {label}
+                            </label>
+                          ),
+                      )}
+                      <label>
+                        Operational purpose
+                        <input
+                          name="publicationPurpose"
+                          defaultValue={row.contact_publication_purpose}
+                          placeholder="SOW, gateway, property, fuel, or technical support"
+                        />
+                      </label>
+                      <label>
+                        Official-form placement
+                        <select
+                          name="publicationPlacement"
+                          defaultValue={row.contact_publication_placement}
+                        >
+                          <option value="remarks">
+                            This assignment row’s Remarks
+                          </option>
+                          <option value="special_instructions">
+                            Plan-wide Special Instructions
+                          </option>
+                        </select>
+                      </label>
+                      <button type="submit">Save publication selection</button>
+                    </form>
+                  )}
                 <span className="row-number">{index + 1}</span>
                 <div>
                   <strong>{row.function}</strong>
@@ -817,13 +1144,22 @@ export function PlanWorkspace({ incident }: { incident?: Incident }) {
               revision.assignments.length > 0 && (
                 <button
                   type="button"
-                  onClick={() =>
-                    void run(() => approvePlanRevision(revision.id))
-                  }
+                  onClick={() => void handleApproveRevision()}
                 >
                   Approve and lock revision
                 </button>
               )}
+            {canApprove && !revision.is_locked && (
+              <button
+                className="secondary-button"
+                type="button"
+                onClick={() =>
+                  void run(() => previewPlanApprovalPdf(revision.id))
+                }
+              >
+                Preview exact approval PDF
+              </button>
+            )}
             {revisions.length > 1 && (
               <button
                 type="button"
@@ -864,8 +1200,9 @@ export function PlanWorkspace({ incident }: { incident?: Incident }) {
             </div>
           )}
           <p className="legal">
-            Contact details are access-controlled and are not included in the
-            current PDF export.
+            Contact details remain restricted unless an authorized planner
+            selects specific fields, records an operational purpose, previews
+            the PDF, and confirms publication during approval.
           </p>
         </>
       )}

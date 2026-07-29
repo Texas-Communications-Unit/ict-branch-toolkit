@@ -37,6 +37,9 @@ ASSIGNMENT_SNAPSHOT_FIELDS = (
     "site_address",
     "phone_numbers",
     "contact_24_hour",
+    "published_contact_fields",
+    "contact_publication_purpose",
+    "contact_publication_placement",
     "collaboration_version",
 )
 REVISION_EDIT_FIELDS = {
@@ -119,6 +122,32 @@ def _create_change(
 
 
 def _conflict(*, actor, revision, payload, digest, current_snapshot) -> CollaborationChange:
+    intervening = CollaborationChange.objects.filter(
+        revision=revision,
+        disposition=CollaborationChange.Disposition.SAVED,
+    )
+    if payload.get("object_id"):
+        intervening = intervening.filter(object_id=payload["object_id"])
+    else:
+        intervening = intervening.filter(
+            operation__in={
+                CollaborationChange.Operation.REVISION_UPDATE,
+                CollaborationChange.Operation.ASSIGNMENT_CREATE,
+                CollaborationChange.Operation.ASSIGNMENT_REORDER,
+            }
+        )
+    intervening = intervening.select_related("actor").order_by("-created_at").first()
+    result = {"detail": "The saved record changed after this editor loaded it."}
+    if intervening:
+        result.update(
+            {
+                "intervening_change_id": str(intervening.id),
+                "intervening_actor_display_name": (
+                    intervening.actor.get_full_name() or intervening.actor.get_username()
+                ),
+                "intervening_resulting_version": intervening.resulting_version,
+            }
+        )
     return _create_change(
         actor=actor,
         revision=revision,
@@ -126,7 +155,7 @@ def _conflict(*, actor, revision, payload, digest, current_snapshot) -> Collabor
         payload_sha256=digest,
         disposition=CollaborationChange.Disposition.CONFLICT,
         current_snapshot=current_snapshot,
-        result={"detail": "The saved record changed after this editor loaded it."},
+        result=result,
     )
 
 

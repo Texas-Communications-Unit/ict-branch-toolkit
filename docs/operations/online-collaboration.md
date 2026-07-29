@@ -18,8 +18,10 @@ queue. Users must have a current authenticated server connection to save.
    silently overwritten.
 5. Choose one action:
    - **Keep currently saved values** records a discard resolution; or
-   - **Apply my proposed values** submits a new version-checked change and, if it
-     succeeds, records an intentional replacement.
+   - **Reapply selected fields** submits only the checked values as a new
+     version-checked change; or
+   - **Intentionally replace with complete proposal** requires confirmation and
+     submits the whole retained proposal as a new audited version.
 6. If the record changes again during review, compare the new current values and
    decide again.
 7. Copy an approved revision to a new draft before attempting changes.
@@ -31,9 +33,11 @@ apply.
 
 ## Permission administration
 
-Global and incident roles remain Administrator, COML, COMC, COMT, Contributor,
-and Read-only. Existing backend policy controls plan view, edit, approval, and
-export. Incident membership is checked on every collaboration request.
+Global and incident roles are Administrator, COML, COMC, COMT, AUXCOMM, INCM,
+Contributor, and Read-only. AUXCOMM and INCM are distinct assignable roles with
+the Contributor baseline until an approved policy revision changes them.
+Existing backend policy controls plan view, edit, approval, and export.
+Incident membership is checked on every collaboration request.
 
 The following contact fields receive additional field policy:
 
@@ -42,18 +46,16 @@ The following contact fields receive additional field policy:
 - `phone_numbers`
 - `contact_24_hour`
 
-The provisional default preserves the existing tested policy: Administrator,
-COML, and COMC may view or edit those fields. COMT, Contributor, Read-only, and
-new roles fail closed. An Administrator can create a per-incident
+The approved default allows Administrator, COML, COMC, and COMT to view or edit
+those fields. AUXCOMM, INCM, Contributor, and Read-only fail closed. An
+Administrator can create a per-incident
 sensitive-field rule through the API or protected Django administration path.
 Each rule specifies independent view and edit role arrays and whether an
-unauthorized response omits the field or returns `[REDACTED]`. Rules are
+unauthorized response omits the field or returns `Access restricted`. Rules are
 retained, versioned, validated, and audited; they cannot be deleted through the
 API.
 
-Do not broaden the default role arrays in shared deployment configuration until
-the Issue #23 security/privacy and incident-practitioner human gate approves the
-matrix. A blank value, omitted field, and `[REDACTED]` value have different
+A blank value, omitted field, and `Access restricted` marker have different
 meanings.
 
 ## Presence privacy and recovery
@@ -66,9 +68,25 @@ Permission revocation takes effect on the user's next API request. A revoked
 user cannot renew or list presence or submit another mutation. Short-lived
 presence already visible to other authorized incident users expires normally.
 
-Presence is deliberately minimal. Do not add field values, contact details,
-locations, tokens, browser history, typing state, or detailed activity
-telemetry.
+Presence is deliberately minimal. It returns display name, incident role,
+viewing/editing state, and an allowlisted section/row/field identifier. It does
+not return the internal device ID, sequence, exact lease timestamps, field
+values, contact details, coordinates, tokens, browser history, typing state, or
+detailed activity telemetry.
+
+## Approval, contact publication, and copied drafts
+
+Approved revisions are permanently locked. The only continuation action is
+**Create new draft from approved version**. It copies plan content,
+assignments, source references, and lineage into the next revision; it does not
+copy approval, signature, presence, conflict, or audit records.
+
+Restricted contact values remain off the ICS 205 unless an Administrator,
+COML, COMC, or COMT explicitly selects exact populated fields and records an
+operational purpose. An approver must render the approval-preview PDF and
+confirm the matching publication digest while locking the revision. The
+approval audit records actor, revision, assignment, selected field names,
+purpose, and digest without duplicating contact values.
 
 ## Conflict and audit recovery
 
@@ -97,8 +115,8 @@ If a user reports a missing change:
 ```dotenv
 ICT_COLLABORATION_PRESENCE_TTL_SECONDS=75
 ICT_COLLABORATION_HISTORY_LIMIT=100
-ICT_RESTRICTED_FIELD_DEFAULT_VIEW_ROLES=["administrator","coml","comc"]
-ICT_RESTRICTED_FIELD_DEFAULT_EDIT_ROLES=["administrator","coml","comc"]
+ICT_RESTRICTED_FIELD_DEFAULT_VIEW_ROLES=["administrator","coml","comc","comt"]
+ICT_RESTRICTED_FIELD_DEFAULT_EDIT_ROLES=["administrator","coml","comc","comt"]
 ```
 
 History responses are bounded between 10 and 500 records. The setting controls
@@ -110,6 +128,10 @@ The external identity status is intentionally disabled:
 ICT_EXTERNAL_SSO_ENABLED=false
 ICT_EXTERNAL_IDENTITY_PROVIDER=apps.accounts.external_identity.DisabledExternalIdentityProvider
 ICT_EXTERNAL_ROLE_MAPPINGS={}
+ICT_EXTERNAL_ELIGIBILITY_GROUP=ICT Branch Toolkit — Access
+ICT_EXTERNAL_ROLE_FIELD=ICT Branch Toolkit Role
+ICT_EXTERNAL_IDENTITY_REFRESH_SECONDS=900
+ICT_EXTERNAL_OUTAGE_GRACE_SECONDS=14400
 ```
 
 Do not set live credentials or connection details in source control. A future
@@ -121,10 +143,10 @@ activate WordPress/CiviCRM SSO.
 Automated tests cover independent-record edits, same-record stale conflict,
 idempotent replay, mutation-ID misuse, approved-revision rejection, conflict
 resolution, presence expiry, incident membership revocation, server-side field
-omission/redaction, denied restricted-field edits, and disabled shadow identity
+omission/restricted marking, denied restricted-field edits, and disabled shadow identity
 provisioning.
 
-No safe concurrent-user count or production throughput is established. Before
-operational activation, run PostgreSQL deployment-specific synthetic load tests
-covering concurrent mutations, audit growth, long incident histories, proxy
-timeouts, worker saturation, and failure recovery.
+No safe concurrent-user count or production throughput is established. Use the
+synthetic shared-test probe documented in
+[performance-tested-limits.md](performance-tested-limits.md) to characterize
+the actual host conservatively.

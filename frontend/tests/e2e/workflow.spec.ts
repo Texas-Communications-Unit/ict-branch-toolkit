@@ -463,7 +463,22 @@ test("administrator signs in and sees the incident planning workspace", async ({
       },
     }),
   );
+  await page.route(
+    "**/api/plan-revisions/rev-1/publication-summary/",
+    (route) =>
+      route.fulfill({
+        json: {
+          digest: "0".repeat(64),
+          has_published_contacts: false,
+          contact_publications: [],
+        },
+      }),
+  );
   await page.route("**/api/plan-revisions/rev-1/approve/", (route) => {
+    expect(route.request().postDataJSON()).toEqual({
+      confirm_contact_publication: false,
+      publication_digest: "0".repeat(64),
+    });
     approved = true;
     return route.fulfill({ json: {} });
   });
@@ -880,13 +895,13 @@ test("administrator signs in and sees the incident planning workspace", async ({
   await page.goto("/");
   await expectNoAccessibilityViolations(page, testInfo, "sign-in-desktop");
   await page.keyboard.press("Tab");
-  await expect(page.getByLabel("Username")).toBeFocused();
+  await expect(page.getByLabel("Username", { exact: true })).toBeFocused();
   await page.keyboard.press("Tab");
-  await expect(page.getByLabel("Password")).toBeFocused();
+  await expect(page.getByLabel("Password", { exact: true })).toBeFocused();
   await page.keyboard.press("Tab");
   await expect(page.getByRole("button", { name: "Sign in" })).toBeFocused();
-  await page.getByLabel("Username").fill("admin");
-  await page.getByLabel("Password").fill("synthetic-password");
+  await page.getByLabel("Username", { exact: true }).fill("admin");
+  await page.getByLabel("Password", { exact: true }).fill("synthetic-password");
   await page.getByRole("button", { name: "Sign in" }).click();
   await expect(
     page.getByRole("button", { name: /^Synthetic Flood Exercise/ }),
@@ -1127,6 +1142,7 @@ test("administrator signs in and sees the incident planning workspace", async ({
   await expect(
     page.getByText("14SQB7401876781", { exact: true }).first(),
   ).toBeVisible();
+  page.once("dialog", (dialog) => dialog.accept());
   await page.getByRole("button", { name: "Approve and lock revision" }).click();
   await expect(
     page.getByRole("button", { name: "Download official PDF" }),

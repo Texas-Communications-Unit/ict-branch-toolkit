@@ -19,8 +19,32 @@ export interface CurrentUser {
   username: string;
   display_name: string;
   role:
-    "administrator" | "coml" | "comc" | "comt" | "contributor" | "read_only";
+    | "administrator"
+    | "coml"
+    | "comc"
+    | "comt"
+    | "auxcomm"
+    | "incm"
+    | "contributor"
+    | "read_only";
   permissions: string[];
+}
+
+export type ToolkitRole = CurrentUser["role"];
+
+export interface LocalContingencyAccount {
+  username: string;
+  display_name: string;
+  role: ToolkitRole;
+  is_active: boolean;
+  linked_to_external_identity: boolean;
+  reason: string;
+  must_change_password: boolean;
+  disabled_at: string | null;
+  disabled_reason: string;
+  created_at: string;
+  updated_at: string;
+  temporary_password?: string;
 }
 
 export interface ResourceSource {
@@ -141,6 +165,11 @@ export interface PlanAssignment {
   site_address?: string;
   phone_numbers?: string;
   contact_24_hour?: string;
+  published_contact_fields: (
+    "contact_name" | "site_address" | "phone_numbers" | "contact_24_hour"
+  )[];
+  contact_publication_purpose: string;
+  contact_publication_placement: "remarks" | "special_instructions";
   collaboration_version: number;
   resource_snapshot: Record<string, unknown>;
 }
@@ -161,10 +190,25 @@ export interface PlanRevision {
   is_locked: boolean;
   prepared_by_name: string;
   prepared_by_position: string;
+  copied_from: string | null;
   approved_at: string | null;
   collaboration_version: number;
   assignments: PlanAssignment[];
   relationships: PlanRelationship[];
+}
+
+export interface PlanPublicationSummary {
+  digest: string;
+  has_published_contacts: boolean;
+  contact_publications: {
+    assignment_id: string;
+    position: number;
+    channel_name: string;
+    purpose: string;
+    placement: "remarks" | "special_instructions";
+    fields: string[];
+    values: Record<string, string>;
+  }[];
 }
 
 export interface ICS205Plan {
@@ -296,6 +340,7 @@ export interface CollaborationChange {
   client_mutation_id: string;
   revision: string;
   actor: number;
+  actor_display_name: string;
   device_id: string;
   operation: CollaborationOperation;
   object_id: string | null;
@@ -315,13 +360,12 @@ export interface CollaborationChange {
 export interface CollaborationPresence {
   id: string;
   revision: string;
-  device_id: string;
   section: string;
   mode: "viewing" | "editing";
-  sequence: number;
-  expires_at: string;
-  last_seen_at: string;
+  object_id: string | null;
+  field_name: string;
   display_name: string;
+  incident_role: string;
   is_current_user: boolean;
 }
 
@@ -334,6 +378,11 @@ export interface ExternalIdentityStatus {
   live_connection: boolean;
   warning: string;
   break_glass_local_login_available: boolean;
+  eligibility_group: string;
+  role_field: string;
+  identity_refresh_seconds: number;
+  outage_grace_seconds: number;
+  allowed_roles: ToolkitRole[];
 }
 
 export interface CoordinateParseResult {

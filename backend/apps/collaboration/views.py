@@ -2,6 +2,7 @@ from datetime import timedelta
 
 from django.conf import settings
 from django.db import transaction
+from django.db.models import Prefetch
 from django.utils import timezone
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema
@@ -20,6 +21,7 @@ from apps.accounts.policy import (
     user_has_permission,
 )
 from apps.audit.services import record_event
+from apps.incidents.models import IncidentMembership
 from apps.plans.models import PlanRevision
 
 from .models import (
@@ -195,7 +197,16 @@ class PresenceView(APIView):
             leases = leases.filter(section=section)
         return Response(
             PresenceLeaseSerializer(
-                leases.select_related("user"),
+                leases.select_related("user", "user__toolkit_role").prefetch_related(
+                    Prefetch(
+                        "user__incident_memberships",
+                        queryset=IncidentMembership.objects.filter(
+                            incident=revision.plan.incident,
+                            is_active=True,
+                        ),
+                        to_attr="active_presence_memberships",
+                    )
+                ),
                 many=True,
                 context={"request": request},
             ).data
@@ -231,14 +242,27 @@ class PresenceView(APIView):
             defaults={
                 "incident": revision.plan.incident,
                 "mode": data["mode"],
+                "object_id": data.get("object_id"),
+                "field_name": data.get("field_name", ""),
                 "expires_at": expires_at,
             },
         )
         if not created:
             lease.mode = data["mode"]
+            lease.object_id = data.get("object_id")
+            lease.field_name = data.get("field_name", "")
             lease.expires_at = expires_at
             lease.sequence += 1
-            lease.save(update_fields=["mode", "expires_at", "sequence", "last_seen_at"])
+            lease.save(
+                update_fields=[
+                    "mode",
+                    "object_id",
+                    "field_name",
+                    "expires_at",
+                    "sequence",
+                    "last_seen_at",
+                ]
+            )
         PresenceLease.objects.filter(expires_at__lte=timezone.now()).delete()
         return Response(
             PresenceLeaseSerializer(lease, context={"request": request}).data,

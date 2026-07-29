@@ -153,7 +153,7 @@ and recovery bounds, not database-retention limits.
 Deterministic SQLite tests cover two independent assignment edits, one
 same-record conflict, idempotent replay, rejected mutation-ID reuse,
 approved-revision rejection, presence expiry, active membership revocation,
-restricted-field omission/redaction, and conflict resolution. They do not
+restricted-field omission/`Access restricted` behavior, and conflict resolution. They do not
 establish a safe concurrent-user count, sustained mutation rate, audit-chain
 throughput, PostgreSQL lock-wait target, or reverse-proxy timeout.
 
@@ -164,6 +164,45 @@ and client retry storms. Record query plans, p50/p95/p99 latency, CPU, memory,
 database growth, lock waits, error rate, and recovery time. The 20-second browser
 poll and 75-second lease are initial coordination settings, not a service-level
 objective.
+
+### Shared-test collaboration capacity probe
+
+Issue #23 adds an explicitly invoked, synthetic-only deployed probe. It creates
+hidden named synthetic accounts and synthetic incidents, never imports
+operational data, and revokes every generated token when the command ends.
+Fixtures and audit evidence are retained.
+
+Run it only on the approved shared-test server after the exact release
+candidate is deployed:
+
+```sh
+docker compose -f compose.production.yaml exec backend \
+  python manage.py probe_collaboration_capacity \
+  --base-url http://127.0.0.1:8000 \
+  --host-header backend
+```
+
+The default ramp is 5, 10, 25, 50, and 100 total users, with no more than 25
+users assigned to one synthetic incident. Each level exercises presence,
+incident reads, independent saves, same-field conflicts, membership revocation,
+token reconnect, health recovery, restricted-field isolation, and audit-chain
+verification. Output is JSON Lines with per-scenario latency and status,
+unexpected errors, CPU utilization, host memory/load/swap, database size and
+growth, and PostgreSQL connection/lock measurements. Each invocation creates a
+new set of hidden, individually named synthetic users so retained evidence from
+an earlier run cannot affect a later isolation check.
+
+The command stops before the next level when the unexpected error rate exceeds
+2%, sampled CPU utilization exceeds 90%, available memory falls below 10%, free
+swap falls below 10%, five-minute load exceeds 1.5 times available CPU (with a
+minimum threshold of 2), or a PostgreSQL lock wait remains at the measurement
+point. Operators may set more conservative CPU, memory, or error guards. Do not
+weaken a guard merely to reach 100 users.
+
+The highest completed level is a characterization of that exact surplus SFF
+host, deployed release, proxy path, and database state. It is not a hard pass
+threshold, production capacity claim, service-level objective, or permission
+to enable live CiviCRM SSO.
 
 ## Planning-extension workload
 

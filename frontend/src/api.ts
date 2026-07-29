@@ -33,9 +33,11 @@ import type {
   HAATCalculation,
   ImportResult,
   Incident,
+  LocalContingencyAccount,
   ICS205Plan,
   Paginated,
   PlanAssignment,
+  PlanPublicationSummary,
   PlanRelationship,
   PlanRevision,
   Phase2ExportVerification,
@@ -52,6 +54,7 @@ import type {
   TerrainAnalysisStatus,
   CreateTerrainAnalysisPayload,
   TrunkedTalkgroup,
+  ToolkitRole,
   UpdateSubscriberProfilePayload,
 } from "./types";
 
@@ -206,6 +209,7 @@ export function heartbeatCollaborationPresence(
   revision: string,
   mode: "viewing" | "editing",
   section = "ics205",
+  location?: { object_id?: string | null; field_name?: string },
 ): Promise<CollaborationPresence> {
   return request("/api/collaboration/presence/", {
     method: "POST",
@@ -214,6 +218,8 @@ export function heartbeatCollaborationPresence(
       device_id: collaborationDeviceId(),
       section,
       mode,
+      object_id: location?.object_id ?? null,
+      field_name: location?.field_name ?? "",
     }),
   });
 }
@@ -395,10 +401,104 @@ export function createPlanRelationship(
   });
 }
 
-export function approvePlanRevision(id: string): Promise<PlanRevision> {
+export function approvePlanRevision(
+  id: string,
+  confirmation: {
+    confirm_contact_publication: boolean;
+    publication_digest?: string;
+  },
+): Promise<PlanRevision> {
   return request<PlanRevision>(`/api/plan-revisions/${id}/approve/`, {
     method: "POST",
+    body: JSON.stringify(confirmation),
   });
+}
+
+export async function activateLocalContingencyAccount(
+  username: string,
+  temporaryPassword: string,
+  newPassword: string,
+): Promise<void> {
+  const response = await fetch(`${API_BASE}/api/auth/activate-local/`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      username,
+      temporary_password: temporaryPassword,
+      new_password: newPassword,
+    }),
+  });
+  if (!response.ok) {
+    throw new Error((await response.text()) || "Account activation failed.");
+  }
+}
+
+export function listLocalContingencyAccounts(): Promise<
+  LocalContingencyAccount[]
+> {
+  return request<LocalContingencyAccount[]>("/api/local-contingency-accounts/");
+}
+
+export function createLocalContingencyAccount(payload: {
+  username: string;
+  display_name: string;
+  role: ToolkitRole;
+  reason: string;
+  incidents: string[];
+}): Promise<LocalContingencyAccount> {
+  return request<LocalContingencyAccount>("/api/local-contingency-accounts/", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function setLocalContingencyAccountStatus(
+  username: string,
+  action: "enable" | "disable",
+  reason: string,
+): Promise<LocalContingencyAccount> {
+  return request<LocalContingencyAccount>(
+    `/api/local-contingency-accounts/${encodeURIComponent(username)}/${action}/`,
+    {
+      method: "POST",
+      body: JSON.stringify({ reason }),
+    },
+  );
+}
+
+export function signOutLocalContingencyAccount(
+  username: string,
+): Promise<void> {
+  return request<void>(
+    `/api/local-contingency-accounts/${encodeURIComponent(username)}/sign-out-all/`,
+    { method: "POST" },
+  );
+}
+
+export function getPlanPublicationSummary(
+  id: string,
+): Promise<PlanPublicationSummary> {
+  return request<PlanPublicationSummary>(
+    `/api/plan-revisions/${id}/publication-summary/`,
+  );
+}
+
+export async function previewPlanApprovalPdf(id: string): Promise<void> {
+  const token = tokenForRequest();
+  const response = await fetch(
+    `${API_BASE}/api/plan-revisions/${id}/approval-preview/`,
+    { headers: token ? { Authorization: `Token ${token}` } : {} },
+  );
+  if (!response.ok) throw new Error(await response.text());
+  const url = URL.createObjectURL(await response.blob());
+  const preview = window.open(url, "_blank", "noopener,noreferrer");
+  if (!preview) {
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = "ics-205-approval-preview.pdf";
+    anchor.click();
+  }
+  window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }
 
 export function copyPlanRevision(id: string): Promise<PlanRevision> {

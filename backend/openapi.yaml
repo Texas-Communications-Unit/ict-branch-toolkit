@@ -45,6 +45,26 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+  /api/auth/activate-local/:
+    post:
+      operationId: auth_activate_local_create
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LocalContingencyActivation'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/LocalContingencyActivation'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/LocalContingencyActivation'
+        required: true
+      responses:
+        '204':
+          description: No response body
   /api/auth/logout/:
     post:
       operationId: auth_logout_create
@@ -1955,6 +1975,154 @@ paths:
               schema:
                 $ref: '#/components/schemas/Incident'
           description: ''
+  /api/local-contingency-accounts/:
+    get:
+      operationId: local_contingency_accounts_list
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - local-contingency-accounts
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedLocalContingencyAccountList'
+          description: ''
+    post:
+      operationId: local_contingency_accounts_create
+      tags:
+      - local-contingency-accounts
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LocalContingencyAccount'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/LocalContingencyAccount'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/LocalContingencyAccount'
+        required: true
+      security:
+      - tokenAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LocalContingencyAccount'
+          description: ''
+  /api/local-contingency-accounts/{username}/disable/:
+    post:
+      operationId: local_contingency_accounts_disable_create
+      parameters:
+      - in: path
+        name: username
+        schema:
+          type: string
+          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
+            only.
+        required: true
+      tags:
+      - local-contingency-accounts
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LocalContingencyAccount'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/LocalContingencyAccount'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/LocalContingencyAccount'
+        required: true
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LocalContingencyAccount'
+          description: ''
+  /api/local-contingency-accounts/{username}/enable/:
+    post:
+      operationId: local_contingency_accounts_enable_create
+      parameters:
+      - in: path
+        name: username
+        schema:
+          type: string
+          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
+            only.
+        required: true
+      tags:
+      - local-contingency-accounts
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LocalContingencyAccount'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/LocalContingencyAccount'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/LocalContingencyAccount'
+        required: true
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LocalContingencyAccount'
+          description: ''
+  /api/local-contingency-accounts/{username}/sign-out-all/:
+    post:
+      operationId: local_contingency_accounts_sign_out_all_create
+      parameters:
+      - in: path
+        name: username
+        schema:
+          type: string
+          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
+            only.
+        required: true
+      tags:
+      - local-contingency-accounts
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LocalContingencyAccount'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/LocalContingencyAccount'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/LocalContingencyAccount'
+        required: true
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LocalContingencyAccount'
+          description: ''
   /api/manual-rings/:
     get:
       operationId: manual_rings_list
@@ -3004,6 +3172,28 @@ paths:
       responses:
         '204':
           description: No response body
+  /api/plan-revisions/{id}/approval-preview/:
+    get:
+      operationId: plan_revisions_approval_preview_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this plan revision.
+        required: true
+      tags:
+      - plan-revisions
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlanRevision'
+          description: ''
   /api/plan-revisions/{id}/approve/:
     post:
       operationId: plan_revisions_approve_create
@@ -3097,6 +3287,28 @@ paths:
   /api/plan-revisions/{id}/pdf/:
     get:
       operationId: plan_revisions_pdf_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this plan revision.
+        required: true
+      tags:
+      - plan-revisions
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlanRevision'
+          description: ''
+  /api/plan-revisions/{id}/publication-summary/:
+    get:
+      operationId: plan_revisions_publication_summary_retrieve
       parameters:
       - in: path
         name: id
@@ -4222,6 +4434,12 @@ components:
         contact_24_hour:
           type: string
           maxLength: 240
+        published_contact_fields: {}
+        contact_publication_purpose:
+          type: string
+          maxLength: 240
+        contact_publication_placement:
+          $ref: '#/components/schemas/ContactPublicationPlacementEnum'
         collaboration_version:
           type: integer
           readOnly: true
@@ -4470,6 +4688,9 @@ components:
           format: uuid
         actor:
           type: integer
+        actor_display_name:
+          type: string
+          readOnly: true
         device_id:
           type: string
           format: uuid
@@ -4514,6 +4735,7 @@ components:
           readOnly: true
       required:
       - actor
+      - actor_display_name
       - base_version
       - client_mutation_id
       - created_at
@@ -4602,6 +4824,14 @@ components:
       required:
       - decision
       - explanation
+    ContactPublicationPlacementEnum:
+      enum:
+      - remarks
+      - special_instructions
+      type: string
+      description: |-
+        * `remarks` - Assignment remarks
+        * `special_instructions` - Plan-wide special instructions
     ConventionalChannel:
       type: object
       properties:
@@ -6115,15 +6345,83 @@ components:
         break_glass_local_login_available:
           type: boolean
           readOnly: true
+        eligibility_group:
+          type: string
+          readOnly: true
+        role_field:
+          type: string
+          readOnly: true
+        identity_refresh_seconds:
+          type: integer
+          readOnly: true
+        outage_grace_seconds:
+          type: integer
+          readOnly: true
+        allowed_roles:
+          type: array
+          items:
+            type: string
+          readOnly: true
       required:
+      - allowed_roles
       - authorization_code_flow
       - break_glass_local_login_available
+      - eligibility_group
       - enabled
+      - identity_refresh_seconds
       - live_connection
+      - outage_grace_seconds
       - password_passthrough
       - protocol
       - provider
+      - role_field
       - warning
+    FieldNameEnum:
+      enum:
+      - prepared_by_name
+      - prepared_by_position
+      - prepared_at
+      - function
+      - channel_name
+      - assignment
+      - operating_classification
+      - technology_subtype
+      - rx_frequency_hz
+      - rx_squelch
+      - tx_frequency_hz
+      - tx_squelch
+      - mode
+      - remarks
+      - structured_note
+      - contact_name
+      - site_address
+      - phone_numbers
+      - contact_24_hour
+      - contact_publication_purpose
+      - contact_publication_placement
+      type: string
+      description: |-
+        * `prepared_by_name` - prepared_by_name
+        * `prepared_by_position` - prepared_by_position
+        * `prepared_at` - prepared_at
+        * `function` - function
+        * `channel_name` - channel_name
+        * `assignment` - assignment
+        * `operating_classification` - operating_classification
+        * `technology_subtype` - technology_subtype
+        * `rx_frequency_hz` - rx_frequency_hz
+        * `rx_squelch` - rx_squelch
+        * `tx_frequency_hz` - tx_frequency_hz
+        * `tx_squelch` - tx_squelch
+        * `mode` - mode
+        * `remarks` - remarks
+        * `structured_note` - structured_note
+        * `contact_name` - contact_name
+        * `site_address` - site_address
+        * `phone_numbers` - phone_numbers
+        * `contact_24_hour` - contact_24_hour
+        * `contact_publication_purpose` - contact_publication_purpose
+        * `contact_publication_placement` - contact_publication_placement
     FieldObservation:
       type: object
       properties:
@@ -6857,6 +7155,71 @@ components:
         * `talk_in` - Talk-in
         * `equal` - Equal
         * `none` - Not available
+    LocalContingencyAccount:
+      type: object
+      properties:
+        username:
+          type: string
+          readOnly: true
+        display_name:
+          type: string
+          readOnly: true
+        role:
+          type: string
+          readOnly: true
+        is_active:
+          type: boolean
+          readOnly: true
+        linked_to_external_identity:
+          type: boolean
+          readOnly: true
+        reason:
+          type: string
+          maxLength: 500
+        must_change_password:
+          type: boolean
+        disabled_at:
+          type: string
+          format: date-time
+          nullable: true
+        disabled_reason:
+          type: string
+          maxLength: 500
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - display_name
+      - is_active
+      - linked_to_external_identity
+      - reason
+      - role
+      - updated_at
+      - username
+    LocalContingencyActivation:
+      type: object
+      properties:
+        username:
+          type: string
+          maxLength: 150
+        temporary_password:
+          type: string
+          writeOnly: true
+          maxLength: 256
+        new_password:
+          type: string
+          writeOnly: true
+          maxLength: 256
+      required:
+      - new_password
+      - temporary_password
+      - username
     LocationPrecisionEnum:
       enum:
       - exact
@@ -7243,6 +7606,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/IncidentMembership'
+    PaginatedLocalContingencyAccountList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/LocalContingencyAccount'
     PaginatedManualRingList:
       type: object
       required:
@@ -7654,6 +8040,12 @@ components:
         contact_24_hour:
           type: string
           maxLength: 240
+        published_contact_fields: {}
+        contact_publication_purpose:
+          type: string
+          maxLength: 240
+        contact_publication_placement:
+          $ref: '#/components/schemas/ContactPublicationPlacementEnum'
         collaboration_version:
           type: integer
           readOnly: true
@@ -8565,6 +8957,14 @@ components:
           default: ics205
         mode:
           $ref: '#/components/schemas/CollaborationPresenceModeEnum'
+        object_id:
+          type: string
+          format: uuid
+          nullable: true
+        field_name:
+          oneOf:
+          - $ref: '#/components/schemas/FieldNameEnum'
+          - $ref: '#/components/schemas/BlankEnum'
       required:
       - device_id
       - mode
@@ -8579,39 +8979,32 @@ components:
         revision:
           type: string
           format: uuid
-        device_id:
-          type: string
-          format: uuid
         section:
           type: string
           maxLength: 80
         mode:
           $ref: '#/components/schemas/CollaborationPresenceModeEnum'
-        sequence:
-          type: integer
-          maximum: 9223372036854775807
-          minimum: 0
-          format: int64
-        expires_at:
+        object_id:
           type: string
-          format: date-time
-        last_seen_at:
+          format: uuid
+          nullable: true
+        field_name:
           type: string
-          format: date-time
-          readOnly: true
+          maxLength: 80
         display_name:
+          type: string
+          readOnly: true
+        incident_role:
           type: string
           readOnly: true
         is_current_user:
           type: boolean
           readOnly: true
       required:
-      - device_id
       - display_name
-      - expires_at
       - id
+      - incident_role
       - is_current_user
-      - last_seen_at
       - mode
       - revision
     ProfileTypeEnum:
@@ -8984,6 +9377,8 @@ components:
       - coml
       - comc
       - comt
+      - auxcomm
+      - incm
       - contributor
       - read_only
       type: string
@@ -8992,6 +9387,8 @@ components:
         * `coml` - COML
         * `comc` - COMC
         * `comt` - COMT
+        * `auxcomm` - AUXCOMM
+        * `incm` - INCM
         * `contributor` - Contributor
         * `read_only` - Read-only
     SectionEnum:
@@ -9870,11 +10267,11 @@ components:
     UnauthorizedVisibilityEnum:
       enum:
       - omitted
-      - redacted
+      - restricted
       type: string
       description: |-
         * `omitted` - Omitted
-        * `redacted` - Redacted
+        * `restricted` - Access restricted
   securitySchemes:
     tokenAuth:
       type: apiKey

@@ -105,7 +105,29 @@ ICT_EXTERNAL_IDENTITY_PROVIDER = os.getenv(
 ICT_EXTERNAL_ROLE_MAPPINGS = json.loads(os.getenv("ICT_EXTERNAL_ROLE_MAPPINGS", "{}"))
 if not isinstance(ICT_EXTERNAL_ROLE_MAPPINGS, dict):
     raise ValueError("ICT_EXTERNAL_ROLE_MAPPINGS must be a JSON object.")
-ICT_TOKEN_TTL_SECONDS = int(os.getenv("ICT_TOKEN_TTL_SECONDS", "28800"))
+ICT_EXTERNAL_ELIGIBILITY_GROUP = os.getenv(
+    "ICT_EXTERNAL_ELIGIBILITY_GROUP",
+    "ICT Branch Toolkit — Access",
+)
+if ICT_EXTERNAL_ELIGIBILITY_GROUP != "ICT Branch Toolkit — Access":
+    raise ValueError(
+        "ICT_EXTERNAL_ELIGIBILITY_GROUP must match the approved controlled group name."
+    )
+ICT_EXTERNAL_ROLE_FIELD = os.getenv(
+    "ICT_EXTERNAL_ROLE_FIELD",
+    "ICT Branch Toolkit Role",
+)
+if ICT_EXTERNAL_ROLE_FIELD != "ICT Branch Toolkit Role":
+    raise ValueError("ICT_EXTERNAL_ROLE_FIELD must match the approved controlled field name.")
+ICT_EXTERNAL_IDENTITY_REFRESH_SECONDS = int(
+    os.getenv("ICT_EXTERNAL_IDENTITY_REFRESH_SECONDS", "900")
+)
+if ICT_EXTERNAL_IDENTITY_REFRESH_SECONDS != 900:
+    raise ValueError("ICT_EXTERNAL_IDENTITY_REFRESH_SECONDS must remain 900 for this release.")
+ICT_EXTERNAL_OUTAGE_GRACE_SECONDS = int(os.getenv("ICT_EXTERNAL_OUTAGE_GRACE_SECONDS", "14400"))
+if not 0 <= ICT_EXTERNAL_OUTAGE_GRACE_SECONDS <= 14_400:
+    raise ValueError("ICT_EXTERNAL_OUTAGE_GRACE_SECONDS must be between 0 and 14400.")
+ICT_TOKEN_TTL_SECONDS = int(os.getenv("ICT_TOKEN_TTL_SECONDS", "43200"))
 if ICT_TOKEN_TTL_SECONDS <= 0:
     raise ValueError("ICT_TOKEN_TTL_SECONDS must be greater than zero.")
 ICT_COLLABORATION_PRESENCE_TTL_SECONDS = int(
@@ -119,13 +141,13 @@ if not 10 <= ICT_COLLABORATION_HISTORY_LIMIT <= 500:
 ICT_RESTRICTED_FIELD_DEFAULT_VIEW_ROLES = json.loads(
     os.getenv(
         "ICT_RESTRICTED_FIELD_DEFAULT_VIEW_ROLES",
-        '["administrator","coml","comc"]',
+        '["administrator","coml","comc","comt"]',
     )
 )
 ICT_RESTRICTED_FIELD_DEFAULT_EDIT_ROLES = json.loads(
     os.getenv(
         "ICT_RESTRICTED_FIELD_DEFAULT_EDIT_ROLES",
-        '["administrator","coml","comc"]',
+        '["administrator","coml","comc","comt"]',
     )
 )
 for setting_name, configured_roles in (
@@ -136,7 +158,16 @@ for setting_name, configured_roles in (
         isinstance(role, str) for role in configured_roles
     ):
         raise ValueError(f"{setting_name} must be a JSON array of role names.")
-    allowed_roles = {"administrator", "coml", "comc", "comt", "contributor", "read_only"}
+    allowed_roles = {
+        "administrator",
+        "coml",
+        "comc",
+        "comt",
+        "auxcomm",
+        "incm",
+        "contributor",
+        "read_only",
+    }
     if any(role not in allowed_roles for role in configured_roles):
         raise ValueError(f"{setting_name} contains an unrecognized role.")
 if not set(ICT_RESTRICTED_FIELD_DEFAULT_EDIT_ROLES).issubset(

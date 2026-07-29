@@ -146,6 +146,11 @@ DEFAULT_ROLE_POLICY = {
     },
 }
 
+# AUXCOMM and INCM are separately assignable incident roles, but intentionally
+# inherit the Contributor baseline until a later approved policy revision.
+DEFAULT_ROLE_POLICY[Role.AUXCOMM] = set(DEFAULT_ROLE_POLICY[Role.CONTRIBUTOR])
+DEFAULT_ROLE_POLICY[Role.INCM] = set(DEFAULT_ROLE_POLICY[Role.CONTRIBUTOR])
+
 
 def role_for_user(user) -> str:
     if user.is_superuser:

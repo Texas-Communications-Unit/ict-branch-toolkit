@@ -32,7 +32,7 @@ DJANGO_THROTTLE_AUTH_RATE=10/min
 DJANGO_SUPERUSER_USERNAME=<non-default administrator name>
 DJANGO_SUPERUSER_EMAIL=<administrator email>
 DJANGO_SUPERUSER_PASSWORD=<random initial administrator password>
-ICT_TOKEN_TTL_SECONDS=28800
+ICT_TOKEN_TTL_SECONDS=43200
 APP_BIND_ADDRESS=<application-host address reachable by the reverse proxy>
 APP_PORT=8088
 VITE_MAP_STYLE_URL=
@@ -49,7 +49,7 @@ VITE_MAP_REPORT_ISSUE_URL=
 VITE_MAP_CONTACT_URL=
 ```
 
-`ICT_TOKEN_TTL_SECONDS` sets the maximum local login lifetime. The eight-hour default is the
+`ICT_TOKEN_TTL_SECONDS` sets the maximum local login lifetime. The 12-hour default is the
 non-production baseline. A shorter value is allowed after operator review; zero and negative values
 prevent application startup. Changing the value can immediately expire existing sessions.
 

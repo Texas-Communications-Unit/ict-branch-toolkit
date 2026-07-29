@@ -8,7 +8,7 @@ from apps.accounts.policy import role_for_user
 
 from .models import RESTRICTED_ASSIGNMENT_FIELDS, SensitiveFieldRule
 
-REDACTED_VALUE = "[REDACTED]"
+RESTRICTED_VALUE = "Access restricted"
 
 
 def _request_policy_cache(request) -> dict:
@@ -30,7 +30,11 @@ def effective_incident_role(user, incident, *, request=None) -> str:
     if global_role == Role.ADMINISTRATOR:
         cache[cache_key] = global_role
         return cache[cache_key]
-    membership = incident.memberships.filter(user=user, is_active=True).first()
+    prefetched_memberships = getattr(user, "active_presence_memberships", None)
+    if prefetched_memberships is None:
+        membership = incident.memberships.filter(user=user, is_active=True).first()
+    else:
+        membership = prefetched_memberships[0] if prefetched_memberships else None
     cache[cache_key] = membership.role if membership else global_role
     return cache[cache_key]
 
@@ -81,8 +85,8 @@ def filter_assignment_snapshot(*, user, incident, snapshot: Mapping, request=Non
         if role in _roles_for(rule, "view"):
             continue
         visibility = rule.unauthorized_visibility if rule else SensitiveFieldRule.Visibility.OMITTED
-        if visibility == SensitiveFieldRule.Visibility.REDACTED:
-            filtered[field] = REDACTED_VALUE
+        if visibility == SensitiveFieldRule.Visibility.RESTRICTED:
+            filtered[field] = RESTRICTED_VALUE
         else:
             filtered.pop(field, None)
     return filtered

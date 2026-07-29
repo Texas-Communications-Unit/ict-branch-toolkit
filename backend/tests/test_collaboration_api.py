@@ -550,7 +550,15 @@ def test_presence_expires_and_revoked_membership_fails_on_next_request(client):
         **headers,
     )
     assert listed.status_code == 200
-    assert listed.json()[0]["display_name"] == "collaboration-editor"
+    presence = listed.json()[0]
+    assert presence["display_name"] == "collaboration-editor"
+    assert presence["incident_role"] == "COMT"
+    assert presence["object_id"] is None
+    assert presence["field_name"] == ""
+    assert "device_id" not in presence
+    assert "sequence" not in presence
+    assert "expires_at" not in presence
+    assert "last_seen_at" not in presence
 
     lease = PresenceLease.objects.get()
     lease.expires_at = timezone.now() - timedelta(seconds=1)
@@ -591,7 +599,7 @@ def test_restricted_assignment_fields_are_omitted_and_edits_fail_closed(client):
     IncidentMembership.objects.create(
         incident=incident,
         user=technician,
-        role=Role.COMT,
+        role=Role.AUXCOMM,
         assigned_by=admin,
     )
     headers = auth_header(technician)
@@ -621,17 +629,57 @@ def test_restricted_assignment_fields_are_omitted_and_edits_fail_closed(client):
     rule = SensitiveFieldRule.objects.create(
         incident=incident,
         field_name="contact_name",
-        unauthorized_visibility=SensitiveFieldRule.Visibility.REDACTED,
+        unauthorized_visibility=SensitiveFieldRule.Visibility.RESTRICTED,
         view_roles=[Role.ADMINISTRATOR],
         edit_roles=[Role.ADMINISTRATOR],
         created_by=admin,
         updated_by=admin,
     )
-    redacted = client.get("/api/ics205-plans/", **headers).json()["results"][0]["revisions"][0][
+    restricted = client.get("/api/ics205-plans/", **headers).json()["results"][0]["revisions"][0][
         "assignments"
     ][0]
-    assert redacted["contact_name"] == "[REDACTED]"
+    assert restricted["contact_name"] == "Access restricted"
     assert rule.version == 1
+
+
+@pytest.mark.django_db
+def test_comt_can_view_and_edit_default_restricted_assignment_fields(client):
+    admin, incident, revision = setup_workspace()
+    assignment = create_assignment(revision, 1, "SYN CALL")
+    comt = get_user_model().objects.create_user(
+        "restricted-comt",
+        password="safe-test-password",
+    )
+    UserRoleAssignment.objects.create(user=comt, role=Role.READ_ONLY)
+    IncidentMembership.objects.create(
+        incident=incident,
+        user=comt,
+        role=Role.COMT,
+        assigned_by=admin,
+    )
+    headers = auth_header(comt)
+
+    row = client.get("/api/ics205-plans/", **headers).json()["results"][0]["revisions"][0][
+        "assignments"
+    ][0]
+    assert row["contact_name"] == "Synthetic Restricted Contact"
+
+    changed = client.post(
+        "/api/collaboration/mutations/",
+        mutation_payload(
+            revision,
+            "assignment.update",
+            assignment.collaboration_version,
+            {"contact_name": "Updated by synthetic COMT"},
+            object_id=assignment.id,
+        ),
+        content_type="application/json",
+        **headers,
+    )
+    assert changed.status_code == 200
+    assert changed.json()["disposition"] == CollaborationChange.Disposition.SAVED
+    assignment.refresh_from_db()
+    assert assignment.contact_name == "Updated by synthetic COMT"
 
 
 @pytest.mark.django_db
@@ -645,6 +693,12 @@ def test_external_identity_boundary_is_disabled_and_shadow_accounts_have_no_pass
     assert status_response.json()["enabled"] is False
     assert status_response.json()["password_passthrough"] is False
     assert status_response.json()["live_connection"] is False
+    assert status_response.json()["eligibility_group"] == "ICT Branch Toolkit — Access"
+    assert status_response.json()["role_field"] == "ICT Branch Toolkit Role"
+    assert status_response.json()["identity_refresh_seconds"] == 900
+    assert status_response.json()["outage_grace_seconds"] == 14_400
+    assert Role.AUXCOMM in status_response.json()["allowed_roles"]
+    assert Role.INCM in status_response.json()["allowed_roles"]
 
     assertion = ExternalIdentityAssertion(
         provider="synthetic-authority",

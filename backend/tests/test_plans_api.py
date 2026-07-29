@@ -315,6 +315,88 @@ def test_pdf_is_approved_only_deterministic_and_audited(client):
 
 
 @pytest.mark.django_db
+def test_contact_publication_requires_exact_preview_confirmation_and_audits_no_values(client):
+    admin, incident, period = setup_incident()
+    _, revision = create_plan(client, admin, incident, period)
+    assignment = add_assignment(client, admin, revision, 1, "SYN CALL")
+    configured = client.patch(
+        f"/api/plan-assignments/{assignment.id}/",
+        {
+            "published_contact_fields": ["contact_name"],
+            "contact_publication_purpose": "Synthetic gateway technical support",
+            "contact_publication_placement": "special_instructions",
+        },
+        content_type="application/json",
+        **auth_header(admin),
+    )
+    assert configured.status_code == 200, configured.content
+
+    summary = client.get(
+        f"/api/plan-revisions/{revision.id}/publication-summary/",
+        **auth_header(admin),
+    )
+    assert summary.status_code == 200
+    assert summary.json()["has_published_contacts"] is True
+    assert summary.json()["contact_publications"][0]["fields"] == ["contact_name"]
+    digest = summary.json()["digest"]
+
+    preview = client.get(
+        f"/api/plan-revisions/{revision.id}/approval-preview/",
+        **auth_header(admin),
+    )
+    assert preview.status_code == 200
+    assert preview["X-ICT-Contact-Publication-Digest"] == digest
+    preview_text = "\n".join(
+        page.extract_text() or "" for page in PdfReader(BytesIO(preview.content)).pages
+    )
+    assert "DRAFT APPROVAL PREVIEW" in preview_text
+    assert "Special Instructions" in preview_text
+    assert "Private Synthetic Contact" in preview_text
+
+    unconfirmed = client.post(
+        f"/api/plan-revisions/{revision.id}/approve/",
+        {"confirm_contact_publication": False, "publication_digest": digest},
+        content_type="application/json",
+        **auth_header(admin),
+    )
+    assert unconfirmed.status_code == 400
+    stale = client.post(
+        f"/api/plan-revisions/{revision.id}/approve/",
+        {
+            "confirm_contact_publication": True,
+            "publication_digest": "0" * 64,
+        },
+        content_type="application/json",
+        **auth_header(admin),
+    )
+    assert stale.status_code == 400
+
+    approved = client.post(
+        f"/api/plan-revisions/{revision.id}/approve/",
+        {
+            "confirm_contact_publication": True,
+            "publication_digest": digest,
+        },
+        content_type="application/json",
+        **auth_header(admin),
+    )
+    assert approved.status_code == 200, approved.content
+    exported = client.get(
+        f"/api/plan-revisions/{revision.id}/pdf/",
+        **auth_header(admin),
+    )
+    export_text = "\n".join(
+        page.extract_text() or "" for page in PdfReader(BytesIO(exported.content)).pages
+    )
+    assert "Private Synthetic Contact" in export_text
+    event = AuditEvent.objects.get(action="plan_revision.approved")
+    assert event.details["contact_publication_digest"] == digest
+    assert event.details["contact_publications"][0]["fields"] == ["contact_name"]
+    assert event.details["contact_publications"][0]["placement"] == "special_instructions"
+    assert "Private Synthetic Contact" not in json.dumps(event.details)
+
+
+@pytest.mark.django_db
 def test_pdf_continuation_pages_repeat_table_heading_and_page_numbers():
     admin, incident, period = setup_incident()
     plan = ICS205Plan.objects.create(incident=incident, operational_period=period, created_by=admin)

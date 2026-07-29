@@ -13,8 +13,8 @@
 
 ## P1.6 local-token lifecycle
 
-- Local tokens have a configurable maximum lifetime. `ICT_TOKEN_TTL_SECONDS` defaults to 28,800
-  seconds (eight hours) and must be greater than zero.
+- Local tokens have a configurable maximum lifetime. `ICT_TOKEN_TTL_SECONDS` defaults to 43,200
+  seconds (12 hours) and must be greater than zero.
 - Every successful sign-in rotates the user's token, so the previous token stops working.
 - Sign-out revokes the current token. The browser also clears its session when the local expiration
   is reached or the API rejects the token.
@@ -25,6 +25,13 @@
   authorization headers, or request bodies.
 - Tokens are header-only credentials and require TLS outside local development. Do not put them in
   URLs, logs, tickets, chat, screenshots, or browser local storage.
+- Administrators can create individually attributable local contingency accounts with a required
+  reason, global/default role, and optional incident memberships. The generated temporary
+  credential is returned once and must be changed before sign-in.
+- Local contingency accounts are disabled rather than deleted. Disablement revokes the token;
+  **Sign out all sessions** revokes it without disabling the account. Every action is audited.
+- Shared contingency accounts are prohibited. Hidden synthetic accounts are reserved for the
+  controlled capacity probe and are not shown in the normal administrator account list.
 
 See [ADR-0007](../adr/0007-local-token-lifecycle.md) for the decision and accepted non-production
 limits.
@@ -44,7 +51,10 @@ limits.
 - Approval locks a complete revision and its assignment and relationship children. Later work begins by copying to a new numbered draft.
 - Each controlled resource row stores an immutable source/release/digest snapshot so a later library update cannot rewrite an approved plan.
 - Remote Base, Link, and Patch relationships are typed records. A Patch requires two or more rows from the same revision.
-- Contact name, address, phone, and 24-hour contact fields are optional, incident-scoped, audited by changed field name, and excluded from the P1.2 PDF.
+- Contact name, address, phone, and 24-hour contact fields are optional, incident-scoped, and
+  audited by changed field name. They remain excluded from PDF output unless an authorized planner
+  intentionally selects exact fields, records a purpose, and the approver confirms the preview
+  digest.
 - P1.3 associates assignments with canonical incident site records; P1.2 contact fields do not duplicate those coordinates.
 - Only approved revisions can produce the current official PDF endpoint. PDF exports create audit events.
 

@@ -1,3 +1,5 @@
+import hashlib
+import json
 from copy import deepcopy
 
 from django.db import transaction
@@ -110,8 +112,47 @@ def copy_revision(revision, actor):
     return copied
 
 
+def contact_publication_manifest(revision) -> list[dict]:
+    manifest = []
+    for assignment in revision.assignments.order_by("position", "id"):
+        fields = [
+            field
+            for field in assignment.published_contact_fields
+            if field in Assignment.PUBLISHABLE_CONTACT_FIELDS
+        ]
+        if not fields:
+            continue
+        manifest.append(
+            {
+                "assignment_id": str(assignment.id),
+                "position": assignment.position,
+                "channel_name": assignment.channel_name,
+                "purpose": assignment.contact_publication_purpose,
+                "placement": assignment.contact_publication_placement,
+                "fields": fields,
+                "values": {field: getattr(assignment, field) for field in fields},
+            }
+        )
+    return manifest
+
+
+def contact_publication_digest(revision) -> str:
+    encoded = json.dumps(
+        contact_publication_manifest(revision),
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode()
+    return hashlib.sha256(encoded).hexdigest()
+
+
 @transaction.atomic
-def approve_revision(revision, actor):
+def approve_revision(
+    revision,
+    actor,
+    *,
+    confirm_contact_publication=False,
+    publication_digest_confirmation="",
+):
     ensure_draft(revision)
     if not revision.assignments.exists():
         raise ValidationError("A revision must contain at least one assignment before approval.")
@@ -124,6 +165,16 @@ def approve_revision(revision, actor):
                 "determined operating classification."
             )
         assignment.full_clean()
+    publication_manifest = contact_publication_manifest(revision)
+    publication_digest = contact_publication_digest(revision)
+    if publication_manifest and not confirm_contact_publication:
+        raise ValidationError(
+            "Confirm the restricted contact fields shown in the approval preview."
+        )
+    if publication_manifest and publication_digest_confirmation != publication_digest:
+        raise ValidationError(
+            "The contact publication selection changed. Review the approval preview again."
+        )
     for relationship in revision.relationships.prefetch_related("assignments"):
         members = list(relationship.assignments.all())
         if any(item.revision_id != revision.id for item in members):
@@ -137,5 +188,22 @@ def approve_revision(revision, actor):
     revision.approved_by = actor
     revision.approved_at = timezone.now()
     revision.save(update_fields=["status", "approved_by", "approved_at", "updated_at"])
-    record_event(actor=actor, action="plan_revision.approved", target=revision)
+    record_event(
+        actor=actor,
+        action="plan_revision.approved",
+        target=revision,
+        details={
+            "contact_publication_digest": publication_digest,
+            "contact_publications": [
+                {
+                    "assignment_id": item["assignment_id"],
+                    "position": item["position"],
+                    "fields": item["fields"],
+                    "purpose": item["purpose"],
+                    "placement": item["placement"],
+                }
+                for item in publication_manifest
+            ],
+        },
+    )
     return revision

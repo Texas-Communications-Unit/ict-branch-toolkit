@@ -630,15 +630,20 @@ footer {
   margin: 1rem 0;
 }
 
-.conflict-comparison pre {
-  max-height: 18rem;
-  overflow: auto;
+.conflict-comparison label {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.35rem 0.6rem;
   padding: 0.75rem;
   border: 1px solid var(--tx-comu-border);
   border-radius: 0.35rem;
   background: var(--tx-comu-white);
-  white-space: pre-wrap;
   overflow-wrap: anywhere;
+}
+
+.conflict-comparison label > span,
+.conflict-comparison label > strong {
+  grid-column: 2;
 }
 
 .status {
@@ -709,6 +714,20 @@ footer {
   display: block;
   color: var(--tx-comu-slate);
   font-size: 0.85rem;
+}
+
+.contact-publication-form {
+  border-top: 1px solid var(--tx-comu-border);
+  display: grid;
+  gap: 0.5rem;
+  grid-column: 1 / -1;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  margin-top: 0.4rem;
+  padding-top: 0.75rem;
+}
+
+.contact-publication-form > strong {
+  grid-column: 1 / -1;
 }
 
 .row-number {

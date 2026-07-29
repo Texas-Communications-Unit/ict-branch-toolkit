@@ -1,7 +1,9 @@
 from django.db import transaction
 from rest_framework import serializers
 
+from apps.accounts.models import Role
 from apps.collaboration.field_policy import (
+    effective_incident_role,
     enforce_assignment_field_edits,
     filter_assignment_snapshot,
 )
@@ -134,6 +136,29 @@ class AssignmentSerializer(serializers.ModelSerializer):
                 fields=restricted_changes,
                 request=request,
             )
+            if {
+                "published_contact_fields",
+                "contact_publication_purpose",
+                "contact_publication_placement",
+            } & attrs.keys():
+                role = effective_incident_role(
+                    request.user,
+                    revision.plan.incident,
+                    request=request,
+                )
+                if role not in {
+                    Role.ADMINISTRATOR,
+                    Role.COML,
+                    Role.COMC,
+                    Role.COMT,
+                }:
+                    raise serializers.ValidationError(
+                        {
+                            "published_contact_fields": (
+                                "Your incident role cannot publish restricted contact fields."
+                            )
+                        }
+                    )
         return attrs
 
     def to_representation(self, instance):
@@ -249,6 +274,15 @@ class PlanRevisionSerializer(serializers.ModelSerializer):
             if attrs.get("plan", self.instance.plan) != self.instance.plan:
                 raise serializers.ValidationError({"plan": "The plan cannot be changed."})
         return attrs
+
+
+class PlanApprovalSerializer(serializers.Serializer):
+    confirm_contact_publication = serializers.BooleanField(default=False)
+    publication_digest = serializers.RegexField(
+        r"^[0-9a-f]{64}$",
+        required=False,
+        allow_blank=True,
+    )
 
 
 class PlanSerializer(serializers.ModelSerializer):

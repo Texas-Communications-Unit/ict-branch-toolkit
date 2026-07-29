@@ -5,7 +5,7 @@ from django.contrib.auth import get_user_model
 from django.utils import timezone
 from rest_framework.authtoken.models import Token
 
-from apps.accounts.models import Role, UserRoleAssignment
+from apps.accounts.models import LocalContingencyAccount, Role, UserRoleAssignment
 from apps.audit.models import AuditEvent
 from apps.incidents.models import Incident, IncidentMembership, OperationalPeriod
 
@@ -74,6 +74,80 @@ def test_logout_revokes_current_token_and_records_audit_event(client):
     event = AuditEvent.objects.get(action="authentication.logout")
     assert event.actor == user
     assert event.details == {}
+
+
+@pytest.mark.django_db
+def test_administrator_can_create_activate_revoke_and_disable_local_contingency_account(client):
+    admin = user_with_role("contingency-admin", Role.ADMINISTRATOR)
+    admin_token = Token.objects.create(user=admin)
+    created = client.post(
+        "/api/local-contingency-accounts/",
+        {
+            "username": "synthetic-local-user",
+            "display_name": "Synthetic Local User",
+            "role": Role.AUXCOMM,
+            "reason": "Synthetic identity-provider outage exercise.",
+            "incidents": [],
+        },
+        content_type="application/json",
+        **auth_header(admin_token),
+    )
+    assert created.status_code == 201, created.content
+    temporary_password = created.json()["temporary_password"]
+    assert temporary_password
+    account = LocalContingencyAccount.objects.get(user__username="synthetic-local-user")
+    assert account.must_change_password is True
+    assert account.user.toolkit_role.role == Role.AUXCOMM
+
+    blocked = client.post(
+        "/api/auth/token/",
+        {
+            "username": "synthetic-local-user",
+            "password": temporary_password,
+        },
+        content_type="application/json",
+    )
+    assert blocked.status_code == 403
+    assert blocked.json()["code"] == "password_change_required"
+
+    activated = client.post(
+        "/api/auth/activate-local/",
+        {
+            "username": "synthetic-local-user",
+            "temporary_password": temporary_password,
+            "new_password": "replacement-safe-test-password-2026",
+        },
+        content_type="application/json",
+    )
+    assert activated.status_code == 204, activated.content
+    signed_in = client.post(
+        "/api/auth/token/",
+        {
+            "username": "synthetic-local-user",
+            "password": "replacement-safe-test-password-2026",
+        },
+        content_type="application/json",
+    )
+    assert signed_in.status_code == 200
+    assert Token.objects.filter(user=account.user).exists()
+
+    revoked = client.post(
+        "/api/local-contingency-accounts/synthetic-local-user/sign-out-all/",
+        **auth_header(admin_token),
+    )
+    assert revoked.status_code == 204
+    assert Token.objects.filter(user=account.user).exists() is False
+
+    disabled = client.post(
+        "/api/local-contingency-accounts/synthetic-local-user/disable/",
+        {"reason": "Synthetic exercise complete."},
+        content_type="application/json",
+        **auth_header(admin_token),
+    )
+    assert disabled.status_code == 200, disabled.content
+    account.user.refresh_from_db()
+    assert account.user.is_active is False
+    assert temporary_password not in str(AuditEvent.objects.values_list("details", flat=True))
 
 
 @pytest.mark.django_db
