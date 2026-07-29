@@ -2,17 +2,24 @@ import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 
 import {
   approvePlanRevision,
+  collaborationDeviceId,
   comparePlanRevisions,
   copyPlanRevision,
   createPlan,
-  createPlanAssignment,
   createPlanRelationship,
-  deletePlanAssignment,
   downloadPlanPdf,
+  heartbeatCollaborationPresence,
+  listCollaborationChanges,
+  listCollaborationPresence,
   listPlans,
-  reorderPlanAssignments,
+  releaseCollaborationPresence,
+  resolveCollaborationConflict,
+  sendCollaborationMutation,
 } from "./api";
 import type {
+  CollaborationChange,
+  CollaborationOperation,
+  CollaborationPresence,
   ICS205Plan,
   Incident,
   PlanAssignment,
@@ -23,6 +30,11 @@ export function PlanWorkspace({ incident }: { incident?: Incident }) {
   const [plans, setPlans] = useState<ICS205Plan[]>([]);
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
   const [comparison, setComparison] = useState<RevisionComparison | null>(null);
+  const [presence, setPresence] = useState<CollaborationPresence[]>([]);
+  const [changes, setChanges] = useState<CollaborationChange[]>([]);
+  const [activeConflict, setActiveConflict] =
+    useState<CollaborationChange | null>(null);
+  const [collaborationStatus, setCollaborationStatus] = useState("");
   const [message, setMessage] = useState("");
 
   const refresh = useCallback(async () => {
@@ -59,6 +71,75 @@ export function PlanWorkspace({ incident }: { incident?: Incident }) {
     incident?.permissions.includes("plan.edit") && !revision?.is_locked;
   const canApprove = incident?.permissions.includes("plan.approve");
   const canExport = incident?.permissions.includes("plan.export");
+  const revisionId = revision?.id;
+
+  useEffect(() => {
+    if (!revisionId) {
+      setPresence([]);
+      setChanges([]);
+      setActiveConflict(null);
+      setCollaborationStatus("");
+      return;
+    }
+    let active = true;
+    const section = "ics205";
+
+    async function synchronize() {
+      try {
+        await heartbeatCollaborationPresence(
+          revisionId,
+          canEdit ? "editing" : "viewing",
+          section,
+        );
+        const [currentPresence, history] = await Promise.all([
+          listCollaborationPresence(revisionId, section),
+          listCollaborationChanges(revisionId),
+        ]);
+        if (!active) return;
+        setPresence(currentPresence);
+        setChanges(history);
+        setActiveConflict(
+          (current) =>
+            current ??
+            history.find(
+              (change) =>
+                change.disposition === "conflict" && !change.resolution,
+            ) ??
+            null,
+        );
+        setCollaborationStatus(
+          "Online collaboration active. Presence and saved changes refresh every 20 seconds.",
+        );
+      } catch (error) {
+        if (!active) return;
+        setCollaborationStatus(
+          error instanceof Error
+            ? `Collaboration connection needs attention: ${error.message}`
+            : "Collaboration connection needs attention.",
+        );
+      }
+    }
+
+    void synchronize();
+    const interval = window.setInterval(() => {
+      void synchronize();
+      void refresh().catch((error) => {
+        if (!active) return;
+        setCollaborationStatus(
+          error instanceof Error
+            ? `Plan refresh failed: ${error.message}`
+            : "Plan refresh failed.",
+        );
+      });
+    }, 20_000);
+    return () => {
+      active = false;
+      window.clearInterval(interval);
+      void releaseCollaborationPresence(revisionId, section).catch(() => {
+        // The short server lease expires if unload prevents an explicit release.
+      });
+    };
+  }, [canEdit, refresh, revisionId]);
 
   async function run(action: () => Promise<unknown>) {
     try {
@@ -72,6 +153,49 @@ export function PlanWorkspace({ incident }: { incident?: Incident }) {
     }
   }
 
+  async function runMutation(input: {
+    operation: CollaborationOperation;
+    baseVersion: number;
+    changes: Record<string, unknown>;
+    objectId?: string;
+  }): Promise<CollaborationChange | null> {
+    try {
+      const outcome = await sendCollaborationMutation({
+        client_mutation_id: crypto.randomUUID(),
+        device_id: collaborationDeviceId(),
+        revision: revision!.id,
+        operation: input.operation,
+        object_id: input.objectId ?? null,
+        section: "ics205",
+        base_version: input.baseVersion,
+        changes: input.changes,
+      });
+      if (outcome.disposition === "conflict") {
+        setActiveConflict(outcome);
+        setMessage(
+          "Your change was not applied because the saved record changed. Choose how to resolve it below.",
+        );
+        return outcome;
+      }
+      if (outcome.disposition === "rejected") {
+        setMessage(
+          String(outcome.result.detail ?? "The server rejected this change."),
+        );
+        return outcome;
+      }
+      setMessage("");
+      await refresh();
+      return outcome;
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? `The change could not be saved: ${error.message}`
+          : "The change could not be saved.",
+      );
+      return null;
+    }
+  }
+
   async function handleCreatePlan(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
@@ -82,9 +206,10 @@ export function PlanWorkspace({ incident }: { incident?: Incident }) {
     event.preventDefault();
     const form = event.currentTarget;
     const data = new FormData(form);
-    await run(() =>
-      createPlanAssignment({
-        revision: revision!.id,
+    const outcome = await runMutation({
+      operation: "assignment.create",
+      baseVersion: revision!.collaboration_version,
+      changes: {
         position: revision!.assignments.length + 1,
         function: String(data.get("function")),
         channel_name: String(data.get("channelName")),
@@ -102,9 +227,9 @@ export function PlanWorkspace({ incident }: { incident?: Incident }) {
         site_address: String(data.get("siteAddress")),
         phone_numbers: String(data.get("phoneNumbers")),
         contact_24_hour: String(data.get("contact24Hour")),
-      }),
-    );
-    form.reset();
+      },
+    });
+    if (outcome?.disposition === "saved") form.reset();
   }
 
   async function move(row: PlanAssignment, offset: number) {
@@ -113,12 +238,76 @@ export function PlanWorkspace({ incident }: { incident?: Incident }) {
     const target = index + offset;
     if (target < 0 || target >= rows.length) return;
     [rows[index], rows[target]] = [rows[target], rows[index]];
-    await run(() =>
-      reorderPlanAssignments(
-        revision!.id,
-        rows.map((item) => item.id),
-      ),
+    await runMutation({
+      operation: "assignment.reorder",
+      baseVersion: revision!.collaboration_version,
+      changes: { assignment_ids: rows.map((item) => item.id) },
+    });
+  }
+
+  async function discardConflict() {
+    if (!activeConflict) return;
+    try {
+      await resolveCollaborationConflict(activeConflict.id, {
+        decision: "discard",
+        explanation: "User chose to keep the currently saved values.",
+      });
+      setActiveConflict(null);
+      setMessage("");
+      await refresh();
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? `The conflict could not be resolved: ${error.message}`
+          : "The conflict could not be resolved.",
+      );
+    }
+  }
+
+  async function replaceWithProposedValues() {
+    if (!activeConflict) return;
+    const currentVersion = Number(
+      activeConflict.current_snapshot.collaboration_version,
     );
+    if (!Number.isInteger(currentVersion) || currentVersion < 1) {
+      setMessage(
+        "The saved version cannot be determined. Reload the plan before resolving this conflict.",
+      );
+      return;
+    }
+    try {
+      const replacement = await sendCollaborationMutation({
+        client_mutation_id: crypto.randomUUID(),
+        device_id: collaborationDeviceId(),
+        revision: activeConflict.revision,
+        operation: activeConflict.operation,
+        object_id: activeConflict.object_id,
+        section: activeConflict.section,
+        base_version: currentVersion,
+        changes: activeConflict.proposed_snapshot,
+      });
+      if (replacement.disposition !== "saved") {
+        setActiveConflict(replacement);
+        setMessage(
+          "The record changed again. Review the latest saved values before choosing.",
+        );
+        return;
+      }
+      await resolveCollaborationConflict(activeConflict.id, {
+        decision: "replace",
+        explanation: "User intentionally applied the retained proposed values.",
+        replacement_change: replacement.id,
+      });
+      setActiveConflict(null);
+      setMessage("");
+      await refresh();
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? `The conflict could not be resolved: ${error.message}`
+          : "The conflict could not be resolved.",
+      );
+    }
   }
 
   if (!incident)
@@ -183,6 +372,66 @@ export function PlanWorkspace({ incident }: { incident?: Incident }) {
                 </button>
               )}
           </div>
+          <div
+            className="collaboration-summary"
+            role="status"
+            aria-live="polite"
+          >
+            <strong>Shared online workspace</strong>
+            <span>{collaborationStatus}</span>
+            <span>
+              {presence.length === 0
+                ? "No active users reported."
+                : presence
+                    .map(
+                      (person) =>
+                        `${person.display_name}${person.is_current_user ? " (you)" : ""}: ${person.mode}`,
+                    )
+                    .join(" · ")}
+            </span>
+            <small>
+              {changes.length} recent saved, rejected, or conflicting change
+              record(s) retained.
+            </small>
+          </div>
+          {activeConflict && (
+            <section
+              className="conflict-panel"
+              aria-labelledby="conflict-heading"
+            >
+              <h3 id="conflict-heading">Resolve concurrent change</h3>
+              <p>
+                Nothing was overwritten. Compare your retained proposal with the
+                values currently saved, then choose what to do.
+              </p>
+              <div className="conflict-comparison">
+                <div>
+                  <strong>Your proposed values</strong>
+                  <pre>
+                    {JSON.stringify(activeConflict.proposed_snapshot, null, 2)}
+                  </pre>
+                </div>
+                <div>
+                  <strong>Currently saved values</strong>
+                  <pre>
+                    {JSON.stringify(activeConflict.current_snapshot, null, 2)}
+                  </pre>
+                </div>
+              </div>
+              <div className="button-row">
+                <button type="button" onClick={() => void discardConflict()}>
+                  Keep currently saved values
+                </button>
+                <button
+                  className="secondary-button"
+                  type="button"
+                  onClick={() => void replaceWithProposedValues()}
+                >
+                  Apply my proposed values
+                </button>
+              </div>
+            </section>
+          )}
           {canEdit && (
             <form className="assignment-form" onSubmit={handleAssignment}>
               <label>
@@ -294,7 +543,12 @@ export function PlanWorkspace({ incident }: { incident?: Incident }) {
                     <button
                       type="button"
                       onClick={() =>
-                        void run(() => deletePlanAssignment(row.id))
+                        void runMutation({
+                          operation: "assignment.delete",
+                          objectId: row.id,
+                          baseVersion: row.collaboration_version,
+                          changes: {},
+                        })
                       }
                     >
                       Delete

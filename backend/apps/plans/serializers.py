@@ -1,6 +1,11 @@
 from django.db import transaction
 from rest_framework import serializers
 
+from apps.collaboration.field_policy import (
+    enforce_assignment_field_edits,
+    filter_assignment_snapshot,
+)
+
 from .models import Assignment, AssignmentRelationship, ICS205Plan, PlanRevision
 from .services import ensure_draft, resource_snapshot
 
@@ -9,7 +14,13 @@ class AssignmentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Assignment
         fields = "__all__"
-        read_only_fields = ["id", "resource_snapshot", "created_at", "updated_at"]
+        read_only_fields = [
+            "id",
+            "resource_snapshot",
+            "collaboration_version",
+            "created_at",
+            "updated_at",
+        ]
 
     def validate(self, attrs):
         revision = attrs.get("revision", getattr(self.instance, "revision", None))
@@ -19,7 +30,32 @@ class AssignmentSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({"revision": "The revision cannot be changed."})
         if attrs.get("conventional_channel") and attrs.get("trunked_talkgroup"):
             raise serializers.ValidationError("Choose one resource type.")
+        request = self.context.get("request")
+        if revision and request:
+            restricted_changes = {
+                field: value
+                for field, value in attrs.items()
+                if self.instance is not None or value not in ("", None)
+            }
+            enforce_assignment_field_edits(
+                user=request.user,
+                incident=revision.plan.incident,
+                fields=restricted_changes,
+                request=request,
+            )
         return attrs
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        request = self.context.get("request")
+        if not request:
+            return data
+        return filter_assignment_snapshot(
+            user=request.user,
+            incident=instance.revision.plan.incident,
+            snapshot=data,
+            request=request,
+        )
 
     def create(self, validated_data):
         validated_data["resource_snapshot"] = resource_snapshot(validated_data)
@@ -91,6 +127,7 @@ class PlanRevisionSerializer(serializers.ModelSerializer):
             "created_by",
             "approved_by",
             "approved_at",
+            "collaboration_version",
             "created_at",
             "updated_at",
             "assignments",
@@ -104,6 +141,7 @@ class PlanRevisionSerializer(serializers.ModelSerializer):
             "created_by",
             "approved_by",
             "approved_at",
+            "collaboration_version",
             "created_at",
             "updated_at",
             "is_locked",

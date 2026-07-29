@@ -8,6 +8,17 @@ class TokenSessionSerializer(serializers.Serializer):
     expires_at = serializers.DateTimeField(read_only=True)
 
 
+class ExternalIdentityStatusSerializer(serializers.Serializer):
+    provider = serializers.CharField(read_only=True)
+    enabled = serializers.BooleanField(read_only=True)
+    protocol = serializers.CharField(read_only=True)
+    authorization_code_flow = serializers.BooleanField(read_only=True)
+    password_passthrough = serializers.BooleanField(read_only=True)
+    live_connection = serializers.BooleanField(read_only=True)
+    warning = serializers.CharField(read_only=True)
+    break_glass_local_login_available = serializers.BooleanField(read_only=True)
+
+
 class CurrentUserSerializer(serializers.Serializer):
     username = serializers.CharField(read_only=True)
     display_name = serializers.SerializerMethodField()

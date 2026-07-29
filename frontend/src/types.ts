@@ -123,10 +123,11 @@ export interface PlanAssignment {
   mode: string;
   remarks: string;
   structured_note: "" | "remote_base" | "link" | "patch" | "other";
-  contact_name: string;
-  site_address: string;
-  phone_numbers: string;
-  contact_24_hour: string;
+  contact_name?: string;
+  site_address?: string;
+  phone_numbers?: string;
+  contact_24_hour?: string;
+  collaboration_version: number;
   resource_snapshot: Record<string, unknown>;
 }
 
@@ -147,6 +148,7 @@ export interface PlanRevision {
   prepared_by_name: string;
   prepared_by_position: string;
   approved_at: string | null;
+  collaboration_version: number;
   assignments: PlanAssignment[];
   relationships: PlanRelationship[];
 }
@@ -168,6 +170,78 @@ export interface RevisionComparison {
     after: string | null;
     changed_fields: string[];
   }[];
+}
+
+export type CollaborationOperation =
+  | "revision.update"
+  | "assignment.create"
+  | "assignment.update"
+  | "assignment.delete"
+  | "assignment.reorder";
+
+export interface CollaborationMutationPayload {
+  client_mutation_id: string;
+  device_id: string;
+  revision: string;
+  operation: CollaborationOperation;
+  object_id?: string | null;
+  section: string;
+  base_version: number;
+  changes: Record<string, unknown>;
+}
+
+export interface CollaborationResolution {
+  id: string;
+  decision: "discard" | "reapply" | "replace";
+  explanation: string;
+  replacement_change: string | null;
+  resolved_by: number;
+  created_at: string;
+}
+
+export interface CollaborationChange {
+  id: string;
+  client_mutation_id: string;
+  revision: string;
+  actor: number;
+  device_id: string;
+  operation: CollaborationOperation;
+  object_id: string | null;
+  section: string;
+  base_version: number;
+  resulting_version: number | null;
+  affected_fields: string[];
+  proposed_snapshot: Record<string, unknown>;
+  current_snapshot: Record<string, unknown>;
+  payload_sha256: string;
+  disposition: "saved" | "conflict" | "rejected";
+  result: Record<string, unknown>;
+  resolution: CollaborationResolution | null;
+  created_at: string;
+}
+
+export interface CollaborationPresence {
+  id: string;
+  revision: string;
+  device_id: string;
+  section: string;
+  mode: "viewing" | "editing";
+  sequence: number;
+  expires_at: string;
+  last_seen_at: string;
+  display_name: string;
+  is_current_user: boolean;
+}
+
+export interface ExternalIdentityStatus {
+  provider: string;
+  enabled: boolean;
+  protocol: "authorization_code";
+  authorization_code_flow: boolean;
+  password_passthrough: boolean;
+  live_connection: boolean;
+  warning: string;
+  break_glass_local_login_available: boolean;
 }
 
 export interface CoordinateParseResult {

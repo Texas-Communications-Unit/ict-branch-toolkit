@@ -505,6 +505,48 @@ footer {
   padding-bottom: 0.75rem;
 }
 
+.collaboration-summary {
+  display: grid;
+  gap: 0.35rem;
+  margin: 1rem 0;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--tx-comu-border);
+  border-left: 0.35rem solid var(--accent);
+  border-radius: 0.5rem;
+  background: var(--tx-comu-light);
+}
+
+.collaboration-summary span,
+.collaboration-summary small {
+  overflow-wrap: anywhere;
+}
+
+.conflict-panel {
+  margin: 1rem 0;
+  padding: 1rem;
+  border: 2px solid var(--warning, #a45200);
+  border-radius: 0.5rem;
+  background: #fff8ed;
+}
+
+.conflict-comparison {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  gap: 1rem;
+  margin: 1rem 0;
+}
+
+.conflict-comparison pre {
+  max-height: 18rem;
+  overflow: auto;
+  padding: 0.75rem;
+  border: 1px solid var(--tx-comu-border);
+  border-radius: 0.35rem;
+  background: var(--tx-comu-white);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
 .status {
   border-radius: 999px;
   font-size: 0.75rem;

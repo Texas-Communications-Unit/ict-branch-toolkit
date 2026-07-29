@@ -65,6 +65,7 @@ const plan: ICS205Plan = {
       prepared_by_name: "Synthetic COML",
       prepared_by_position: "COML",
       approved_at: "2026-07-28T20:00:00Z",
+      collaboration_version: 1,
       assignments: [],
       relationships: [],
     },

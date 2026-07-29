@@ -14,7 +14,12 @@ from rest_framework.views import APIView
 
 from apps.audit.services import record_event
 
-from .serializers import CurrentUserSerializer, TokenSessionSerializer
+from .external_identity import identity_provider
+from .serializers import (
+    CurrentUserSerializer,
+    ExternalIdentityStatusSerializer,
+    TokenSessionSerializer,
+)
 
 
 class CurrentUserView(RetrieveAPIView):
@@ -66,3 +71,25 @@ class LogoutView(APIView):
             )
             request.auth.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class ExternalIdentityStatusView(APIView):
+    """Expose only capability/configuration state; never provider secrets or credentials."""
+
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(responses=ExternalIdentityStatusSerializer)
+    def get(self, request):
+        provider_status = identity_provider().status()
+        return Response(
+            {
+                "provider": provider_status.provider,
+                "enabled": provider_status.enabled,
+                "protocol": provider_status.protocol,
+                "authorization_code_flow": provider_status.authorization_code_flow,
+                "password_passthrough": provider_status.password_passthrough,
+                "live_connection": provider_status.live_connection,
+                "warning": provider_status.warning,
+                "break_glass_local_login_available": True,
+            }
+        )

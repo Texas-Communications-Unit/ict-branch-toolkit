@@ -1,6 +1,9 @@
 import type {
   CalibrationSet,
   CalibrationStatus,
+  CollaborationChange,
+  CollaborationMutationPayload,
+  CollaborationPresence,
   CoverageEngineStatus,
   CoverageEstimate,
   CreateDirectionalCoverageAnalysisPayload,
@@ -19,6 +22,7 @@ import type {
   CurrentUser,
   EditableRFInputFields,
   ElevationProviderStatus,
+  ExternalIdentityStatus,
   FieldObservation,
   GeocoderSearchResult,
   HAATCalculation,
@@ -109,10 +113,127 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
       throw new Error("Your session expired. Sign in again.");
     }
     const detail = await response.text();
-    throw new Error(detail || `Request failed with status ${response.status}`);
+    let parsed: unknown = detail;
+    try {
+      parsed = detail ? JSON.parse(detail) : null;
+    } catch {
+      // Keep the server's plain-text response.
+    }
+    throw new ApiError(
+      typeof parsed === "object" &&
+        parsed !== null &&
+        "detail" in parsed &&
+        typeof parsed.detail === "string"
+        ? parsed.detail
+        : detail || `Request failed with status ${response.status}`,
+      response.status,
+      parsed,
+    );
   }
   if (response.status === 204) return undefined as T;
   return (await response.json()) as T;
+}
+
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    public readonly status: number,
+    public readonly data: unknown,
+  ) {
+    super(message);
+    this.name = "ApiError";
+  }
+}
+
+export function collaborationDeviceId(): string {
+  const key = "ict-toolkit-collaboration-device-id";
+  const current = sessionStorage.getItem(key);
+  if (current) return current;
+  const created = crypto.randomUUID();
+  sessionStorage.setItem(key, created);
+  return created;
+}
+
+export async function sendCollaborationMutation(
+  payload: CollaborationMutationPayload,
+): Promise<CollaborationChange> {
+  try {
+    return await request<CollaborationChange>("/api/collaboration/mutations/", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  } catch (error) {
+    if (
+      error instanceof ApiError &&
+      typeof error.data === "object" &&
+      error.data !== null &&
+      "disposition" in error.data
+    ) {
+      return error.data as CollaborationChange;
+    }
+    throw error;
+  }
+}
+
+export function listCollaborationChanges(
+  revision: string,
+): Promise<CollaborationChange[]> {
+  return request(
+    `/api/collaboration/changes/?revision=${encodeURIComponent(revision)}`,
+  );
+}
+
+export function resolveCollaborationConflict(
+  conflict: string,
+  payload: {
+    decision: "discard" | "reapply" | "replace";
+    explanation: string;
+    replacement_change?: string;
+  },
+): Promise<CollaborationChange> {
+  return request(`/api/collaboration/conflicts/${conflict}/resolve/`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function heartbeatCollaborationPresence(
+  revision: string,
+  mode: "viewing" | "editing",
+  section = "ics205",
+): Promise<CollaborationPresence> {
+  return request("/api/collaboration/presence/", {
+    method: "POST",
+    body: JSON.stringify({
+      revision,
+      device_id: collaborationDeviceId(),
+      section,
+      mode,
+    }),
+  });
+}
+
+export function listCollaborationPresence(
+  revision: string,
+  section = "ics205",
+): Promise<CollaborationPresence[]> {
+  return request(
+    `/api/collaboration/presence/?revision=${encodeURIComponent(revision)}&section=${encodeURIComponent(section)}`,
+  );
+}
+
+export function releaseCollaborationPresence(
+  revision: string,
+  section = "ics205",
+): Promise<void> {
+  return request(
+    `/api/collaboration/presence/?revision=${encodeURIComponent(revision)}&device_id=${encodeURIComponent(collaborationDeviceId())}&section=${encodeURIComponent(section)}`,
+    { method: "DELETE" },
+  );
+}
+
+export function getExternalIdentityStatus(): Promise<ExternalIdentityStatus> {
+  return request("/api/external-identity/status/");
 }
 
 export async function login(username: string, password: string): Promise<void> {

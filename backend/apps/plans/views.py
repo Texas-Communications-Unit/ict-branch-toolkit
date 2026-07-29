@@ -122,7 +122,9 @@ class RevisionViewSet(viewsets.ModelViewSet):
 
     def perform_update(self, serializer):
         ensure_draft(serializer.instance)
-        revision = serializer.save()
+        revision = serializer.save(
+            collaboration_version=serializer.instance.collaboration_version + 1
+        )
         record_event(
             actor=self.request.user,
             action="plan_revision.updated",
@@ -242,10 +244,14 @@ class AssignmentViewSet(viewsets.ModelViewSet):
         if not user_has_permission(self.request.user, PLAN_EDIT, revision.plan.incident):
             raise PermissionDenied("Your incident role cannot edit plan assignments.")
         assignment = serializer.save()
+        revision.collaboration_version += 1
+        revision.save(update_fields=["collaboration_version", "updated_at"])
         record_event(actor=self.request.user, action="plan_assignment.created", target=assignment)
 
     def perform_update(self, serializer):
-        assignment = serializer.save()
+        assignment = serializer.save(
+            collaboration_version=serializer.instance.collaboration_version + 1
+        )
         record_event(
             actor=self.request.user,
             action="plan_assignment.updated",
@@ -258,6 +264,8 @@ class AssignmentViewSet(viewsets.ModelViewSet):
         target_id = str(instance.id)
         revision = instance.revision
         instance.delete()
+        revision.collaboration_version += 1
+        revision.save(update_fields=["collaboration_version", "updated_at"])
         record_event(
             actor=self.request.user,
             action="plan_assignment.deleted",
@@ -285,6 +293,8 @@ class AssignmentViewSet(viewsets.ModelViewSet):
                 Assignment.objects.filter(pk=by_id[str(item_id)].id).update(position=10000 + offset)
             for position, item_id in enumerate(ordered_ids, 1):
                 Assignment.objects.filter(pk=by_id[str(item_id)].id).update(position=position)
+            revision.collaboration_version += 1
+            revision.save(update_fields=["collaboration_version", "updated_at"])
         record_event(actor=request.user, action="plan_assignments.reordered", target=revision)
         return Response(self.get_serializer(revision.assignments.all(), many=True).data)
 

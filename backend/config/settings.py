@@ -36,6 +36,7 @@ INSTALLED_APPS = [
     "apps.sites",
     "apps.rf_analysis",
     "apps.deconfliction",
+    "apps.collaboration",
 ]
 if ENABLE_GIS:
     INSTALLED_APPS.append("django.contrib.gis")
@@ -95,9 +96,52 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 ICT_ROLE_POLICY_OVERRIDES = json.loads(os.getenv("ICT_ROLE_POLICY_OVERRIDES", "{}"))
 ICT_IDENTITY_PROVIDER = os.getenv("ICT_IDENTITY_PROVIDER", "local")
+ICT_EXTERNAL_SSO_ENABLED = os.getenv("ICT_EXTERNAL_SSO_ENABLED", "false").lower() == "true"
+ICT_EXTERNAL_IDENTITY_PROVIDER = os.getenv(
+    "ICT_EXTERNAL_IDENTITY_PROVIDER",
+    "apps.accounts.external_identity.DisabledExternalIdentityProvider",
+)
+ICT_EXTERNAL_ROLE_MAPPINGS = json.loads(os.getenv("ICT_EXTERNAL_ROLE_MAPPINGS", "{}"))
+if not isinstance(ICT_EXTERNAL_ROLE_MAPPINGS, dict):
+    raise ValueError("ICT_EXTERNAL_ROLE_MAPPINGS must be a JSON object.")
 ICT_TOKEN_TTL_SECONDS = int(os.getenv("ICT_TOKEN_TTL_SECONDS", "28800"))
 if ICT_TOKEN_TTL_SECONDS <= 0:
     raise ValueError("ICT_TOKEN_TTL_SECONDS must be greater than zero.")
+ICT_COLLABORATION_PRESENCE_TTL_SECONDS = int(
+    os.getenv("ICT_COLLABORATION_PRESENCE_TTL_SECONDS", "75")
+)
+if not 30 <= ICT_COLLABORATION_PRESENCE_TTL_SECONDS <= 300:
+    raise ValueError("ICT_COLLABORATION_PRESENCE_TTL_SECONDS must be between 30 and 300.")
+ICT_COLLABORATION_HISTORY_LIMIT = int(os.getenv("ICT_COLLABORATION_HISTORY_LIMIT", "100"))
+if not 10 <= ICT_COLLABORATION_HISTORY_LIMIT <= 500:
+    raise ValueError("ICT_COLLABORATION_HISTORY_LIMIT must be between 10 and 500.")
+ICT_RESTRICTED_FIELD_DEFAULT_VIEW_ROLES = json.loads(
+    os.getenv(
+        "ICT_RESTRICTED_FIELD_DEFAULT_VIEW_ROLES",
+        '["administrator","coml","comc"]',
+    )
+)
+ICT_RESTRICTED_FIELD_DEFAULT_EDIT_ROLES = json.loads(
+    os.getenv(
+        "ICT_RESTRICTED_FIELD_DEFAULT_EDIT_ROLES",
+        '["administrator","coml","comc"]',
+    )
+)
+for setting_name, configured_roles in (
+    ("ICT_RESTRICTED_FIELD_DEFAULT_VIEW_ROLES", ICT_RESTRICTED_FIELD_DEFAULT_VIEW_ROLES),
+    ("ICT_RESTRICTED_FIELD_DEFAULT_EDIT_ROLES", ICT_RESTRICTED_FIELD_DEFAULT_EDIT_ROLES),
+):
+    if not isinstance(configured_roles, list) or not all(
+        isinstance(role, str) for role in configured_roles
+    ):
+        raise ValueError(f"{setting_name} must be a JSON array of role names.")
+    allowed_roles = {"administrator", "coml", "comc", "comt", "contributor", "read_only"}
+    if any(role not in allowed_roles for role in configured_roles):
+        raise ValueError(f"{setting_name} contains an unrecognized role.")
+if not set(ICT_RESTRICTED_FIELD_DEFAULT_EDIT_ROLES).issubset(
+    set(ICT_RESTRICTED_FIELD_DEFAULT_VIEW_ROLES)
+):
+    raise ValueError("ICT_RESTRICTED_FIELD_DEFAULT_EDIT_ROLES must be a subset of view roles.")
 ICT_APPROVED_REFERENCE_IMPORTS = json.loads(os.getenv("ICT_APPROVED_REFERENCE_IMPORTS", "[]"))
 ICT_GEOCODER_PROVIDER = os.getenv("ICT_GEOCODER_PROVIDER", "apps.sites.geocoders.DisabledGeocoder")
 ICT_ELEVATION_PROVIDER = os.getenv(
@@ -264,5 +308,13 @@ SPECTACULAR_SETTINGS = {
     "SERVE_INCLUDE_SCHEMA": False,
     "ENUM_NAME_OVERRIDES": {
         "PlanRevisionStatusEnum": "apps.plans.models.PlanRevision.Status",
+        "ResourceChannelModeEnum": "apps.resources.models.ConventionalChannel.Mode",
+        "FieldObservationReviewDecisionEnum": (
+            "apps.rf_analysis.models.FieldObservationReview.Decision"
+        ),
+        "CollaborationResolutionDecisionEnum": (
+            "apps.collaboration.models.CollaborationResolution.Decision"
+        ),
+        "CollaborationPresenceModeEnum": "apps.collaboration.models.PresenceLease.Mode",
     },
 }

@@ -63,6 +63,7 @@ class PlanRevision(models.Model):
         on_delete=models.PROTECT,
     )
     approved_at = models.DateTimeField(null=True, blank=True)
+    collaboration_version = models.PositiveBigIntegerField(default=1)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -125,6 +126,7 @@ class Assignment(models.Model):
     site_address = models.TextField(blank=True)
     phone_numbers = models.CharField(max_length=240, blank=True)
     contact_24_hour = models.CharField(max_length=240, blank=True)
+    collaboration_version = models.PositiveBigIntegerField(default=1)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

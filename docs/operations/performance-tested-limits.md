@@ -23,7 +23,7 @@ tests these authenticated list paths:
 | Incident update with audit | 1 incident membership; status patch plus append-only audit event                              |                    12 |                8 KiB |
 | Conventional-channel list  | 1,001 channels; oversized request is clamped to 1,000 results                                 |                     4 |              1.5 MiB |
 | Radio-site list            | 101 sites; first 100 sites, each with 3 manual rings                                          |                     5 |              256 KiB |
-| ICS-205 plan list          | 25 plans, 2 revisions per plan, 10 assignments and 1 two-assignment relationship per revision |                     8 |              512 KiB |
+| ICS-205 plan list          | 25 plans, 2 revisions per plan, 10 assignments and 1 two-assignment relationship per revision |                    10 |              512 KiB |
 
 The query budgets cover request transaction control, pagination counts, object
 retrieval, nested serialization, and—on the update workload—the material write
@@ -31,6 +31,12 @@ and audit append. They exclude the single token-authentication lookup so the
 tests isolate endpoint data-access behavior. The response budgets cover the
 uncompressed JSON body produced by the fixed synthetic fixtures; they do not
 cap arbitrarily long text values or HTTP headers.
+
+P3.3 adds two bounded plan-list queries: one resolves the requester's
+incident-scoped role for restricted fields and one loads the incident's
+sensitive-field rules. Request-scoped caching keeps those checks constant per
+incident rather than per assignment. On July 28, 2026, the same synthetic plan
+fixture measured 10 queries and 350,877 bytes with server-side field filtering.
 
 The general API page size is 100. The channel-library endpoints default to 500
 and accept `page_size` only up to 1,000. The tests verify the incident and site
@@ -136,3 +142,25 @@ latency/timeouts/rate limits, concurrent requests, cancellation behavior, audit
 growth, and recovery under failure. Use synthetic data for load testing. A
 successful 1,001-sample fixture does not validate terrain accuracy or authorize
 operational use.
+
+## Online-collaboration workload
+
+P3.3 bounds one recent-change response to 100 records by default and permits a
+configured value only from 10 through 500. Presence expires after 75 seconds by
+default and is configurable only from 30 through 300 seconds. These are response
+and recovery bounds, not database-retention limits.
+
+Deterministic SQLite tests cover two independent assignment edits, one
+same-record conflict, idempotent replay, rejected mutation-ID reuse,
+approved-revision rejection, presence expiry, active membership revocation,
+restricted-field omission/redaction, and conflict resolution. They do not
+establish a safe concurrent-user count, sustained mutation rate, audit-chain
+throughput, PostgreSQL lock-wait target, or reverse-proxy timeout.
+
+Before operational activation, run synthetic PostgreSQL tests for concurrent
+edits to independent and shared targets, history growth, audit-chain contention,
+worker saturation, abnormal disconnects, membership revocation, backup/restore,
+and client retry storms. Record query plans, p50/p95/p99 latency, CPU, memory,
+database growth, lock waits, error rate, and recovery time. The 20-second browser
+poll and 75-second lease are initial coordination settings, not a service-level
+objective.
