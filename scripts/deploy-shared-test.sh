@@ -84,6 +84,7 @@ test -s "$backup_file"
 )
 chmod 600 "$backup_file.sha256"
 
+# shellcheck disable=SC2016
 "${compose[@]}" exec -T db sh -c '
   temporary_backup="$(mktemp)"
   trap "rm -f \"$temporary_backup\"" EXIT
