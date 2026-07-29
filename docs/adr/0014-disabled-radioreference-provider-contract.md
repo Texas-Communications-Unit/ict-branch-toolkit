@@ -68,3 +68,7 @@ The Toolkit can validate normalization and XML safety without contacting
 RadioReference or implying authorization. Local/manual and other approved
 reference libraries remain fully usable. A future live adapter requires a new
 decision record and code review; it cannot be enabled by configuration alone.
+
+The approved future workflow and the decision to track live activation
+separately are recorded in
+[ADR-0020](0020-deferred-live-radioreference-provider.md).

@@ -19,6 +19,13 @@ An approved developer application is not, by itself, approval for multiuser
 governmental/nonprofit planning, storage, display, printing, offline use, or
 redistribution.
 
+The project administrator has approved the intended individual-account,
+incident-retention, revision, map-coordinate, auditing, and copy-from-previous
+workflow. Those product decisions are preserved in
+[ADR-0020](../adr/0020-deferred-live-radioreference-provider.md). They do not
+override the external licensing and activation gate. Live implementation is
+tracked in Issue #75.
+
 ## Safe configuration
 
 Keep these values in the protected server-side deployment environment:
@@ -90,6 +97,31 @@ approve every item below:
 The next implementation must remain replaceable and server-side. It must not
 expose SOAP/XML or credentials to the browser, silently overwrite local
 libraries, or treat provider data as an operational assignment.
+
+## Approved future operating workflow
+
+When the external authorization gate is satisfied, implementation may proceed
+only within this boundary:
+
+- provide a full-page internal workspace with explicit state, optional county,
+  and **Search** controls;
+- require an individual Premium account for every user performing a live action;
+- keep user credentials only in protected server memory for the current Toolkit
+  session and device;
+- retain only deliberately selected normalized records and required provenance;
+- make retained incident copies available to other authorized incident users
+  without requiring a new provider login;
+- keep updates manual, reviewed, revisioned, and incident-local;
+- preserve FCC ASR, user-entered, and RadioReference coordinate sources without
+  inventing coordinates, using that order as the default priority;
+- audit credential-safe connection, search, save, use, export, update, revision,
+  supersession, and coordinate-override events; and
+- permit controlled copy from an exact prior plan revision into an independent
+  new draft while preserving lineage and excluding prior incident identity,
+  dates, personnel, approvals, and signatures.
+
+These requirements define future behavior; every live capability in the current
+provider-status response must continue to report `false`.
 
 ## Disablement and incident response
 
