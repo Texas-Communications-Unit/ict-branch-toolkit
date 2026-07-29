@@ -55,6 +55,20 @@ only.
 - Provider exception detail, credentials, coordinates, samples, or raw responses leaking through
   API failures, audit events, logs, screenshots, or CI artifacts.
 - Repeated maximum-size synchronous terrain requests exhausting application resources.
+- Concurrent editors silently overwriting one another or replaying an old
+  mutation after a reconnect.
+- A forged or reused client mutation identifier being treated as an idempotent
+  retry for different content.
+- Approved ICS-205 content being changed through a collaboration route.
+- Restricted contact data leaking through conflict evidence, presence,
+  validation errors, audit summaries, or browser-only hiding.
+- Revoked incident members continuing to mutate or renew presence through an
+  already-open browser.
+- Presence becoming user surveillance or a stranded hard lock.
+- A disabled external-identity setting being mistaken for live WordPress/CiviCRM
+  SSO readiness, or the Toolkit receiving a user password.
+- Ambiguous external subjects, stale eligibility, or overlapping role mappings
+  creating an authorized shadow account.
 
 ## Design responses
 
@@ -152,3 +166,27 @@ states, and digests rather than coordinates, samples, RF values, or
 credentials. General throttling and profile bounds reduce but do not eliminate
 synchronous denial-of-service risk. See
 [ADR-0017](../adr/0017-optional-source-aware-terrain-analysis.md).
+
+For P3.3, version checks and database row locks precede every supported
+collaboration save. Client mutation UUIDs are bound to actor, device, and a
+canonical payload digest; mismatched reuse is rejected. Stale proposals and
+their current values are retained as protected conflict evidence, and resolution
+is a separate append-only record. Approved revisions return a retained rejection
+and require a copied draft. Presence is a short lease with minimal metadata,
+never a hard edit lock.
+
+The backend rechecks incident membership for each mutation, presence, history,
+and resolution request. Restricted assignment fields have independent server
+read/edit policy and are omitted or explicitly redacted before serialization;
+general audit detail receives only field names, versions, disposition, and
+digests. The provisional restricted-field defaults preserve the existing
+Administrator, COML, and COMC policy while COMT, Contributor, Read-only, and new
+roles fail closed pending human approval.
+
+The external identity provider is a network-free disabled class. Its status
+explicitly reports no live connection or password passthrough. Synthetic shadow
+provisioning uses stable subject and CiviCRM contact identifiers, unusable local
+passwords, expiry checks, exact-one role mapping, fail-closed eligibility, and
+bounded audit metadata. No authorization-code transport or live provider
+credentials exist. See
+[ADR-0018](../adr/0018-online-collaboration-and-disabled-external-identity.md).

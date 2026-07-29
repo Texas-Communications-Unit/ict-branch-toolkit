@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import UserRoleAssignment
+from .models import ExternalIdentity, UserRoleAssignment
 
 
 @admin.register(UserRoleAssignment)
@@ -13,3 +13,27 @@ class UserRoleAssignmentAdmin(admin.ModelAdmin):
         if not obj.assigned_by_id:
             obj.assigned_by = request.user
         super().save_model(request, obj, form, change)
+
+
+@admin.register(ExternalIdentity)
+class ExternalIdentityAdmin(admin.ModelAdmin):
+    list_display = (
+        "provider",
+        "user",
+        "eligibility",
+        "mapped_role",
+        "last_refreshed_at",
+        "valid_until",
+    )
+    list_filter = ("provider", "eligibility", "mapped_role")
+    search_fields = ("user__username", "external_subject", "civicrm_contact_id")
+    readonly_fields = [field.name for field in ExternalIdentity._meta.fields]
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False

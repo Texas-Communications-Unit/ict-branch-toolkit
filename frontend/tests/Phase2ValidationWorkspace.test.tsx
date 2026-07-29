@@ -75,6 +75,7 @@ const plan: ICS205Plan = {
       prepared_by_name: "Synthetic planner",
       prepared_by_position: "COML",
       approved_at: "2026-07-28T12:00:00Z",
+      collaboration_version: 1,
       assignments: [
         {
           id: "assignment-1",
@@ -94,6 +95,7 @@ const plan: ICS205Plan = {
           site_address: "",
           phone_numbers: "",
           contact_24_hour: "",
+          collaboration_version: 1,
           resource_snapshot: {},
         },
       ],

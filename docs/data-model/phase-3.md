@@ -91,3 +91,26 @@ digests; they do not copy the input/result snapshots.
 
 Browser visibility is not the authorization boundary; the backend scopes every
 record to authorized incident memberships.
+
+## P3.3 online collaboration
+
+P3.3 adds online-only optimistic collaboration evidence without changing or
+requiring the P3.1 terrain aggregate:
+
+| Record                               | Purpose                                                                                                                                                                                                                         |
+| ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `PlanRevision.collaboration_version` | Versions revision metadata and the shared assignment collection.                                                                                                                                                                |
+| `Assignment.collaboration_version`   | Allows unrelated assignment rows to be edited independently.                                                                                                                                                                    |
+| `CollaborationChange`                | Retains client mutation UUID/device, incident/revision, actor, operation, base/resulting versions, affected field names, protected proposed/current snapshots, payload digest, result, and saved/conflict/rejected disposition. |
+| `CollaborationResolution`            | Append-only discard, reapply, or intentional replacement decision linked to one retained conflict and optional saved replacement.                                                                                               |
+| `PresenceLease`                      | Short-lived incident/revision/section viewing or editing indicator; it is not a lock.                                                                                                                                           |
+| `SensitiveFieldRule`                 | Versioned per-incident read/edit roles and omitted/redacted behavior for a documented restricted assignment field.                                                                                                              |
+| `ExternalIdentity`                   | Minimal local shadow for a future approved provider; stable subject/contact linkage, eligibility, mapped role, assertion digest, refresh/validity, and disablement state.                                                       |
+
+Approved revisions remain immutable. Collaboration records and resolutions are
+retained; presence leases are intentionally ephemeral. Protected snapshots stay
+in the incident database and are filtered on every response. Audit events use
+metadata and digests instead of copying protected values.
+
+See [ADR-0018](../adr/0018-online-collaboration-and-disabled-external-identity.md)
+and the [operator guide](../operations/online-collaboration.md).
