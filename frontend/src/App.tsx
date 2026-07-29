@@ -20,6 +20,7 @@ import { CoverageEstimateWorkspace } from "./CoverageEstimateWorkspace";
 import { DirectionalCoverageWorkspace } from "./DirectionalCoverageWorkspace";
 import { DeconflictionWorkspace } from "./DeconflictionWorkspace";
 import { FieldCalibrationWorkspace } from "./FieldCalibrationWorkspace";
+import { ExtensionWorkspace } from "./ExtensionWorkspace";
 import { MapShell } from "./MapShell";
 import { PlanWorkspace } from "./PlanWorkspace";
 import { Phase2ValidationWorkspace } from "./Phase2ValidationWorkspace";
@@ -504,6 +505,9 @@ export default function App() {
         <FieldCalibrationWorkspace incident={selected} />
         <Phase2ValidationWorkspace incident={selected} />
         <TerrainAnalysisWorkspace incident={selected} />
+        {currentUser?.permissions.includes("extension.view") && (
+          <ExtensionWorkspace incident={selected} currentUser={currentUser} />
+        )}
         <MapShell incident={selected} />
         <section className="library-panel" aria-labelledby="library-heading">
           <div className="section-heading">

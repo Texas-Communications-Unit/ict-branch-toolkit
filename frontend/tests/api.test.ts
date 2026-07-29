@@ -8,6 +8,7 @@ import {
   copySubscriberProfileVersion,
   createCalibrationSet,
   createDeconflictionAnalysis,
+  createExtensionExecution,
   createFieldObservation,
   createHAATCalculation,
   createRFAnalysisInputSnapshot,
@@ -19,6 +20,8 @@ import {
   listCalibrationSets,
   listDeconflictionAnalyses,
   listFieldObservations,
+  listExtensionCatalog,
+  listExtensionExecutions,
   listHAATCalculations,
   listRFAnalysisInputSnapshots,
   listSubscriberProfiles,
@@ -29,6 +32,9 @@ import {
   reviewFieldObservation,
   updateSubscriberProfile,
   updateSubscriberProfileVersion,
+  installExtension,
+  enableExtension,
+  disableExtension,
 } from "../src/api";
 import type { EditableRFInputFields } from "../src/types";
 
@@ -453,5 +459,81 @@ test("uses the versioned deconfliction status, analysis, and approval endpoints"
   );
   expect(String(fetchMock.mock.calls[3][0])).toBe(
     "http://localhost:8000/api/deconfliction-analyses/analysis-1/approve/",
+  );
+});
+
+test("uses governed extension endpoints and preserves bounded failed execution evidence", async () => {
+  sessionStorage.setItem("ict-toolkit-token", "synthetic-extension-token");
+  sessionStorage.setItem(
+    "ict-toolkit-token-expires-at",
+    "2099-07-28T20:00:00Z",
+  );
+  const failedExecution = {
+    id: "extension-execution-failed",
+    status: "failed",
+    failure_code: "extension_execution_failed",
+    failure_message:
+      "The optional extension failed. Core incident planning remains available.",
+  };
+  const fetchMock = vi
+    .spyOn(globalThis, "fetch")
+    .mockImplementation(async (input) => {
+      const url = String(input);
+      if (url.endsWith("/api/extensions/")) {
+        return new Response(JSON.stringify([]), { status: 200 });
+      }
+      if (url.includes("/api/extension-executions/?")) {
+        return new Response(
+          JSON.stringify({
+            count: 0,
+            next: null,
+            previous: null,
+            results: [],
+          }),
+          { status: 200 },
+        );
+      }
+      if (url.endsWith("/api/extension-executions/") && !url.includes("?")) {
+        return new Response(JSON.stringify(failedExecution), { status: 503 });
+      }
+      return new Response(JSON.stringify({}), { status: 200 });
+    });
+
+  await listExtensionCatalog();
+  await installExtension("synthetic-readiness-summary", "1.0");
+  await enableExtension("synthetic-readiness-summary");
+  await disableExtension("synthetic-readiness-summary");
+  await listExtensionExecutions("incident / extension");
+  await expect(
+    createExtensionExecution({
+      extension_key: "synthetic-readiness-summary",
+      contract_version: "1.0",
+      capability: "readiness-check",
+      incident: "incident-1",
+      source_revision: "revision-1",
+      inputs: { minimum_assignment_count: 1 },
+    }),
+  ).resolves.toEqual(failedExecution);
+
+  expect(String(fetchMock.mock.calls[0][0])).toBe(
+    "http://localhost:8000/api/extensions/",
+  );
+  expect(fetchMock.mock.calls[1][1]).toEqual(
+    expect.objectContaining({
+      method: "POST",
+      body: JSON.stringify({
+        extension_key: "synthetic-readiness-summary",
+        contract_version: "1.0",
+      }),
+    }),
+  );
+  expect(String(fetchMock.mock.calls[2][0])).toContain(
+    "/api/extensions/synthetic-readiness-summary/enable/",
+  );
+  expect(String(fetchMock.mock.calls[3][0])).toContain(
+    "/api/extensions/synthetic-readiness-summary/disable/",
+  );
+  expect(String(fetchMock.mock.calls[4][0])).toBe(
+    "http://localhost:8000/api/extension-executions/?incident=incident%20%2F%20extension",
   );
 });

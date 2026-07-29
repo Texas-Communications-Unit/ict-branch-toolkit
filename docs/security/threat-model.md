@@ -69,6 +69,16 @@ only.
   SSO readiness, or the Toolkit receiving a user password.
 - Ambiguous external subjects, stale eligibility, or overlapping role mappings
   creating an authorized shadow account.
+- Arbitrary uploaded or dynamically imported extension code executing inside
+  the trusted application boundary.
+- A disabled, stale, tampered, or incompatible extension manifest being run
+  despite administrator or version gates.
+- An extension bypassing incident membership, reading protected source fields,
+  changing approved source records, or leaking content into audit detail.
+- Optional extension failure preventing core incident planning, approval,
+  export, or recovery.
+- Draft or decision-support extension output being represented as an official
+  form, command approval, technical authorization, or adopted standard.
 
 ## Design responses
 
@@ -190,3 +200,24 @@ passwords, expiry checks, exact-one role mapping, fail-closed eligibility, and
 bounded audit metadata. No authorization-code transport or live provider
 credentials exist. See
 [ADR-0018](../adr/0018-online-collaboration-and-disabled-external-identity.md).
+
+For P3.4, extensions are code-defined and shipped through normal source review;
+there is no upload, package installation, remote-code, shell, or dynamic-import
+path. Administrator installation snapshots the exact manifest and digest and
+starts disabled. Enablement and execution compare exact extension, contract,
+and manifest versions and fail closed on drift.
+
+The backend rechecks active incident membership and extension permission for
+run, list, detail, and export. A run accepts only an approved same-incident
+ICS-205 revision and declared bounded inputs. The synthetic handler receives
+read-only source context, omits protected contact/frequency values from retained
+output, and cannot mutate the approved source. Input/result evidence is
+immutable and digest-bound; audit events retain only identifiers, versions,
+classifications, counts where safe, and digests.
+
+Handler exceptions create bounded retained failure evidence and a `503` only
+for the optional request; core incident routes remain independent. The
+synthetic example is permanently labeled decision support and non-operational.
+Every future tool/report requires its own authority, classification, retention,
+accessibility, performance, and qualified human gate. See
+[ADR-0019](../adr/0019-governed-planning-extension-framework.md).
