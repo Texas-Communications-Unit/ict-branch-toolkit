@@ -234,6 +234,334 @@ paths:
               schema:
                 $ref: '#/components/schemas/ChannelImportResponse'
           description: ''
+  /api/collaboration-sensitive-field-rules/:
+    get:
+      operationId: collaboration_sensitive_field_rules_list
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - collaboration-sensitive-field-rules
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedSensitiveFieldRuleList'
+          description: ''
+    post:
+      operationId: collaboration_sensitive_field_rules_create
+      tags:
+      - collaboration-sensitive-field-rules
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SensitiveFieldRule'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SensitiveFieldRule'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SensitiveFieldRule'
+        required: true
+      security:
+      - tokenAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SensitiveFieldRule'
+          description: ''
+  /api/collaboration-sensitive-field-rules/{id}/:
+    get:
+      operationId: collaboration_sensitive_field_rules_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this sensitive field rule.
+        required: true
+      tags:
+      - collaboration-sensitive-field-rules
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SensitiveFieldRule'
+          description: ''
+    put:
+      operationId: collaboration_sensitive_field_rules_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this sensitive field rule.
+        required: true
+      tags:
+      - collaboration-sensitive-field-rules
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SensitiveFieldRule'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SensitiveFieldRule'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SensitiveFieldRule'
+        required: true
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SensitiveFieldRule'
+          description: ''
+    patch:
+      operationId: collaboration_sensitive_field_rules_partial_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this sensitive field rule.
+        required: true
+      tags:
+      - collaboration-sensitive-field-rules
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedSensitiveFieldRule'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedSensitiveFieldRule'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedSensitiveFieldRule'
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SensitiveFieldRule'
+          description: ''
+    delete:
+      operationId: collaboration_sensitive_field_rules_destroy
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this sensitive field rule.
+        required: true
+      tags:
+      - collaboration-sensitive-field-rules
+      security:
+      - tokenAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/collaboration/changes/:
+    get:
+      operationId: collaboration_changes_list
+      parameters:
+      - in: query
+        name: revision
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - collaboration
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CollaborationChange'
+          description: ''
+  /api/collaboration/conflicts/{change_id}/resolve/:
+    post:
+      operationId: collaboration_conflicts_resolve_create
+      parameters:
+      - in: path
+        name: change_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - collaboration
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConflictResolution'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ConflictResolution'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ConflictResolution'
+        required: true
+      security:
+      - tokenAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CollaborationChange'
+          description: ''
+  /api/collaboration/mutations/:
+    post:
+      operationId: collaboration_mutations_create
+      tags:
+      - collaboration
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CollaborationMutation'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CollaborationMutation'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CollaborationMutation'
+        required: true
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CollaborationChange'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CollaborationChange'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CollaborationChange'
+          description: ''
+  /api/collaboration/presence/:
+    get:
+      operationId: collaboration_presence_list
+      parameters:
+      - in: query
+        name: revision
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: query
+        name: section
+        schema:
+          type: string
+      tags:
+      - collaboration
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PresenceLease'
+          description: ''
+    post:
+      operationId: collaboration_presence_create
+      tags:
+      - collaboration
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PresenceHeartbeat'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PresenceHeartbeat'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PresenceHeartbeat'
+        required: true
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PresenceLease'
+          description: ''
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PresenceLease'
+          description: ''
+    delete:
+      operationId: collaboration_presence_destroy
+      parameters:
+      - in: query
+        name: device_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: query
+        name: revision
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: query
+        name: section
+        schema:
+          type: string
+      tags:
+      - collaboration
+      security:
+      - tokenAuth: []
+      responses:
+        '204':
+          description: No response body
   /api/conventional-channels/:
     get:
       operationId: conventional_channels_list
@@ -672,6 +1000,22 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ElevationSnapshot'
+          description: ''
+  /api/external-identity/status/:
+    get:
+      operationId: external_identity_status_retrieve
+      description: Expose only capability/configuration state; never provider secrets
+        or credentials.
+      tags:
+      - external-identity
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExternalIdentityStatus'
           description: ''
   /api/field-observations/:
     get:
@@ -3659,6 +4003,9 @@ components:
         contact_24_hour:
           type: string
           maxLength: 240
+        collaboration_version:
+          type: integer
+          readOnly: true
         created_at:
           type: string
           format: date-time
@@ -3680,6 +4027,7 @@ components:
           nullable: true
       required:
       - channel_name
+      - collaboration_version
       - created_at
       - function
       - id
@@ -3884,6 +4232,143 @@ components:
         * `good` - Good communications
         * `marginal` - Marginal communications
         * `failed` - Failed communications
+    CollaborationChange:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        client_mutation_id:
+          type: string
+          format: uuid
+        revision:
+          type: string
+          format: uuid
+        actor:
+          type: integer
+        device_id:
+          type: string
+          format: uuid
+        operation:
+          $ref: '#/components/schemas/OperationEnum'
+        object_id:
+          type: string
+          format: uuid
+          nullable: true
+        section:
+          type: string
+          maxLength: 80
+        base_version:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 0
+          format: int64
+        resulting_version:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 0
+          format: int64
+          nullable: true
+        affected_fields: {}
+        proposed_snapshot: {}
+        current_snapshot: {}
+        payload_sha256:
+          type: string
+          pattern: ^[0-9a-f]{64}$
+          maxLength: 64
+        disposition:
+          $ref: '#/components/schemas/DispositionEnum'
+        result: {}
+        resolution:
+          type: object
+          additionalProperties: {}
+          nullable: true
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - actor
+      - base_version
+      - client_mutation_id
+      - created_at
+      - device_id
+      - disposition
+      - id
+      - operation
+      - payload_sha256
+      - resolution
+      - revision
+    CollaborationMutation:
+      type: object
+      properties:
+        client_mutation_id:
+          type: string
+          format: uuid
+        device_id:
+          type: string
+          format: uuid
+        revision:
+          type: string
+          format: uuid
+        operation:
+          $ref: '#/components/schemas/OperationEnum'
+        object_id:
+          type: string
+          format: uuid
+          nullable: true
+        section:
+          allOf:
+          - $ref: '#/components/schemas/SectionEnum'
+          default: ics205
+        base_version:
+          type: integer
+          minimum: 1
+        changes:
+          type: object
+          additionalProperties: {}
+      required:
+      - base_version
+      - changes
+      - client_mutation_id
+      - device_id
+      - operation
+      - revision
+    CollaborationPresenceModeEnum:
+      enum:
+      - viewing
+      - editing
+      type: string
+      description: |-
+        * `viewing` - Viewing
+        * `editing` - Editing
+    CollaborationResolutionDecisionEnum:
+      enum:
+      - discard
+      - reapply
+      - replace
+      type: string
+      description: |-
+        * `discard` - Keep saved record
+        * `reapply` - Copy values into a new change
+        * `replace` - Intentionally replace current values
+    ConflictResolution:
+      type: object
+      properties:
+        decision:
+          $ref: '#/components/schemas/CollaborationResolutionDecisionEnum'
+        explanation:
+          type: string
+          maxLength: 500
+        replacement_change:
+          type: string
+          format: uuid
+          nullable: true
+      required:
+      - decision
+      - explanation
     ConventionalChannel:
       type: object
       properties:
@@ -3927,7 +4412,7 @@ components:
           minimum: 0
           nullable: true
         mode:
-          $ref: '#/components/schemas/ModeEnum'
+          $ref: '#/components/schemas/ResourceChannelModeEnum'
         rx_squelch:
           type: string
           maxLength: 40
@@ -4461,14 +4946,6 @@ components:
       - permissions
       - role
       - username
-    DecisionEnum:
-      enum:
-      - approved
-      - excluded
-      type: string
-      description: |-
-        * `approved` - Approved
-        * `excluded` - Excluded
     DeconflictionAnalysis:
       type: object
       properties:
@@ -4768,6 +5245,16 @@ components:
         * `complete` - Complete
         * `unsupported` - Unsupported
         * `no_overlap` - No probable two-way overlap
+    DispositionEnum:
+      enum:
+      - saved
+      - conflict
+      - rejected
+      type: string
+      description: |-
+        * `saved` - Saved
+        * `conflict` - Conflict
+        * `rejected` - Rejected
     EffectiveStatusEnum:
       enum:
       - draft
@@ -5060,6 +5547,42 @@ components:
           type: string
           format: uri
           nullable: true
+    ExternalIdentityStatus:
+      type: object
+      properties:
+        provider:
+          type: string
+          readOnly: true
+        enabled:
+          type: boolean
+          readOnly: true
+        protocol:
+          type: string
+          readOnly: true
+        authorization_code_flow:
+          type: boolean
+          readOnly: true
+        password_passthrough:
+          type: boolean
+          readOnly: true
+        live_connection:
+          type: boolean
+          readOnly: true
+        warning:
+          type: string
+          readOnly: true
+        break_glass_local_login_available:
+          type: boolean
+          readOnly: true
+      required:
+      - authorization_code_flow
+      - break_glass_local_login_available
+      - enabled
+      - live_connection
+      - password_passthrough
+      - protocol
+      - provider
+      - warning
     FieldObservation:
       type: object
       properties:
@@ -5244,7 +5767,7 @@ components:
           readOnly: true
         decision:
           allOf:
-          - $ref: '#/components/schemas/DecisionEnum'
+          - $ref: '#/components/schemas/FieldObservationReviewDecisionEnum'
           readOnly: true
         reason:
           type: string
@@ -5267,6 +5790,14 @@ components:
       - observation
       - reason
       - reviewed_by
+    FieldObservationReviewDecisionEnum:
+      enum:
+      - approved
+      - excluded
+      type: string
+      description: |-
+        * `approved` - Approved
+        * `excluded` - Excluded
     FrequencyBandEnum:
       enum:
       - unknown
@@ -5529,7 +6060,7 @@ components:
           minimum: 0
           nullable: true
         mode:
-          $ref: '#/components/schemas/ModeEnum'
+          $ref: '#/components/schemas/ResourceChannelModeEnum'
         rx_squelch:
           type: string
           maxLength: 40
@@ -5829,20 +6360,6 @@ components:
       - ring_type
       - site
       - updated_at
-    ModeEnum:
-      enum:
-      - analog_fm
-      - p25
-      - dmr
-      - nxdn
-      - other
-      type: string
-      description: |-
-        * `analog_fm` - Analog FM
-        * `p25` - P25
-        * `dmr` - DMR
-        * `nxdn` - NXDN
-        * `other` - Other
     MountingTypeEnum:
       enum:
       - unknown
@@ -5861,6 +6378,20 @@ components:
         * `tower` - Tower
         * `mast` - Mast
         * `other` - Other
+    OperationEnum:
+      enum:
+      - revision.update
+      - assignment.create
+      - assignment.update
+      - assignment.delete
+      - assignment.reorder
+      type: string
+      description: |-
+        * `revision.update` - Update revision
+        * `assignment.create` - Create assignment
+        * `assignment.update` - Update assignment
+        * `assignment.delete` - Delete assignment
+        * `assignment.reorder` - Reorder assignments
     OperationalPeriod:
       type: object
       properties:
@@ -6339,6 +6870,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ResourceRelease'
+    PaginatedSensitiveFieldRuleList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/SensitiveFieldRule'
     PaginatedSiteAssignmentList:
       type: object
       required:
@@ -6514,6 +7068,9 @@ components:
         contact_24_hour:
           type: string
           maxLength: 240
+        collaboration_version:
+          type: integer
+          readOnly: true
         created_at:
           type: string
           format: date-time
@@ -6737,6 +7294,9 @@ components:
           format: date-time
           readOnly: true
           nullable: true
+        collaboration_version:
+          type: integer
+          readOnly: true
         created_at:
           type: string
           format: date-time
@@ -6843,6 +7403,46 @@ components:
             type: string
             format: uuid
         created_at:
+          type: string
+          format: date-time
+          readOnly: true
+    PatchedSensitiveFieldRule:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        incident:
+          type: string
+          format: uuid
+        resource_type:
+          type: string
+          default: plan_assignment
+          maxLength: 40
+        field_name:
+          type: string
+          maxLength: 80
+        unauthorized_visibility:
+          $ref: '#/components/schemas/UnauthorizedVisibilityEnum'
+        view_roles: {}
+        edit_roles: {}
+        log_reads:
+          type: boolean
+        version:
+          type: integer
+          readOnly: true
+        created_by:
+          type: integer
+          readOnly: true
+        updated_by:
+          type: integer
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
           type: string
           format: date-time
           readOnly: true
@@ -7296,6 +7896,9 @@ components:
           format: date-time
           readOnly: true
           nullable: true
+        collaboration_version:
+          type: integer
+          readOnly: true
         created_at:
           type: string
           format: date-time
@@ -7318,6 +7921,7 @@ components:
       - approved_at
       - approved_by
       - assignments
+      - collaboration_version
       - copied_from
       - created_at
       - created_by
@@ -7350,6 +7954,70 @@ components:
         * `horizontal` - Horizontal
         * `circular` - Circular
         * `mixed` - Mixed
+    PresenceHeartbeat:
+      type: object
+      properties:
+        revision:
+          type: string
+          format: uuid
+        device_id:
+          type: string
+          format: uuid
+        section:
+          allOf:
+          - $ref: '#/components/schemas/SectionEnum'
+          default: ics205
+        mode:
+          $ref: '#/components/schemas/CollaborationPresenceModeEnum'
+      required:
+      - device_id
+      - mode
+      - revision
+    PresenceLease:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        revision:
+          type: string
+          format: uuid
+        device_id:
+          type: string
+          format: uuid
+        section:
+          type: string
+          maxLength: 80
+        mode:
+          $ref: '#/components/schemas/CollaborationPresenceModeEnum'
+        sequence:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 0
+          format: int64
+        expires_at:
+          type: string
+          format: date-time
+        last_seen_at:
+          type: string
+          format: date-time
+          readOnly: true
+        display_name:
+          type: string
+          readOnly: true
+        is_current_user:
+          type: boolean
+          readOnly: true
+      required:
+      - device_id
+      - display_name
+      - expires_at
+      - id
+      - is_current_user
+      - last_seen_at
+      - mode
+      - revision
     ProfileTypeEnum:
       enum:
       - portable
@@ -7602,6 +8270,20 @@ components:
         * `remote_base` - Remote Base
         * `link` - Link
         * `patch` - Patch
+    ResourceChannelModeEnum:
+      enum:
+      - analog_fm
+      - p25
+      - dmr
+      - nxdn
+      - other
+      type: string
+      description: |-
+        * `analog_fm` - Analog FM
+        * `p25` - P25
+        * `dmr` - DMR
+        * `nxdn` - NXDN
+        * `other` - Other
     ResourceRelease:
       type: object
       properties:
@@ -7683,7 +8365,7 @@ components:
       type: object
       properties:
         decision:
-          $ref: '#/components/schemas/DecisionEnum'
+          $ref: '#/components/schemas/FieldObservationReviewDecisionEnum'
         reason:
           type: string
           maxLength: 1000
@@ -7716,6 +8398,67 @@ components:
         * `comt` - COMT
         * `contributor` - Contributor
         * `read_only` - Read-only
+    SectionEnum:
+      enum:
+      - ics205
+      - ics205.metadata
+      - ics205.assignments
+      - ics205.relationships
+      type: string
+      description: |-
+        * `ics205` - ics205
+        * `ics205.metadata` - ics205.metadata
+        * `ics205.assignments` - ics205.assignments
+        * `ics205.relationships` - ics205.relationships
+    SensitiveFieldRule:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        incident:
+          type: string
+          format: uuid
+        resource_type:
+          type: string
+          default: plan_assignment
+          maxLength: 40
+        field_name:
+          type: string
+          maxLength: 80
+        unauthorized_visibility:
+          $ref: '#/components/schemas/UnauthorizedVisibilityEnum'
+        view_roles: {}
+        edit_roles: {}
+        log_reads:
+          type: boolean
+        version:
+          type: integer
+          readOnly: true
+        created_by:
+          type: integer
+          readOnly: true
+        updated_by:
+          type: integer
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - created_by
+      - field_name
+      - id
+      - incident
+      - updated_at
+      - updated_by
+      - version
     SiteAssignment:
       type: object
       properties:
@@ -8502,6 +9245,14 @@ components:
       - release
       - system_name
       - talkgroup_id
+    UnauthorizedVisibilityEnum:
+      enum:
+      - omitted
+      - redacted
+      type: string
+      description: |-
+        * `omitted` - Omitted
+        * `redacted` - Redacted
   securitySchemes:
     tokenAuth:
       type: apiKey
