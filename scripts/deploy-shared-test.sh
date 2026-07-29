@@ -96,7 +96,17 @@ git merge --ff-only "$expected_sha"
 
 "${compose[@]}" config --quiet
 "${compose[@]}" build
-"${compose[@]}" up --detach --wait
+if "${compose[@]}" up --detach --wait; then
+  :
+else
+  compose_status=$?
+  printf 'Deployment startup failed with exit code %s. Container status follows.\n' \
+    "$compose_status" >&2
+  "${compose[@]}" ps --all >&2 || true
+  printf 'Recent backend logs follow. Protected environment values are not displayed.\n' >&2
+  "${compose[@]}" logs --no-color --timestamps --tail 200 backend >&2 || true
+  exit "$compose_status"
+fi
 
 printf 'Deployed commit %s with backup %s and checksum %s\n' \
   "$expected_sha" "$backup_file" "$backup_file.sha256"
