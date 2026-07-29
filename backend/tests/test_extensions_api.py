@@ -110,6 +110,10 @@ def install_and_enable(client, administrator):
     return enabled.json()
 
 
+def key_error_with_sensitive_detail(*_args, **_kwargs):
+    raise KeyError("internal registry path and stack detail")
+
+
 @pytest.mark.django_db
 def test_catalog_is_disabled_by_default_and_only_administrators_manage_installation(client):
     administrator = user_with_role("extension-admin", Role.ADMINISTRATOR)
@@ -152,6 +156,70 @@ def test_catalog_is_disabled_by_default_and_only_administrators_manage_installat
     )
     assert disabled.status_code == 200
     assert disabled.json()["enabled"] is False
+
+
+@pytest.mark.django_db
+def test_registry_and_capability_errors_do_not_expose_internal_exception_details(
+    client, monkeypatch
+):
+    administrator = user_with_role("extension-error-admin", Role.ADMINISTRATOR)
+    owner = user_with_role("extension-error-owner", Role.COML)
+    incident, revision = create_context(owner, "ERROR-REDACTION")
+    install_and_enable(client, administrator)
+
+    monkeypatch.setattr(
+        "apps.extensions.services.get_manifest",
+        key_error_with_sensitive_detail,
+    )
+    install_error = client.post(
+        "/api/extensions/install/",
+        {
+            "extension_key": "internal-extension",
+            "contract_version": "1.0",
+        },
+        content_type="application/json",
+        **auth_header(administrator),
+    )
+    execution_error = client.post(
+        "/api/extension-executions/",
+        {
+            "extension_key": SYNTHETIC_EXTENSION_KEY,
+            "contract_version": "1.0",
+            "capability": "readiness-check",
+            "incident": str(incident.id),
+            "source_revision": str(revision.id),
+            "inputs": {"minimum_assignment_count": 1},
+        },
+        content_type="application/json",
+        **auth_header(owner),
+    )
+    assert install_error.status_code == execution_error.status_code == 400
+    assert "internal registry path" not in json.dumps(install_error.json())
+    assert "internal registry path" not in json.dumps(execution_error.json())
+    assert "not in the server registry" in json.dumps(install_error.json())
+    assert "not in the server registry" in json.dumps(execution_error.json())
+
+    monkeypatch.undo()
+    monkeypatch.setattr(
+        "apps.extensions.services.get_capability",
+        key_error_with_sensitive_detail,
+    )
+    capability_error = client.post(
+        "/api/extension-executions/",
+        {
+            "extension_key": SYNTHETIC_EXTENSION_KEY,
+            "contract_version": "1.0",
+            "capability": "internal-capability",
+            "incident": str(incident.id),
+            "source_revision": str(revision.id),
+            "inputs": {"minimum_assignment_count": 1},
+        },
+        content_type="application/json",
+        **auth_header(owner),
+    )
+    assert capability_error.status_code == 400
+    assert "internal registry path" not in json.dumps(capability_error.json())
+    assert "not declared by this extension" in json.dumps(capability_error.json())
 
 
 @pytest.mark.django_db

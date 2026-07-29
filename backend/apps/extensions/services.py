@@ -81,7 +81,9 @@ def install_extension(*, extension_key: str, contract_version: str, actor):
     try:
         manifest = get_manifest(extension_key)
     except KeyError as exc:
-        raise ValidationError({"extension_key": str(exc)}) from exc
+        raise ValidationError(
+            {"extension_key": "The requested extension is not in the server registry."}
+        ) from exc
     if contract_version not in SUPPORTED_CONTRACT_VERSIONS:
         raise ValidationError(
             {
@@ -192,7 +194,9 @@ def _validated_installation(extension_key: str, contract_version: str):
     try:
         manifest = get_manifest(extension_key)
     except KeyError as exc:
-        raise ValidationError({"extension_key": str(exc)}) from exc
+        raise ValidationError(
+            {"extension_key": "The requested extension is not in the server registry."}
+        ) from exc
     if contract_version not in SUPPORTED_CONTRACT_VERSIONS:
         raise ValidationError(
             {
@@ -315,7 +319,9 @@ def execute_extension(
     try:
         capability_definition, handler = get_capability(extension_key, capability)
     except KeyError as exc:
-        raise ValidationError({"capability": str(exc)}) from exc
+        raise ValidationError(
+            {"capability": "The requested capability is not declared by this extension."}
+        ) from exc
     try:
         revision = PlanRevision.objects.select_related("plan__incident").get(pk=source_revision.pk)
     except PlanRevision.DoesNotExist as exc:
