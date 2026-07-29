@@ -35,6 +35,14 @@ The allowlist authorizes only the exact profile version for controlled
 release-candidate evidence. It does not approve the underlying models for
 operational use or permit non-synthetic data.
 
+The Phase 2 milestone gate was accepted by Eric M. Gildersleeve on July 28,
+2026, for synthetic non-production evaluation with the documented
+best-estimate limitations. That acceptance does not change the fail-closed
+default, make profile enablement automatic, or authorize official coverage
+mapping, RF-penetration claims, or non-synthetic data. Any environment that
+enables the provisional profile must record that separate deployment-specific
+configuration decision.
+
 ## Prepare an evidence bundle
 
 1. Select one incident.
@@ -115,10 +123,13 @@ Normal CI and Security workflows remain required for:
   tests/build, browser and WCAG automation, and container builds;
 - dependency audit, Gitleaks, CodeQL, Trivy, and CycloneDX SBOM evidence.
 
-Human keyboard, zoom/reflow, contrast, screen-reader, RF/GIS, security/privacy,
-operations, accessibility, and exact-commit maintainer review are publication
-blockers. Passing automation alone does not make `v0.2.0-rc.1` publishable or
-deployable.
+RF/GIS limitation, security/privacy, operations, automated accessibility, and
+exact-commit maintainer acceptance for the Phase 2 milestone are recorded in
+the [candidate evidence](../releases/v0.2.0-rc.1-evidence.md). Manual keyboard,
+zoom/reflow, contrast, and screen-reader evaluation remains tracked in Issue
+#69, and no formal accessibility-conformance claim is made. Publishing the
+candidate does not make it deployable for production or authorize
+non-synthetic data.
 
 ## Recovery and rollback
 
