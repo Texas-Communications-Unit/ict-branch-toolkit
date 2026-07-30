@@ -10,9 +10,15 @@ expected_sha="$1"
 app_dir="$HOME/apps/ict-branch-toolkit"
 env_file="$HOME/.config/ict-branch-toolkit/deployment.env"
 backup_dir="$HOME/backups/ict-branch-toolkit"
+script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+environment_validator="$script_dir/validate-compose-environment.py"
 
 if [[ ! -f "$env_file" ]]; then
   echo "Refusing deployment because the protected environment file is missing." >&2
+  exit 1
+fi
+if [[ ! -f "$environment_validator" ]]; then
+  echo "Refusing deployment because the environment validator is missing." >&2
   exit 1
 fi
 
@@ -59,22 +65,22 @@ if [[ "$remote_sha" != "$expected_sha" ]]; then
 fi
 
 "${compose[@]}" config --quiet
+"${compose[@]}" config --format json | python3 "$environment_validator"
 
 install -d -m 700 "$backup_dir"
 backup_file="$backup_dir/postgresql-$(date -u +%Y%m%dT%H%M%SZ)-pre-${expected_sha:0:12}.dump"
 
-set -a
-# shellcheck disable=SC1090
-source "$env_file"
-set +a
-
-"${compose[@]}" exec -T \
-  -e PGPASSWORD="$POSTGRES_PASSWORD" \
-  db \
-  pg_dump \
-  --username "$POSTGRES_USER" \
-  --dbname "$POSTGRES_DB" \
-  --format custom > "$backup_file"
+# Read the database credentials from the already-running database container.
+# Importing the protected environment into Bash would alter quoted JSON values
+# and can override the exact values that Compose validated above.
+# shellcheck disable=SC2016
+"${compose[@]}" exec -T db sh -c '
+  export PGPASSWORD="$POSTGRES_PASSWORD"
+  exec pg_dump \
+    --username "$POSTGRES_USER" \
+    --dbname "$POSTGRES_DB" \
+    --format custom
+' > "$backup_file"
 
 chmod 600 "$backup_file"
 test -s "$backup_file"
@@ -96,6 +102,7 @@ git switch main
 git merge --ff-only "$expected_sha"
 
 "${compose[@]}" config --quiet
+"${compose[@]}" config --format json | python3 "$environment_validator"
 "${compose[@]}" build
 if "${compose[@]}" up --detach --wait; then
   :

@@ -68,6 +68,20 @@ jobs:
       - name: Validate capacity report safeguards
         working-directory: .
         run: python3 scripts/test-validate-capacity-report.py
+      - name: Validate effective production JSON settings
+        working-directory: .
+        env:
+          POSTGRES_PASSWORD: synthetic-ci-password
+          DJANGO_SECRET_KEY: synthetic-ci-secret-key
+          DJANGO_ALLOWED_HOSTS: localhost,backend
+          DJANGO_CORS_ALLOWED_ORIGINS: https://localhost
+          DJANGO_SUPERUSER_USERNAME: synthetic-admin
+          DJANGO_SUPERUSER_EMAIL: synthetic-admin@example.invalid
+          DJANGO_SUPERUSER_PASSWORD: synthetic-ci-admin-password
+        run: |
+          python3 scripts/test-validate-compose-environment.py
+          docker compose -f compose.production.yaml config --format json |
+            python3 scripts/validate-compose-environment.py
       - name: Test PostgreSQL backup and isolated restore
         run: >-
           docker run --rm --network host
