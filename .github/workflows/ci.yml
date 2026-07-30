@@ -63,7 +63,11 @@ jobs:
       - name: Validate recovery scripts
         run: >-
           shellcheck ../scripts/database-recovery.sh ../scripts/deploy-shared-test.sh
+          ../scripts/run-shared-test-capacity.sh
           ../scripts/test-postgresql-recovery.sh
+      - name: Validate capacity report safeguards
+        working-directory: .
+        run: python3 scripts/test-validate-capacity-report.py
       - name: Validate effective production JSON settings
         working-directory: .
         env:

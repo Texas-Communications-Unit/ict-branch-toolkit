@@ -204,6 +204,10 @@ class Command(BaseCommand):
                             latencies[min(len(latencies) - 1, int(len(latencies) * 0.95))],
                             2,
                         ),
+                        "p99": round(
+                            latencies[min(len(latencies) - 1, int(len(latencies) * 0.99))],
+                            2,
+                        ),
                         "maximum": round(max(latencies), 2),
                     },
                     "health": health,

@@ -182,15 +182,29 @@ docker compose -f compose.production.yaml exec backend \
   --host-header backend
 ```
 
+The preferred operator path is the manual **Characterize shared-test
+collaboration capacity** GitHub Actions workflow. It requires the protected
+`shared-test` environment, the exact confirmation text
+`RUN-SYNTHETIC-CAPACITY`, a clean server checkout at current `main`, healthy
+database/backend/frontend containers, no pending migrations, and disabled live
+external SSO. It shares the deployment concurrency lock so a deployment and a
+capacity run cannot overlap. The JSON Lines report and SHA-256 checksum are
+retained on the server; the workflow also retains a 90-day artifact when the
+restricted SSH account permits report retrieval.
+
 The default ramp is 5, 10, 25, 50, and 100 total users, with no more than 25
 users assigned to one synthetic incident. Each level exercises presence,
 incident reads, independent saves, same-field conflicts, membership revocation,
 token reconnect, health recovery, restricted-field isolation, and audit-chain
 verification. Output is JSON Lines with per-scenario latency and status,
-unexpected errors, CPU utilization, host memory/load/swap, database size and
-growth, and PostgreSQL connection/lock measurements. Each invocation creates a
-new set of hidden, individually named synthetic users so retained evidence from
-an earlier run cannot affect a later isolation check.
+unexpected errors, p50/p95/p99/maximum latency, CPU utilization, host
+memory/load/swap, database size and growth, and PostgreSQL connection/lock
+measurements. Each invocation creates a new set of hidden, individually named
+synthetic users so retained evidence from an earlier run cannot affect a later
+isolation check. The workflow rejects a report that lacks the synthetic-only
+and no-production-claim markers, complete latency evidence, hidden-fixture and
+token-revocation confirmation, or successful audit, isolation, save, conflict,
+and restricted-field leakage checks.
 
 The command stops before the next level when the unexpected error rate exceeds
 2%, sampled CPU utilization exceeds 90%, available memory falls below 10%, free
