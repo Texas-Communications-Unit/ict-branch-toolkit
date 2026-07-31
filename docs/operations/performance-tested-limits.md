@@ -213,6 +213,12 @@ minimum threshold of 2), or a PostgreSQL lock wait remains at the measurement
 point. Operators may set more conservative CPU, memory, or error guards. Do not
 weaken a guard merely to reach 100 users.
 
+The unexpected-error calculation excludes an HTTP 409 only after the
+same-field scenario verifies one saved mutation and conflicts for every other
+contender. It likewise excludes an expected 403 or 404 from the revocation
+scenario. Other non-success responses, transport failures, or failed scenario
+outcomes continue to count toward the unchanged error guard.
+
 The highest completed level is a characterization of that exact surplus SFF
 host, deployed release, proxy path, and database state. It is not a hard pass
 threshold, production capacity claim, service-level objective, or permission
