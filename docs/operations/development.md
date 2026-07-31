@@ -4,6 +4,14 @@
 
 Copy `.env.example` to `.env`, change the local administrator password, and run `docker compose up --build --wait`. Verify `docker compose ps` and `curl http://localhost:8000/api/health/`. The health response must report PostgreSQL and a PostGIS version for the integration environment.
 
+The development Compose file explicitly builds the backend `development`
+target, which includes the pinned test, audit, lint, and formatting tools used by
+the Makefile. The production Compose file builds the separate `production`
+target with runtime dependencies only. Do not add development tools to the
+production target to make a local command available. The production image also
+excludes Python package installers and build backends; its dependencies are
+assembled in an intermediate image and copied into the final runtime image.
+
 ## Backup and restore boundary
 
 P1.0 contains synthetic data only. The controlled test-deployment procedure

@@ -7,6 +7,7 @@ on:
     paths:
       - ".github/workflows/phase-2-release-candidate-evaluation.yml"
       - "backend/apps/rf_analysis/**"
+      - "backend/Dockerfile"
       - "backend/tests/test_phase2_validation_api.py"
       - "frontend/src/Phase2ValidationWorkspace.tsx"
       - "frontend/tests/Phase2ValidationWorkspace.test.tsx"
@@ -135,10 +136,30 @@ jobs:
       - name: Exercise the synthetic end-to-end validation pipeline
         shell: bash
         run: |
-          docker compose \
-            --env-file "$DEPLOY_ENV" \
-            -f compose.production.yaml \
-            exec -T backend \
+          test_image="ict-phase2-validation-runner:${GITHUB_SHA}"
+          docker build --target development --tag "$test_image" backend
+
+          backend_id="$(
+            docker compose \
+              --env-file "$DEPLOY_ENV" \
+              -f compose.production.yaml \
+              ps --quiet backend
+          )"
+          backend_network="$(
+            docker inspect "$backend_id" \
+              --format '{{range $name, $_ := .NetworkSettings.Networks}}{{println $name}}{{end}}' \
+              | head -n 1
+          )"
+          backend_env="$RUNNER_TEMP/ict-phase2-backend.env"
+          docker inspect "$backend_id" \
+            --format '{{range .Config.Env}}{{println .}}{{end}}' \
+            > "$backend_env"
+          chmod 600 "$backend_env"
+
+          docker run --rm \
+            --env-file "$backend_env" \
+            --network "$backend_network" \
+            "$test_image" \
             pytest --no-cov -q tests/test_phase2_validation_api.py \
             | tee evaluation-evidence/phase2-integration.txt
 

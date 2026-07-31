@@ -123,6 +123,12 @@ docker compose \
   up --detach --wait
 ```
 
+`compose.production.yaml` explicitly selects the runtime-only backend
+`production` target. Development, test, audit, lint, and formatting packages are
+not part of the deployed image. Package installers and build backends are also
+excluded after the runtime dependency set is assembled. Run development and
+validation checks in CI or with the local development Compose target.
+
 The backend startup runs database migrations, ensures that the configured
 administrator exists, conditionally imports the exact approved bundled NIFOG
 release, collects static files, and then starts Gunicorn. Therefore, starting a

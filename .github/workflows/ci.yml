@@ -163,5 +163,23 @@ jobs:
         run: bash scripts/check-github-actions-node24.sh
       - run: docker compose config --quiet
       - run: docker compose build
+      - name: Verify development backend tools remain available
+        run: >-
+          docker compose run --rm --no-deps -T backend
+          python -c "from importlib.metadata import version; assert version('pytest')"
       - run: docker compose -f compose.production.yaml config --quiet
       - run: docker compose -f compose.production.yaml build
+      - name: Verify production backend dependency boundary
+        run: |
+          docker compose -f compose.production.yaml run --rm --no-deps -T backend python - <<'PY'
+          from importlib.metadata import PackageNotFoundError, version
+
+          for package in ("pip", "setuptools", "msgpack", "pip-audit", "pytest", "ruff"):
+              try:
+                  installed = version(package)
+              except PackageNotFoundError:
+                  continue
+              raise SystemExit(f"Production image unexpectedly contains {package} {installed}.")
+          assert version("Django") == "5.2.16"
+          assert version("gunicorn") == "23.0.0"
+          PY

@@ -18,6 +18,7 @@ services:
   backend:
     build:
       context: ./backend
+      target: development
     environment:
       DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:-unsafe-compose-development-key}
       DJANGO_DEBUG: ${DJANGO_DEBUG:-true}
