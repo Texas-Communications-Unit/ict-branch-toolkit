@@ -200,11 +200,7 @@ class Command(BaseCommand):
                     health["database"]["growth_bytes_since_start"] = (
                         database_size - database_baseline_size
                     )
-                failures = [
-                    item
-                    for item in measurements
-                    if _measurement_is_unexpected(item)
-                ]
+                failures = [item for item in measurements if _measurement_is_unexpected(item)]
                 error_rate = len(failures) / max(1, len(measurements))
                 latencies = sorted(item.elapsed_ms for item in measurements)
                 summary = {

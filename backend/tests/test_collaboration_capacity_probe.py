@@ -41,10 +41,7 @@ def test_measurement_is_unexpected(
 def test_expected_same_field_conflicts_do_not_inflate_error_rate():
     measurements = [
         RequestMeasurement("same_field_conflict", 200, 1.0, True),
-        *[
-            RequestMeasurement("same_field_conflict", 409, 1.0, True)
-            for _ in range(4)
-        ],
+        *[RequestMeasurement("same_field_conflict", 409, 1.0, True) for _ in range(4)],
     ]
 
     failures = [item for item in measurements if _measurement_is_unexpected(item)]
