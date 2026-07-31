@@ -37,6 +37,23 @@ class RequestMeasurement:
     expected: bool
 
 
+EXPECTED_NON_SUCCESS_STATUSES = {
+    "revocation": {403, 404},
+    "same_field_conflict": {409},
+}
+
+
+def _measurement_is_unexpected(measurement: RequestMeasurement) -> bool:
+    if not measurement.expected:
+        return True
+    if 200 <= measurement.status < 300:
+        return False
+    return measurement.status not in EXPECTED_NON_SUCCESS_STATUSES.get(
+        measurement.scenario,
+        set(),
+    )
+
+
 def _host_health() -> dict:
     result: dict[str, float | int | None] = {
         "load_1m": None,
@@ -186,8 +203,7 @@ class Command(BaseCommand):
                 failures = [
                     item
                     for item in measurements
-                    if not item.expected
-                    or (item.scenario != "revocation" and not 200 <= item.status < 300)
+                    if _measurement_is_unexpected(item)
                 ]
                 error_rate = len(failures) / max(1, len(measurements))
                 latencies = sorted(item.elapsed_ms for item in measurements)
