@@ -174,11 +174,12 @@ jobs:
           docker compose -f compose.production.yaml run --rm --no-deps -T backend python - <<'PY'
           from importlib.metadata import PackageNotFoundError, version
 
-          assert version("setuptools") == "83.0.0"
-          for package in ("msgpack", "pip-audit", "pytest", "ruff"):
+          for package in ("pip", "setuptools", "msgpack", "pip-audit", "pytest", "ruff"):
               try:
                   installed = version(package)
               except PackageNotFoundError:
                   continue
               raise SystemExit(f"Production image unexpectedly contains {package} {installed}.")
+          assert version("Django") == "5.2.16"
+          assert version("gunicorn") == "23.0.0"
           PY
