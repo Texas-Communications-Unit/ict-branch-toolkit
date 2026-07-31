@@ -21,6 +21,7 @@ services:
   backend:
     build:
       context: ./backend
+      target: production
     restart: unless-stopped
     environment:
       DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?Set DJANGO_SECRET_KEY in the deployment environment file}
