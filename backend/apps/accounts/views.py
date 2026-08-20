@@ -357,7 +357,9 @@ class LocalContingencyAccountViewSet(viewsets.GenericViewSet):
         try:
             send_password_reset_email(account.user)
         except EmailDeliveryUnavailable as exc:
-            raise ValidationError({"email": str(exc)}) from exc
+            raise ValidationError(
+                {"email": "Email delivery is not available. Check the mail configuration."}
+            ) from exc
         except Exception as exc:
             raise ValidationError(
                 {"email": "The reset email could not be delivered. Check the mail service."}

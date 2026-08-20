@@ -232,6 +232,17 @@ def test_password_reset_email_is_generic_single_use_and_revokes_sessions(client,
         action="local_contingency_account.password_reset_sent"
     ).exists()
 
+    settings.ICT_EMAIL_ENABLED = False
+    unavailable = client.post(
+        "/api/local-contingency-accounts/reset-user/send-password-reset/",
+        **auth_header(admin_token),
+    )
+    assert unavailable.status_code == 400
+    assert unavailable.json() == {
+        "email": "Email delivery is not available. Check the mail configuration."
+    }
+    assert "ICT_EMAIL_ENABLED" not in unavailable.content.decode()
+
     email_updated = client.post(
         "/api/local-contingency-accounts/reset-user/set-email/",
         {"email": "updated-reset-user@example.invalid"},
