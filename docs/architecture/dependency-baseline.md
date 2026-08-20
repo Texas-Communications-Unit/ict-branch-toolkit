@@ -7,7 +7,7 @@ Selected on 2026-07-22 from the official PyPI and npm package registries, then i
 | Component | Selected version | Rationale |
 | --- | --- | --- |
 | Python | 3.12 | Supported, conservative runtime for Django 5.2 LTS |
-| Django | 5.2.16 | Current 5.2 long-term-support line rather than the newer non-LTS major |
+| Django | 5.2.17 | Current 5.2 long-term-support line rather than the newer non-LTS major |
 | Django REST Framework | 3.17.1 | Current stable API framework compatible with Django 5.2 |
 | PostgreSQL/PostGIS image | 17 / 3.5 | Stable spatial database baseline with an official PostGIS project image |
 | React / React DOM | 19.2.8 | Current stable UI runtime |
