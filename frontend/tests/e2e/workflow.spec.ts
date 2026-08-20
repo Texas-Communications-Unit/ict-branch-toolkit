@@ -903,6 +903,7 @@ test("administrator signs in and sees the incident planning workspace", async ({
   await page.getByLabel("Username", { exact: true }).fill("admin");
   await page.getByLabel("Password", { exact: true }).fill("synthetic-password");
   await page.getByRole("button", { name: "Sign in" }).click();
+  await expect(page.getByRole("tab", { name: "ICS 205" })).toBeVisible();
   await page.keyboard.press("Tab");
   const skipLink = page.getByRole("link", {
     name: "Skip to planning workspace",
@@ -914,7 +915,13 @@ test("administrator signs in and sees the incident planning workspace", async ({
     "aria-selected",
     "true",
   );
+  await expect(page.locator("#workspace-panel-ics-205")).toBeVisible();
+  await expect(page.locator("#workspace-panel-incidents")).toBeHidden();
+  await expect(page.locator("#workspace-panel-map")).toBeHidden();
+  await expect(page.locator("#workspace-panel-rf-analysis")).toBeHidden();
   await page.getByRole("tab", { name: "Incidents" }).click();
+  await expect(page.locator("#workspace-panel-incidents")).toBeVisible();
+  await expect(page.locator("#workspace-panel-ics-205")).toBeHidden();
   await expect(
     page.getByRole("button", { name: /^Synthetic Flood Exercise/ }),
   ).toBeVisible();
@@ -936,11 +943,11 @@ test("administrator signs in and sees the incident planning workspace", async ({
   await expect(
     page.getByText("SYN CALL", { exact: true }).first(),
   ).toBeVisible();
+  await page.getByRole("tab", { name: "Map" }).click();
+  await expect(planningMap).toBeVisible();
   await expect(
     page.getByText("Synthetic Command Site", { exact: true }).first(),
   ).toBeVisible();
-  await page.getByRole("tab", { name: "Map" }).click();
-  await expect(planningMap).toBeVisible();
   await expect(planningMap).toHaveAccessibleDescription(
     /Keyboard and screen-reader users can use the coordinate form/,
   );
@@ -1152,11 +1159,13 @@ test("administrator signs in and sees the incident planning workspace", async ({
   await expect(
     page.getByText("14SQB7401876781", { exact: true }).first(),
   ).toBeVisible();
+  await page.getByRole("tab", { name: "ICS 205" }).click();
   page.once("dialog", (dialog) => dialog.accept());
   await page.getByRole("button", { name: "Approve and lock revision" }).click();
   await expect(
     page.getByRole("button", { name: "Download official PDF" }),
   ).toBeVisible();
+  await page.getByRole("tab", { name: "Map" }).click();
   await expect(page.getByRole("button", { name: "SVG map" })).toBeVisible();
   await page.getByRole("tab", { name: "Resources" }).click();
   await expect(

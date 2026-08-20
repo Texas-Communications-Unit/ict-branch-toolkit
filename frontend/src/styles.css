@@ -258,6 +258,10 @@ p {
   padding: 1.25rem 2rem;
 }
 
+.workspace[hidden] {
+  display: none;
+}
+
 .workspace-navigation {
   padding: 1.25rem 2rem 0;
 }
