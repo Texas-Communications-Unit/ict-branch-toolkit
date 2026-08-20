@@ -35,6 +35,7 @@ export type ToolkitRole = CurrentUser["role"];
 export interface LocalContingencyAccount {
   username: string;
   display_name: string;
+  email: string;
   role: ToolkitRole;
   is_active: boolean;
   linked_to_external_identity: boolean;

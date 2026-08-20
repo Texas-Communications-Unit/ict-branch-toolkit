@@ -8,6 +8,11 @@ test("provides keyboard-operable workspace tabs", async () => {
     <WorkspaceTabs
       initialTab="ics-205"
       tabs={[
+        {
+          id: "incidents",
+          label: "Incidents",
+          content: <p>Incident content</p>,
+        },
         { id: "ics-205", label: "ICS 205", content: <p>Plan content</p> },
         { id: "map", label: "Map", content: <p>Map content</p> },
         {
@@ -36,5 +41,5 @@ test("provides keyboard-operable workspace tabs", async () => {
   await userEvent.keyboard("{End}");
   expect(screen.getByRole("tab", { name: "Resources" })).toHaveFocus();
   await userEvent.keyboard("{Home}");
-  expect(icsTab).toHaveFocus();
+  expect(screen.getByRole("tab", { name: "Incidents" })).toHaveFocus();
 });

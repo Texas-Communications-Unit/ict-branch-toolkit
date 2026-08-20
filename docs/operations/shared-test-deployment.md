@@ -33,6 +33,17 @@ DJANGO_SUPERUSER_USERNAME=<non-default administrator name>
 DJANGO_SUPERUSER_EMAIL=<administrator email>
 DJANGO_SUPERUSER_PASSWORD=<random initial administrator password>
 ICT_TOKEN_TTL_SECONDS=43200
+ICT_PUBLIC_BASE_URL=https://toolkit.tx-comu.org
+ICT_EMAIL_ENABLED=true
+DJANGO_EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend
+DJANGO_EMAIL_HOST=smtp.dreamhost.com
+DJANGO_EMAIL_PORT=587
+DJANGO_EMAIL_USE_TLS=true
+DJANGO_EMAIL_USE_SSL=false
+DJANGO_EMAIL_HOST_USER=toolkit@tx-comu.org
+DJANGO_EMAIL_HOST_PASSWORD=<SMTP password>
+DJANGO_DEFAULT_FROM_EMAIL=ICT Branch Toolkit <toolkit@tx-comu.org>
+DJANGO_PASSWORD_RESET_TIMEOUT_SECONDS=3600
 APP_BIND_ADDRESS=<application-host address reachable by the reverse proxy>
 APP_PORT=8088
 VITE_MAP_STYLE_URL=
@@ -52,6 +63,15 @@ VITE_MAP_CONTACT_URL=
 `ICT_TOKEN_TTL_SECONDS` sets the maximum local login lifetime. The 12-hour default is the
 non-production baseline. A shorter value is allowed after operator review; zero and negative values
 prevent application startup. Changing the value can immediately expire existing sessions.
+
+`ICT_PUBLIC_BASE_URL` is the verified public HTTPS origin used to construct account setup and
+password-reset links. For this deployment it is `https://toolkit.tx-comu.org` (without a path).
+Email recovery remains unavailable until valid SMTP settings are installed and tested; never commit
+SMTP credentials to the repository.
+
+The approved shared-test sender is `toolkit@tx-comu.org`, authenticated through DreamHost at
+`smtp.dreamhost.com:587` using STARTTLS. The application does not use the mailbox's IMAP or POP3
+settings. Store the mailbox password only in the root-owned deployment environment file.
 
 `DJANGO_HSTS_SECONDS=3600` is a deliberately short initial test value. The
 current application also emits the HSTS `includeSubDomains` and `preload`

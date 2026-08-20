@@ -1,7 +1,9 @@
 from datetime import datetime, timedelta
+from urllib.parse import parse_qs, urlparse
 
 import pytest
 from django.contrib.auth import get_user_model
+from django.core import mail
 from django.utils import timezone
 from rest_framework.authtoken.models import Token
 
@@ -85,6 +87,7 @@ def test_administrator_can_create_activate_revoke_and_disable_local_contingency_
         {
             "username": "synthetic-local-user",
             "display_name": "Synthetic Local User",
+            "email": "synthetic-local@example.invalid",
             "role": Role.AUXCOMM,
             "reason": "Synthetic identity-provider outage exercise.",
             "incidents": [],
@@ -148,6 +151,107 @@ def test_administrator_can_create_activate_revoke_and_disable_local_contingency_
     account.user.refresh_from_db()
     assert account.user.is_active is False
     assert temporary_password not in str(AuditEvent.objects.values_list("details", flat=True))
+
+
+@pytest.mark.django_db
+def test_password_reset_email_is_generic_single_use_and_revokes_sessions(client, settings):
+    settings.ICT_EMAIL_ENABLED = True
+    settings.EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"
+    settings.ICT_PUBLIC_BASE_URL = "https://toolkit.example.invalid"
+    admin = user_with_role("reset-admin", Role.ADMINISTRATOR)
+    admin_token = Token.objects.create(user=admin)
+    created = client.post(
+        "/api/local-contingency-accounts/",
+        {
+            "username": "reset-user",
+            "display_name": "Reset User",
+            "email": "reset-user@example.invalid",
+            "role": Role.READ_ONLY,
+            "reason": "Synthetic reset workflow test.",
+            "incidents": [],
+        },
+        content_type="application/json",
+        **auth_header(admin_token),
+    )
+    assert created.status_code == 201, created.content
+
+    unknown = client.post(
+        "/api/auth/password-reset/request/",
+        {"email": "unknown@example.invalid"},
+        content_type="application/json",
+    )
+    assert unknown.status_code == 204
+    assert len(mail.outbox) == 0
+
+    requested = client.post(
+        "/api/auth/password-reset/request/",
+        {"email": "RESET-USER@example.invalid"},
+        content_type="application/json",
+    )
+    assert requested.status_code == 204
+    assert len(mail.outbox) == 1
+    assert "reset-user" in mail.outbox[0].body
+    reset_url = next(
+        line for line in mail.outbox[0].body.splitlines() if line.startswith("https://")
+    )
+    query = parse_qs(urlparse(reset_url).query)
+
+    reset_user = get_user_model().objects.get(username="reset-user")
+    Token.objects.create(user=reset_user)
+    confirmed = client.post(
+        "/api/auth/password-reset/confirm/",
+        {
+            "uid": query["reset_uid"][0],
+            "token": query["reset_token"][0],
+            "new_password": "replacement-safe-test-password-2026",
+        },
+        content_type="application/json",
+    )
+    assert confirmed.status_code == 204, confirmed.content
+    assert Token.objects.filter(user=reset_user).exists() is False
+    assert reset_user.local_contingency_account.must_change_password is False
+
+    reused = client.post(
+        "/api/auth/password-reset/confirm/",
+        {
+            "uid": query["reset_uid"][0],
+            "token": query["reset_token"][0],
+            "new_password": "another-safe-test-password-2026",
+        },
+        content_type="application/json",
+    )
+    assert reused.status_code == 400
+
+    admin_sent = client.post(
+        "/api/local-contingency-accounts/reset-user/send-password-reset/",
+        **auth_header(admin_token),
+    )
+    assert admin_sent.status_code == 204, admin_sent.content
+    assert len(mail.outbox) == 2
+    assert AuditEvent.objects.filter(
+        action="local_contingency_account.password_reset_sent"
+    ).exists()
+
+    settings.ICT_EMAIL_ENABLED = False
+    unavailable = client.post(
+        "/api/local-contingency-accounts/reset-user/send-password-reset/",
+        **auth_header(admin_token),
+    )
+    assert unavailable.status_code == 400
+    assert unavailable.json() == {
+        "email": "Email delivery is not available. Check the mail configuration."
+    }
+    assert "ICT_EMAIL_ENABLED" not in unavailable.content.decode()
+
+    email_updated = client.post(
+        "/api/local-contingency-accounts/reset-user/set-email/",
+        {"email": "updated-reset-user@example.invalid"},
+        content_type="application/json",
+        **auth_header(admin_token),
+    )
+    assert email_updated.status_code == 200, email_updated.content
+    assert email_updated.json()["email"] == "updated-reset-user@example.invalid"
+    assert AuditEvent.objects.filter(action="local_contingency_account.email_updated").exists()
 
 
 @pytest.mark.django_db
