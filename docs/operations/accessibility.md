@@ -71,6 +71,9 @@ when the affected process or generated artifact changed.
 - Focus has a high-visibility outline and focused elements receive scroll
   margin so author-created content does not place them against an edge.
 - Authenticated content begins with a skip link to the planning workspace.
+- The authenticated workspace uses named tabs for ICS 205, Map, RF Analysis,
+  Resources, and Administration. ICS 205 is selected by default; Left Arrow,
+  Right Arrow, Home, and End move focus and selection between tabs.
 - Immediate status and error messages use live-region semantics.
 - The map is a named region linked to instructions.
 - Clicking, dragging, and visual layers are optional. Coordinate entry, parsed

@@ -28,6 +28,7 @@ import { PlanWorkspace } from "./PlanWorkspace";
 import { Phase2ValidationWorkspace } from "./Phase2ValidationWorkspace";
 import { RFProfileWorkspace } from "./RFProfileWorkspace";
 import { TerrainAnalysisWorkspace } from "./TerrainAnalysisWorkspace";
+import { WorkspaceTabs } from "./WorkspaceTabs";
 import type {
   ConventionalChannel,
   CurrentUser,
@@ -448,277 +449,370 @@ export default function App() {
           {error}
         </p>
       )}
-      <main className="workspace" id="main-content" tabIndex={-1}>
-        <section className="planning-panel" aria-labelledby="incidents-heading">
-          <div className="section-heading">
-            <div>
-              <p className="eyebrow">Current workspace</p>
-              <h2 id="incidents-heading">Incidents</h2>
-            </div>
-            <span className="count">{incidents.length}</span>
-          </div>
-          {canCreateIncident && (
-            <form className="compact-form" onSubmit={handleIncident}>
-              <label>
-                Incident name
-                <input name="name" placeholder="Synthetic exercise" required />
-              </label>
-              <label>
-                Incident number
-                <input name="number" placeholder="SYN-001" />
-              </label>
-              <button type="submit">Create incident</button>
-            </form>
-          )}
-          {loading ? (
-            <p role="status" aria-live="polite">
-              Loading incidents…
-            </p>
-          ) : incidents.length === 0 ? (
-            <p className="empty">
-              No incidents yet. Create a synthetic incident to begin.
-            </p>
-          ) : (
-            <div className="incident-list">
-              {incidents.map((incident) => (
-                <article key={incident.id} className="incident">
-                  <button
-                    className={
-                      selectedIncident === incident.id
-                        ? "incident-select selected"
-                        : "incident-select"
-                    }
-                    type="button"
-                    aria-pressed={selectedIncident === incident.id}
-                    onClick={() => setSelectedIncident(incident.id)}
+      <main className="workspace-main" id="main-content" tabIndex={-1}>
+        <WorkspaceTabs
+          initialTab="ics-205"
+          tabs={[
+            {
+              id: "ics-205",
+              label: "ICS 205",
+              content: (
+                <>
+                  <section
+                    className="planning-panel"
+                    aria-labelledby="incidents-heading"
                   >
-                    <span>
-                      <strong>{incident.name}</strong>
-                      <small>
-                        {incident.incident_number || "No incident number"}
-                      </small>
-                    </span>
-                    <span className="incident-status">{incident.status}</span>
-                  </button>
-                  {incident.permissions.includes("incident.archive") && (
-                    <button
-                      className="text-button"
-                      type="button"
-                      onClick={() => void handleArchive(incident)}
-                    >
-                      Archive {incident.name}
-                    </button>
+                    <div className="section-heading">
+                      <div>
+                        <p className="eyebrow">Current workspace</p>
+                        <h2 id="incidents-heading">Incidents</h2>
+                      </div>
+                      <span className="count">{incidents.length}</span>
+                    </div>
+                    {canCreateIncident && (
+                      <form className="compact-form" onSubmit={handleIncident}>
+                        <label>
+                          Incident name
+                          <input
+                            name="name"
+                            placeholder="Synthetic exercise"
+                            required
+                          />
+                        </label>
+                        <label>
+                          Incident number
+                          <input name="number" placeholder="SYN-001" />
+                        </label>
+                        <button type="submit">Create incident</button>
+                      </form>
+                    )}
+                    {loading ? (
+                      <p role="status" aria-live="polite">
+                        Loading incidents…
+                      </p>
+                    ) : incidents.length === 0 ? (
+                      <p className="empty">
+                        No incidents yet. Create a synthetic incident to begin.
+                      </p>
+                    ) : (
+                      <div className="incident-list">
+                        {incidents.map((incident) => (
+                          <article key={incident.id} className="incident">
+                            <button
+                              className={
+                                selectedIncident === incident.id
+                                  ? "incident-select selected"
+                                  : "incident-select"
+                              }
+                              type="button"
+                              aria-pressed={selectedIncident === incident.id}
+                              onClick={() => setSelectedIncident(incident.id)}
+                            >
+                              <span>
+                                <strong>{incident.name}</strong>
+                                <small>
+                                  {incident.incident_number ||
+                                    "No incident number"}
+                                </small>
+                              </span>
+                              <span className="incident-status">
+                                {incident.status}
+                              </span>
+                            </button>
+                            {incident.permissions.includes(
+                              "incident.archive",
+                            ) && (
+                              <button
+                                className="text-button"
+                                type="button"
+                                onClick={() => void handleArchive(incident)}
+                              >
+                                Archive {incident.name}
+                              </button>
+                            )}
+                            {incident.operational_periods.map((period) => (
+                              <p className="period" key={period.id}>
+                                {period.name}:{" "}
+                                {new Date(period.starts_at).toLocaleString()} –{" "}
+                                {new Date(period.ends_at).toLocaleString()}
+                              </p>
+                            ))}
+                          </article>
+                        ))}
+                      </div>
+                    )}
+                    {canCreatePeriod && (
+                      <form
+                        className="compact-form period-form"
+                        onSubmit={handlePeriod}
+                      >
+                        <h3>Add operational period</h3>
+                        <label>
+                          Incident
+                          <select
+                            value={selectedIncident}
+                            onChange={(event) =>
+                              setSelectedIncident(event.target.value)
+                            }
+                            required
+                          >
+                            <option value="">Select incident</option>
+                            {incidents.map((incident) => (
+                              <option key={incident.id} value={incident.id}>
+                                {incident.name}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                        <label>
+                          Period name
+                          <input
+                            name="periodName"
+                            placeholder="Operational Period 1"
+                            required
+                          />
+                        </label>
+                        <label>
+                          Starts
+                          <input
+                            name="startsAt"
+                            type="datetime-local"
+                            required
+                          />
+                        </label>
+                        <label>
+                          Ends
+                          <input name="endsAt" type="datetime-local" required />
+                        </label>
+                        <button type="submit" disabled={!selectedIncident}>
+                          Add period
+                        </button>
+                      </form>
+                    )}
+                  </section>
+                  <PlanWorkspace incident={selected} />
+                </>
+              ),
+            },
+            {
+              id: "map",
+              label: "Map",
+              layout: "single",
+              content: <MapShell incident={selected} />,
+            },
+            {
+              id: "rf-analysis",
+              label: "RF Analysis",
+              content: (
+                <>
+                  <RFProfileWorkspace incident={selected} />
+                  <HAATWorkspace incident={selected} />
+                  <CoverageEstimateWorkspace incident={selected} />
+                  <DirectionalCoverageWorkspace incident={selected} />
+                  <DeconflictionWorkspace incident={selected} />
+                  <FieldCalibrationWorkspace incident={selected} />
+                  <Phase2ValidationWorkspace incident={selected} />
+                  <TerrainAnalysisWorkspace incident={selected} />
+                </>
+              ),
+            },
+            {
+              id: "resources",
+              label: "Resources",
+              layout: "single",
+              content: (
+                <>
+                  <section
+                    className="library-panel"
+                    aria-labelledby="library-heading"
+                  >
+                    <div className="section-heading">
+                      <div>
+                        <p className="eyebrow">Source-aware reference data</p>
+                        <h2 id="library-heading">Channel library</h2>
+                      </div>
+                      <span className="count">
+                        {visibleChannels.length + visibleTalkgroups.length}
+                      </span>
+                    </div>
+                    <label className="library-search">
+                      Search channels, uses, restrictions, or source details
+                      <input
+                        type="search"
+                        value={resourceSearch}
+                        onChange={(event) =>
+                          setResourceSearch(event.target.value)
+                        }
+                        placeholder="Examples: VTAC33, medical, Texas, deployable"
+                      />
+                    </label>
+                    <div className="resource-grid">
+                      <div>
+                        <h3>Conventional channels</h3>
+                        {visibleChannels.length === 0 ? (
+                          <p className="empty">
+                            {channels.length === 0
+                              ? "No releases imported."
+                              : "No conventional channels match this search."}
+                          </p>
+                        ) : (
+                          visibleChannels.map((channel) => (
+                            <article className="resource-card" key={channel.id}>
+                              <strong>
+                                {channel.name}{" "}
+                                <small>({channel.identifier})</small>
+                              </strong>
+                              <span>
+                                {(channel.rx_frequency_hz / 1_000_000).toFixed(
+                                  6,
+                                )}{" "}
+                                MHz · {channel.mode}
+                              </span>
+                              {channel.channel_use && (
+                                <span>{channel.channel_use}</span>
+                              )}
+                              {channel.restrictions && (
+                                <details>
+                                  <summary>
+                                    Restrictions and use conditions
+                                  </summary>
+                                  <p>{channel.restrictions}</p>
+                                </details>
+                              )}
+                              <small>
+                                {channel.release.source.name} ·{" "}
+                                {channel.release.version}
+                                {channel.source_pages
+                                  ? ` · NIFOG p. ${channel.source_pages}`
+                                  : ""}
+                              </small>
+                            </article>
+                          ))
+                        )}
+                      </div>
+                      <div>
+                        <h3>Trunked talkgroups</h3>
+                        {visibleTalkgroups.length === 0 ? (
+                          <p className="empty">
+                            {talkgroups.length === 0
+                              ? "No releases imported."
+                              : "No trunked talkgroups match this search."}
+                          </p>
+                        ) : (
+                          visibleTalkgroups.map((talkgroup) => (
+                            <article
+                              className="resource-card"
+                              key={talkgroup.id}
+                            >
+                              <strong>
+                                {talkgroup.name}{" "}
+                                <small>({talkgroup.identifier})</small>
+                              </strong>
+                              <span>
+                                {talkgroup.system_name} · TG{" "}
+                                {talkgroup.talkgroup_id}
+                              </span>
+                              {talkgroup.restrictions && (
+                                <details>
+                                  <summary>
+                                    Restrictions and use conditions
+                                  </summary>
+                                  <p>{talkgroup.restrictions}</p>
+                                </details>
+                              )}
+                              <small>
+                                {talkgroup.release.source.name} ·{" "}
+                                {talkgroup.release.version}
+                                {talkgroup.source_pages
+                                  ? ` · NIFOG p. ${talkgroup.source_pages}`
+                                  : ""}
+                              </small>
+                            </article>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                    {currentUser?.permissions.includes("library.import") && (
+                      <form className="import-panel" onSubmit={handleImport}>
+                        <h3>Administrator import</h3>
+                        <p>
+                          Validate first. CISA releases cannot be applied until
+                          their exact source, version, URL, and digest are
+                          approved in server configuration.
+                        </p>
+                        <label>
+                          Import JSON
+                          <textarea
+                            name="payload"
+                            defaultValue={syntheticImportExample}
+                            rows={12}
+                            required
+                          />
+                        </label>
+                        <div className="button-row">
+                          <button type="submit">Validate dry run</button>
+                          <button
+                            className="secondary-button"
+                            type="button"
+                            onClick={(event) => {
+                              if (event.currentTarget.form)
+                                void processImport(
+                                  event.currentTarget.form,
+                                  false,
+                                );
+                            }}
+                          >
+                            Apply approved import
+                          </button>
+                        </div>
+                        {importResult && (
+                          <div
+                            className={
+                              importResult.valid
+                                ? "import-result valid"
+                                : "import-result"
+                            }
+                            role="status"
+                          >
+                            {importResult.valid
+                              ? "Validation passed."
+                              : "Validation failed."}
+                            {importResult.approval_required &&
+                              " Human approval is still required."}
+                            {importResult.errors.map((item) => (
+                              <p key={`${item.path}-${item.code}`}>
+                                {item.path}: {item.message}
+                              </p>
+                            ))}
+                          </div>
+                        )}
+                      </form>
+                    )}
+                  </section>
+                </>
+              ),
+            },
+            {
+              id: "administration",
+              label: "Administration",
+              layout: "single",
+              content: (
+                <>
+                  <AccountAdministration
+                    currentUser={currentUser}
+                    incidents={incidents}
+                  />
+                  {currentUser?.permissions.includes("extension.view") && (
+                    <ExtensionWorkspace
+                      incident={selected}
+                      currentUser={currentUser}
+                    />
                   )}
-                  {incident.operational_periods.map((period) => (
-                    <p className="period" key={period.id}>
-                      {period.name}:{" "}
-                      {new Date(period.starts_at).toLocaleString()} –{" "}
-                      {new Date(period.ends_at).toLocaleString()}
-                    </p>
-                  ))}
-                </article>
-              ))}
-            </div>
-          )}
-          {canCreatePeriod && (
-            <form className="compact-form period-form" onSubmit={handlePeriod}>
-              <h3>Add operational period</h3>
-              <label>
-                Incident
-                <select
-                  value={selectedIncident}
-                  onChange={(event) => setSelectedIncident(event.target.value)}
-                  required
-                >
-                  <option value="">Select incident</option>
-                  {incidents.map((incident) => (
-                    <option key={incident.id} value={incident.id}>
-                      {incident.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Period name
-                <input
-                  name="periodName"
-                  placeholder="Operational Period 1"
-                  required
-                />
-              </label>
-              <label>
-                Starts
-                <input name="startsAt" type="datetime-local" required />
-              </label>
-              <label>
-                Ends
-                <input name="endsAt" type="datetime-local" required />
-              </label>
-              <button type="submit" disabled={!selectedIncident}>
-                Add period
-              </button>
-            </form>
-          )}
-        </section>
-        <PlanWorkspace incident={selected} />
-        <AccountAdministration
-          currentUser={currentUser}
-          incidents={incidents}
+                </>
+              ),
+            },
+          ]}
         />
-        <RFProfileWorkspace incident={selected} />
-        <HAATWorkspace incident={selected} />
-        <CoverageEstimateWorkspace incident={selected} />
-        <DirectionalCoverageWorkspace incident={selected} />
-        <DeconflictionWorkspace incident={selected} />
-        <FieldCalibrationWorkspace incident={selected} />
-        <Phase2ValidationWorkspace incident={selected} />
-        <TerrainAnalysisWorkspace incident={selected} />
-        {currentUser?.permissions.includes("extension.view") && (
-          <ExtensionWorkspace incident={selected} currentUser={currentUser} />
-        )}
-        <MapShell incident={selected} />
-        <section className="library-panel" aria-labelledby="library-heading">
-          <div className="section-heading">
-            <div>
-              <p className="eyebrow">Source-aware reference data</p>
-              <h2 id="library-heading">Channel library</h2>
-            </div>
-            <span className="count">
-              {visibleChannels.length + visibleTalkgroups.length}
-            </span>
-          </div>
-          <label className="library-search">
-            Search channels, uses, restrictions, or source details
-            <input
-              type="search"
-              value={resourceSearch}
-              onChange={(event) => setResourceSearch(event.target.value)}
-              placeholder="Examples: VTAC33, medical, Texas, deployable"
-            />
-          </label>
-          <div className="resource-grid">
-            <div>
-              <h3>Conventional channels</h3>
-              {visibleChannels.length === 0 ? (
-                <p className="empty">
-                  {channels.length === 0
-                    ? "No releases imported."
-                    : "No conventional channels match this search."}
-                </p>
-              ) : (
-                visibleChannels.map((channel) => (
-                  <article className="resource-card" key={channel.id}>
-                    <strong>
-                      {channel.name} <small>({channel.identifier})</small>
-                    </strong>
-                    <span>
-                      {(channel.rx_frequency_hz / 1_000_000).toFixed(6)} MHz ·{" "}
-                      {channel.mode}
-                    </span>
-                    {channel.channel_use && <span>{channel.channel_use}</span>}
-                    {channel.restrictions && (
-                      <details>
-                        <summary>Restrictions and use conditions</summary>
-                        <p>{channel.restrictions}</p>
-                      </details>
-                    )}
-                    <small>
-                      {channel.release.source.name} · {channel.release.version}
-                      {channel.source_pages
-                        ? ` · NIFOG p. ${channel.source_pages}`
-                        : ""}
-                    </small>
-                  </article>
-                ))
-              )}
-            </div>
-            <div>
-              <h3>Trunked talkgroups</h3>
-              {visibleTalkgroups.length === 0 ? (
-                <p className="empty">
-                  {talkgroups.length === 0
-                    ? "No releases imported."
-                    : "No trunked talkgroups match this search."}
-                </p>
-              ) : (
-                visibleTalkgroups.map((talkgroup) => (
-                  <article className="resource-card" key={talkgroup.id}>
-                    <strong>
-                      {talkgroup.name} <small>({talkgroup.identifier})</small>
-                    </strong>
-                    <span>
-                      {talkgroup.system_name} · TG {talkgroup.talkgroup_id}
-                    </span>
-                    {talkgroup.restrictions && (
-                      <details>
-                        <summary>Restrictions and use conditions</summary>
-                        <p>{talkgroup.restrictions}</p>
-                      </details>
-                    )}
-                    <small>
-                      {talkgroup.release.source.name} ·{" "}
-                      {talkgroup.release.version}
-                      {talkgroup.source_pages
-                        ? ` · NIFOG p. ${talkgroup.source_pages}`
-                        : ""}
-                    </small>
-                  </article>
-                ))
-              )}
-            </div>
-          </div>
-          {currentUser?.permissions.includes("library.import") && (
-            <form className="import-panel" onSubmit={handleImport}>
-              <h3>Administrator import</h3>
-              <p>
-                Validate first. CISA releases cannot be applied until their
-                exact source, version, URL, and digest are approved in server
-                configuration.
-              </p>
-              <label>
-                Import JSON
-                <textarea
-                  name="payload"
-                  defaultValue={syntheticImportExample}
-                  rows={12}
-                  required
-                />
-              </label>
-              <div className="button-row">
-                <button type="submit">Validate dry run</button>
-                <button
-                  className="secondary-button"
-                  type="button"
-                  onClick={(event) => {
-                    if (event.currentTarget.form)
-                      void processImport(event.currentTarget.form, false);
-                  }}
-                >
-                  Apply approved import
-                </button>
-              </div>
-              {importResult && (
-                <div
-                  className={
-                    importResult.valid ? "import-result valid" : "import-result"
-                  }
-                  role="status"
-                >
-                  {importResult.valid
-                    ? "Validation passed."
-                    : "Validation failed."}
-                  {importResult.approval_required &&
-                    " Human approval is still required."}
-                  {importResult.errors.map((item) => (
-                    <p key={`${item.path}-${item.code}`}>
-                      {item.path}: {item.message}
-                    </p>
-                  ))}
-                </div>
-              )}
-            </form>
-          )}
-        </section>
       </main>
       <footer>
         <div>

@@ -918,10 +918,8 @@ test("administrator signs in and sees the incident planning workspace", async ({
   const planningMap = page.getByRole("region", {
     name: "Radio site planning map",
   });
-  await expect(planningMap).toBeVisible();
-  await expect(planningMap).toHaveAccessibleDescription(
-    /Keyboard and screen-reader users can use the coordinate form/,
-  );
+  const icsTab = page.getByRole("tab", { name: "ICS 205" });
+  await expect(icsTab).toHaveAttribute("aria-selected", "true");
   await page.evaluate(() => (document.activeElement as HTMLElement)?.blur());
   await page.keyboard.press("Tab");
   const skipLink = page.getByRole("link", {
@@ -938,6 +936,12 @@ test("administrator signs in and sees the incident planning workspace", async ({
   await expect(
     page.getByText("Synthetic Command Site", { exact: true }).first(),
   ).toBeVisible();
+  await page.getByRole("tab", { name: "Map" }).click();
+  await expect(planningMap).toBeVisible();
+  await expect(planningMap).toHaveAccessibleDescription(
+    /Keyboard and screen-reader users can use the coordinate form/,
+  );
+  await page.getByRole("tab", { name: "RF Analysis" }).click();
   const coverageWorkspace = page.getByRole("region", {
     name: "Band and environment estimates",
   });
@@ -1135,6 +1139,7 @@ test("administrator signs in and sees the incident planning workspace", async ({
   await expect(
     terrainWorkspace.getByText(/Core planning remains available/),
   ).toBeVisible();
+  await page.getByRole("tab", { name: "Map" }).click();
   await page
     .getByLabel("Coordinate", { exact: true })
     .fill("33° 12′ 52.20″ N, 97° 07′ 59.16″ W");
@@ -1148,6 +1153,7 @@ test("administrator signs in and sees the incident planning workspace", async ({
     page.getByRole("button", { name: "Download official PDF" }),
   ).toBeVisible();
   await expect(page.getByRole("button", { name: "SVG map" })).toBeVisible();
+  await page.getByRole("tab", { name: "Resources" }).click();
   await expect(
     page.getByRole("heading", { name: "Channel library" }),
   ).toBeVisible();

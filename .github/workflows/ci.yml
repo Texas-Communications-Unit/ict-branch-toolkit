@@ -180,6 +180,6 @@ jobs:
               except PackageNotFoundError:
                   continue
               raise SystemExit(f"Production image unexpectedly contains {package} {installed}.")
-          assert version("Django") == "5.2.16"
+          assert version("Django") == "5.2.17"
           assert version("gunicorn") == "23.0.0"
           PY

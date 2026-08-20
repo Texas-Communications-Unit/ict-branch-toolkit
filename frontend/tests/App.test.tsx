@@ -173,10 +173,16 @@ test("signs in and lists incidents from the API", async () => {
   expect(sessionStorage.getItem("ict-toolkit-token-expires-at")).toBe(
     "2099-07-27T20:00:00Z",
   );
+  expect(screen.getByRole("tab", { name: "ICS 205" })).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
+  await userEvent.click(screen.getByRole("tab", { name: "Map" }));
   expect(screen.getByTestId("map")).toBeInTheDocument();
   expect(screen.getByTestId("map-provider")).toHaveTextContent(
     "Neutral offline map active",
   );
+  await userEvent.click(screen.getByRole("tab", { name: "Resources" }));
   expect(
     screen.getByRole("heading", { name: "Channel library" }),
   ).toBeInTheDocument();
