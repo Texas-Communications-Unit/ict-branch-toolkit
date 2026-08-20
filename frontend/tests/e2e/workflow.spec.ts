@@ -903,9 +903,22 @@ test("administrator signs in and sees the incident planning workspace", async ({
   await page.getByLabel("Username", { exact: true }).fill("admin");
   await page.getByLabel("Password", { exact: true }).fill("synthetic-password");
   await page.getByRole("button", { name: "Sign in" }).click();
+  await page.keyboard.press("Tab");
+  const skipLink = page.getByRole("link", {
+    name: "Skip to planning workspace",
+  });
+  await expect(skipLink).toBeFocused();
+  await skipLink.press("Enter");
+  await expect(page.locator("#main-content")).toBeFocused();
+  await expect(page.getByRole("tab", { name: "ICS 205" })).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
+  await page.getByRole("tab", { name: "Incidents" }).click();
   await expect(
     page.getByRole("button", { name: /^Synthetic Flood Exercise/ }),
   ).toBeVisible();
+  await page.getByRole("tab", { name: "ICS 205" }).click();
   const workspaceLogo = page.getByRole("img", {
     name: "Texas Communications Unit (TX-COMU) logo",
   });
@@ -918,16 +931,6 @@ test("administrator signs in and sees the incident planning workspace", async ({
   const planningMap = page.getByRole("region", {
     name: "Radio site planning map",
   });
-  const icsTab = page.getByRole("tab", { name: "ICS 205" });
-  await expect(icsTab).toHaveAttribute("aria-selected", "true");
-  await page.evaluate(() => (document.activeElement as HTMLElement)?.blur());
-  await page.keyboard.press("Tab");
-  const skipLink = page.getByRole("link", {
-    name: "Skip to planning workspace",
-  });
-  await expect(skipLink).toBeFocused();
-  await skipLink.press("Enter");
-  await expect(page.locator("#main-content")).toBeFocused();
   await expect(page.getByText(/P3.1 Terrain Prototype/)).toBeVisible();
   await expect(page.getByRole("heading", { name: "ICS-205" })).toBeVisible();
   await expect(
@@ -941,7 +944,6 @@ test("administrator signs in and sees the incident planning workspace", async ({
   await expect(planningMap).toHaveAccessibleDescription(
     /Keyboard and screen-reader users can use the coordinate form/,
   );
-  await page.getByRole("tab", { name: "RF Analysis" }).click();
   const coverageWorkspace = page.getByRole("region", {
     name: "Band and environment estimates",
   });
@@ -956,6 +958,7 @@ test("administrator signs in and sees the incident planning workspace", async ({
       { exact: true },
     ),
   ).toBeVisible();
+  await page.getByRole("tab", { name: "RF Analysis" }).click();
   const deconflictionWorkspace = page.getByRole("region", {
     name: "Frequency deconfliction review",
   });
@@ -1027,6 +1030,7 @@ test("administrator signs in and sees the incident planning workspace", async ({
     rfWorkspace.getByText("Synthetic RF baseline", { exact: true }).last(),
   ).toBeVisible();
   await expect(rfWorkspace.getByText("b".repeat(64))).toBeVisible();
+  await page.getByRole("tab", { name: "Map" }).click();
   const haatWorkspace = page.getByRole("region", {
     name: "Elevation and HAAT",
   });
@@ -1061,6 +1065,7 @@ test("administrator signs in and sees the incident planning workspace", async ({
   await expect(
     haatWorkspace.getByText("approved", { exact: true }),
   ).toBeVisible();
+  await page.getByRole("tab", { name: "RF Analysis" }).click();
   const calibrationWorkspace = page.getByRole("region", {
     name: "Field observations and local calibration",
   });
@@ -1126,6 +1131,7 @@ test("administrator signs in and sees the incident planning workspace", async ({
       { exact: true },
     ),
   ).toBeVisible();
+  await page.getByRole("tab", { name: "Map" }).click();
   const terrainWorkspace = page.getByRole("region", {
     name: "Terrain profile analysis",
   });
@@ -1139,7 +1145,6 @@ test("administrator signs in and sees the incident planning workspace", async ({
   await expect(
     terrainWorkspace.getByText(/Core planning remains available/),
   ).toBeVisible();
-  await page.getByRole("tab", { name: "Map" }).click();
   await page
     .getByLabel("Coordinate", { exact: true })
     .fill("33° 12′ 52.20″ N, 97° 07′ 59.16″ W");

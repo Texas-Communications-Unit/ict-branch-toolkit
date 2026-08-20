@@ -78,6 +78,7 @@ jobs:
           DJANGO_SUPERUSER_USERNAME: synthetic-admin
           DJANGO_SUPERUSER_EMAIL: synthetic-admin@example.invalid
           DJANGO_SUPERUSER_PASSWORD: synthetic-ci-admin-password
+          ICT_PUBLIC_BASE_URL: https://localhost
         run: |
           python3 scripts/test-validate-compose-environment.py
           docker compose -f compose.production.yaml config --format json |
@@ -157,6 +158,7 @@ jobs:
       DJANGO_SUPERUSER_USERNAME: synthetic-admin
       DJANGO_SUPERUSER_EMAIL: synthetic-admin@example.invalid
       DJANGO_SUPERUSER_PASSWORD: synthetic-ci-admin-password
+      ICT_PUBLIC_BASE_URL: https://localhost
     steps:
       - uses: actions/checkout@v7
       - name: Enforce Node.js 24 for GitHub Actions

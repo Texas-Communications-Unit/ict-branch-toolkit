@@ -3,6 +3,8 @@ import { FormEvent, useCallback, useEffect, useState } from "react";
 import {
   createLocalContingencyAccount,
   listLocalContingencyAccounts,
+  sendLocalContingencyPasswordReset,
+  setLocalContingencyAccountEmail,
   setLocalContingencyAccountStatus,
   signOutLocalContingencyAccount,
 } from "./api";
@@ -60,6 +62,7 @@ export function AccountAdministration({
       const account = await createLocalContingencyAccount({
         username: String(data.get("username")),
         display_name: String(data.get("displayName")),
+        email: String(data.get("email")),
         role: String(data.get("role")) as ToolkitRole,
         reason: String(data.get("reason")),
         incidents: data.getAll("incidents").map(String),
@@ -111,6 +114,10 @@ export function AccountAdministration({
         is unavailable or an operational exception is documented. Shared
         accounts are prohibited.
       </p>
+      <p>
+        Passwords are never sent by email. Reset messages contain the username
+        and a time-limited, single-use link for the user to choose a password.
+      </p>
       {message && (
         <p role="alert" className="error">
           {message}
@@ -142,6 +149,10 @@ export function AccountAdministration({
         <label>
           Display name
           <input name="displayName" required />
+        </label>
+        <label>
+          Email address
+          <input name="email" type="email" autoComplete="off" required />
         </label>
         <label>
           Global/default role
@@ -183,6 +194,7 @@ export function AccountAdministration({
               {account.role} · {account.is_active ? "Active" : "Disabled"}
               {account.must_change_password ? " · Activation pending" : ""}
             </span>
+            <span>{account.email}</span>
             <small>{account.reason}</small>
             <div className="button-row">
               <button
@@ -218,6 +230,60 @@ export function AccountAdministration({
                 }}
               >
                 Sign out all sessions
+              </button>
+              <button
+                type="button"
+                className="secondary-button"
+                disabled={!account.is_active || !account.email}
+                onClick={() => {
+                  if (
+                    !window.confirm(
+                      `Email a time-limited account setup/reset link to ${account.email}?`,
+                    )
+                  )
+                    return;
+                  void sendLocalContingencyPasswordReset(account.username)
+                    .then(() =>
+                      setMessage(
+                        `Account setup/reset email sent to ${account.email}.`,
+                      ),
+                    )
+                    .catch((error) =>
+                      setMessage(
+                        error instanceof Error
+                          ? error.message
+                          : "Account setup/reset email failed.",
+                      ),
+                    );
+                }}
+              >
+                Send setup/reset email
+              </button>
+              <button
+                type="button"
+                className="secondary-button"
+                onClick={() => {
+                  const email = window.prompt(
+                    `Email address for ${account.username}:`,
+                    account.email,
+                  );
+                  if (!email?.trim() || email.trim() === account.email) return;
+                  void setLocalContingencyAccountEmail(
+                    account.username,
+                    email.trim(),
+                  )
+                    .then(refresh)
+                    .then(() => setMessage("Account email updated."))
+                    .catch((error) =>
+                      setMessage(
+                        error instanceof Error
+                          ? error.message
+                          : "Email update failed.",
+                      ),
+                    );
+                }}
+              >
+                Update email
               </button>
             </div>
           </article>

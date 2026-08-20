@@ -433,6 +433,30 @@ export async function activateLocalContingencyAccount(
   }
 }
 
+export async function requestPasswordReset(email: string): Promise<void> {
+  const response = await fetch(`${API_BASE}/api/auth/password-reset/request/`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email }),
+  });
+  if (!response.ok) throw new Error("Password-reset request failed.");
+}
+
+export async function confirmPasswordReset(
+  uid: string,
+  token: string,
+  newPassword: string,
+): Promise<void> {
+  const response = await fetch(`${API_BASE}/api/auth/password-reset/confirm/`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ uid, token, new_password: newPassword }),
+  });
+  if (!response.ok) {
+    throw new Error((await response.text()) || "Password reset failed.");
+  }
+}
+
 export function listLocalContingencyAccounts(): Promise<
   LocalContingencyAccount[]
 > {
@@ -442,6 +466,7 @@ export function listLocalContingencyAccounts(): Promise<
 export function createLocalContingencyAccount(payload: {
   username: string;
   display_name: string;
+  email: string;
   role: ToolkitRole;
   reason: string;
   incidents: string[];
@@ -450,6 +475,28 @@ export function createLocalContingencyAccount(payload: {
     method: "POST",
     body: JSON.stringify(payload),
   });
+}
+
+export function sendLocalContingencyPasswordReset(
+  username: string,
+): Promise<void> {
+  return request<void>(
+    `/api/local-contingency-accounts/${encodeURIComponent(username)}/send-password-reset/`,
+    { method: "POST" },
+  );
+}
+
+export function setLocalContingencyAccountEmail(
+  username: string,
+  email: string,
+): Promise<LocalContingencyAccount> {
+  return request<LocalContingencyAccount>(
+    `/api/local-contingency-accounts/${encodeURIComponent(username)}/set-email/`,
+    {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    },
+  );
 }
 
 export function setLocalContingencyAccountStatus(

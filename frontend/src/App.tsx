@@ -14,6 +14,8 @@ import {
   listTrunkedTalkgroups,
   login,
   logout,
+  confirmPasswordReset,
+  requestPasswordReset,
 } from "./api";
 import { AccountAdministration } from "./AccountAdministration";
 import { BrandMark } from "./BrandMark";
@@ -95,6 +97,9 @@ export default function App() {
   const [selectedIncident, setSelectedIncident] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const resetParameters = new URLSearchParams(window.location.search);
+  const resetUid = resetParameters.get("reset_uid") ?? "";
+  const resetToken = resetParameters.get("reset_token") ?? "";
   const normalizedResourceSearch = resourceSearch.trim().toLocaleLowerCase();
   const visibleChannels = useMemo(
     () =>
@@ -229,6 +234,42 @@ export default function App() {
     }
   }
 
+  async function handlePasswordResetRequest(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const data = new FormData(form);
+    try {
+      await requestPasswordReset(String(data.get("resetEmail")));
+      form.reset();
+      setError(
+        "If an active local account matches that email address, a reset message has been sent.",
+      );
+    } catch {
+      setError("Unable to request a password reset. Try again later.");
+    }
+  }
+
+  async function handlePasswordResetConfirm(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const data = new FormData(form);
+    const password = String(data.get("resetPassword"));
+    if (password !== String(data.get("resetPasswordConfirm"))) {
+      setError("The new-password entries do not match.");
+      return;
+    }
+    try {
+      await confirmPasswordReset(resetUid, resetToken, password);
+      window.history.replaceState({}, "", window.location.pathname);
+      form.reset();
+      setError("Password reset complete. Sign in with your new password.");
+    } catch (caught) {
+      setError(
+        caught instanceof Error ? caught.message : "Password reset failed.",
+      );
+    }
+  }
+
   async function handleIncident(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = event.currentTarget;
@@ -358,6 +399,48 @@ export default function App() {
             </label>
             <button type="submit">Sign in</button>
           </form>
+          {resetUid && resetToken ? (
+            <section aria-labelledby="reset-password-heading">
+              <h2 id="reset-password-heading">Choose a new password</h2>
+              <form onSubmit={handlePasswordResetConfirm}>
+                <label>
+                  New password
+                  <input
+                    name="resetPassword"
+                    type="password"
+                    autoComplete="new-password"
+                    required
+                  />
+                </label>
+                <label>
+                  Confirm new password
+                  <input
+                    name="resetPasswordConfirm"
+                    type="password"
+                    autoComplete="new-password"
+                    required
+                  />
+                </label>
+                <button type="submit">Set new password</button>
+              </form>
+            </section>
+          ) : (
+            <details>
+              <summary>Forgot your password?</summary>
+              <form onSubmit={handlePasswordResetRequest}>
+                <label>
+                  Account email address
+                  <input
+                    name="resetEmail"
+                    type="email"
+                    autoComplete="email"
+                    required
+                  />
+                </label>
+                <button type="submit">Email password-reset link</button>
+              </form>
+            </details>
+          )}
           <details>
             <summary>Activate a local contingency account</summary>
             <form onSubmit={handleLocalActivation}>
@@ -454,8 +537,9 @@ export default function App() {
           initialTab="ics-205"
           tabs={[
             {
-              id: "ics-205",
-              label: "ICS 205",
+              id: "incidents",
+              label: "Incidents",
+              layout: "single",
               content: (
                 <>
                   <section
@@ -590,15 +674,27 @@ export default function App() {
                       </form>
                     )}
                   </section>
-                  <PlanWorkspace incident={selected} />
                 </>
               ),
             },
             {
+              id: "ics-205",
+              label: "ICS 205",
+              layout: "single",
+              content: <PlanWorkspace incident={selected} />,
+            },
+            {
               id: "map",
               label: "Map",
-              layout: "single",
-              content: <MapShell incident={selected} />,
+              content: (
+                <>
+                  <MapShell incident={selected} />
+                  <HAATWorkspace incident={selected} />
+                  <CoverageEstimateWorkspace incident={selected} />
+                  <DirectionalCoverageWorkspace incident={selected} />
+                  <TerrainAnalysisWorkspace incident={selected} />
+                </>
+              ),
             },
             {
               id: "rf-analysis",
@@ -606,13 +702,9 @@ export default function App() {
               content: (
                 <>
                   <RFProfileWorkspace incident={selected} />
-                  <HAATWorkspace incident={selected} />
-                  <CoverageEstimateWorkspace incident={selected} />
-                  <DirectionalCoverageWorkspace incident={selected} />
                   <DeconflictionWorkspace incident={selected} />
                   <FieldCalibrationWorkspace incident={selected} />
                   <Phase2ValidationWorkspace incident={selected} />
-                  <TerrainAnalysisWorkspace incident={selected} />
                 </>
               ),
             },
@@ -792,25 +884,32 @@ export default function App() {
                 </>
               ),
             },
-            {
-              id: "administration",
-              label: "Administration",
-              layout: "single",
-              content: (
-                <>
-                  <AccountAdministration
-                    currentUser={currentUser}
-                    incidents={incidents}
-                  />
-                  {currentUser?.permissions.includes("extension.view") && (
-                    <ExtensionWorkspace
-                      incident={selected}
-                      currentUser={currentUser}
-                    />
-                  )}
-                </>
-              ),
-            },
+            ...(currentUser?.permissions.includes("account.manage") ||
+            currentUser?.permissions.includes("extension.view")
+              ? [
+                  {
+                    id: "administration",
+                    label: "Administration",
+                    layout: "single" as const,
+                    content: (
+                      <>
+                        <AccountAdministration
+                          currentUser={currentUser}
+                          incidents={incidents}
+                        />
+                        {currentUser?.permissions.includes(
+                          "extension.view",
+                        ) && (
+                          <ExtensionWorkspace
+                            incident={selected}
+                            currentUser={currentUser}
+                          />
+                        )}
+                      </>
+                    ),
+                  },
+                ]
+              : []),
           ]}
         />
       </main>

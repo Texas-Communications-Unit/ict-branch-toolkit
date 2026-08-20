@@ -1,5 +1,8 @@
 from django.contrib.auth import authenticate, get_user_model, password_validation
+from django.contrib.auth.tokens import default_token_generator
 from django.db import transaction
+from django.utils.encoding import force_str
+from django.utils.http import urlsafe_base64_decode
 from rest_framework import serializers
 
 from apps.incidents.models import Incident, IncidentMembership
@@ -50,6 +53,7 @@ class LocalContingencyAccountSerializer(serializers.ModelSerializer):
     display_name = serializers.SerializerMethodField()
     role = serializers.SerializerMethodField()
     is_active = serializers.BooleanField(source="user.is_active", read_only=True)
+    email = serializers.EmailField(source="user.email", read_only=True)
     linked_to_external_identity = serializers.SerializerMethodField()
 
     class Meta:
@@ -57,6 +61,7 @@ class LocalContingencyAccountSerializer(serializers.ModelSerializer):
         fields = [
             "username",
             "display_name",
+            "email",
             "role",
             "is_active",
             "linked_to_external_identity",
@@ -81,6 +86,7 @@ class LocalContingencyAccountSerializer(serializers.ModelSerializer):
 class LocalContingencyAccountCreateSerializer(serializers.Serializer):
     username = serializers.RegexField(r"^[A-Za-z0-9.@_+-]{3,150}$")
     display_name = serializers.CharField(max_length=150)
+    email = serializers.EmailField(max_length=254)
     role = serializers.ChoiceField(choices=Role.choices)
     reason = serializers.CharField(max_length=500)
     incidents = serializers.PrimaryKeyRelatedField(
@@ -94,6 +100,12 @@ class LocalContingencyAccountCreateSerializer(serializers.Serializer):
             raise serializers.ValidationError("That username is already in use.")
         return value
 
+    def validate_email(self, value):
+        value = value.strip().lower()
+        if get_user_model().objects.filter(email__iexact=value).exists():
+            raise serializers.ValidationError("That email address is already in use.")
+        return value
+
     @transaction.atomic
     def create(self, validated_data):
         incidents = validated_data.pop("incidents", [])
@@ -102,6 +114,7 @@ class LocalContingencyAccountCreateSerializer(serializers.Serializer):
         user = get_user_model().objects.create(
             username=validated_data["username"],
             first_name=validated_data["display_name"],
+            email=validated_data["email"],
             is_active=True,
         )
         user.set_password(temporary_password)
@@ -159,6 +172,52 @@ class LocalContingencyActivationSerializer(serializers.Serializer):
             ) from exc
         if not account.must_change_password:
             raise serializers.ValidationError("This temporary credential was already used.")
+        password_validation.validate_password(attrs["new_password"], user)
+        attrs["user"] = user
+        attrs["account"] = account
+        return attrs
+
+
+class PasswordResetRequestSerializer(serializers.Serializer):
+    email = serializers.EmailField(max_length=254)
+
+
+class LocalContingencyEmailSerializer(serializers.Serializer):
+    email = serializers.EmailField(max_length=254)
+
+    def validate_email(self, value):
+        value = value.strip().lower()
+        account = self.context["account"]
+        if (
+            get_user_model()
+            .objects.filter(email__iexact=value)
+            .exclude(pk=account.user_id)
+            .exists()
+        ):
+            raise serializers.ValidationError("That email address is already in use.")
+        return value
+
+
+class PasswordResetConfirmSerializer(serializers.Serializer):
+    uid = serializers.CharField(max_length=128, write_only=True)
+    token = serializers.CharField(max_length=256, write_only=True)
+    new_password = serializers.CharField(
+        max_length=256,
+        trim_whitespace=False,
+        write_only=True,
+    )
+
+    def validate(self, attrs):
+        try:
+            user_id = force_str(urlsafe_base64_decode(attrs["uid"]))
+            user = get_user_model().objects.get(pk=user_id, is_active=True)
+            account = user.local_contingency_account
+        except (ValueError, TypeError, OverflowError, get_user_model().DoesNotExist):
+            raise serializers.ValidationError("This password-reset link is not valid.") from None
+        except LocalContingencyAccount.DoesNotExist:
+            raise serializers.ValidationError("This password-reset link is not valid.") from None
+        if not default_token_generator.check_token(user, attrs["token"]):
+            raise serializers.ValidationError("This password-reset link is invalid or expired.")
         password_validation.validate_password(attrs["new_password"], user)
         attrs["user"] = user
         attrs["account"] = account

@@ -5,6 +5,8 @@ from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 from apps.accounts.views import (
     LocalContingencyActivationView,
     LogoutView,
+    PasswordResetConfirmView,
+    PasswordResetRequestView,
     ThrottledObtainAuthTokenView,
 )
 from apps.incidents.views import health
@@ -13,6 +15,16 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/auth/token/", ThrottledObtainAuthTokenView.as_view(), name="api-token"),
     path("api/auth/logout/", LogoutView.as_view(), name="api-logout"),
+    path(
+        "api/auth/password-reset/request/",
+        PasswordResetRequestView.as_view(),
+        name="api-password-reset-request",
+    ),
+    path(
+        "api/auth/password-reset/confirm/",
+        PasswordResetConfirmView.as_view(),
+        name="api-password-reset-confirm",
+    ),
     path(
         "api/auth/activate-local/",
         LocalContingencyActivationView.as_view(),

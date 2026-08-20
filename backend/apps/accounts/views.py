@@ -22,14 +22,79 @@ from apps.audit.services import record_event
 
 from .external_identity import identity_provider
 from .models import LocalContingencyAccount, Role
+from .password_reset import EmailDeliveryUnavailable, send_password_reset_email
 from .serializers import (
     CurrentUserSerializer,
     ExternalIdentityStatusSerializer,
     LocalContingencyAccountCreateSerializer,
     LocalContingencyAccountSerializer,
     LocalContingencyActivationSerializer,
+    LocalContingencyEmailSerializer,
+    PasswordResetConfirmSerializer,
+    PasswordResetRequestSerializer,
     TokenSessionSerializer,
 )
+
+
+class PasswordResetRequestView(APIView):
+    authentication_classes = []
+    permission_classes = []
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "auth"
+
+    @extend_schema(auth=[], request=PasswordResetRequestSerializer, responses={204: None})
+    def post(self, request):
+        serializer = PasswordResetRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        account = (
+            LocalContingencyAccount.objects.select_related("user")
+            .filter(
+                user__email__iexact=serializer.validated_data["email"],
+                user__is_active=True,
+                is_synthetic_hidden=False,
+            )
+            .first()
+        )
+        if account and settings.ICT_EMAIL_ENABLED:
+            try:
+                send_password_reset_email(account.user)
+            except Exception:  # Never disclose account existence through delivery failures.
+                pass
+            else:
+                record_event(
+                    actor=None,
+                    action="local_contingency_account.password_reset_requested",
+                    target=account,
+                    details={"delivery": "email"},
+                )
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class PasswordResetConfirmView(APIView):
+    authentication_classes = []
+    permission_classes = []
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "auth"
+
+    @extend_schema(auth=[], request=PasswordResetConfirmSerializer, responses={204: None})
+    def post(self, request):
+        serializer = PasswordResetConfirmSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.validated_data["user"]
+        with transaction.atomic():
+            user.set_password(serializer.validated_data["new_password"])
+            user.save(update_fields=["password"])
+            account = serializer.validated_data["account"]
+            account.must_change_password = False
+            account.save(update_fields=["must_change_password", "updated_at"])
+            Token.objects.filter(user=user).delete()
+            record_event(
+                actor=user,
+                action="local_contingency_account.password_reset_completed",
+                target=account,
+                details={"sessions_revoked": True},
+            )
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class CurrentUserView(RetrieveAPIView):
@@ -167,6 +232,8 @@ class LocalContingencyAccountViewSet(viewsets.GenericViewSet):
         "disable": ACCOUNT_MANAGE,
         "enable": ACCOUNT_MANAGE,
         "sign_out_all": ACCOUNT_MANAGE,
+        "send_password_reset": ACCOUNT_MANAGE,
+        "set_email": ACCOUNT_MANAGE,
     }
 
     def get_queryset(self):
@@ -281,3 +348,43 @@ class LocalContingencyAccountViewSet(viewsets.GenericViewSet):
             details={"token_records_revoked": revoked},
         )
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @action(detail=True, methods=["post"], url_path="send-password-reset")
+    def send_password_reset(self, request, username=None):
+        account = self.get_object()
+        if not account.user.email:
+            raise ValidationError({"email": "Add an email address before sending a reset."})
+        try:
+            send_password_reset_email(account.user)
+        except EmailDeliveryUnavailable as exc:
+            raise ValidationError({"email": str(exc)}) from exc
+        except Exception as exc:
+            raise ValidationError(
+                {"email": "The reset email could not be delivered. Check the mail service."}
+            ) from exc
+        record_event(
+            actor=request.user,
+            action="local_contingency_account.password_reset_sent",
+            target=account,
+            details={"delivery": "email", "sessions_revoked": False},
+        )
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @action(detail=True, methods=["post"], url_path="set-email")
+    @transaction.atomic
+    def set_email(self, request, username=None):
+        account = self.get_object()
+        serializer = LocalContingencyEmailSerializer(
+            data=request.data,
+            context={"account": account},
+        )
+        serializer.is_valid(raise_exception=True)
+        account.user.email = serializer.validated_data["email"]
+        account.user.save(update_fields=["email"])
+        record_event(
+            actor=request.user,
+            action="local_contingency_account.email_updated",
+            target=account,
+            details={"email_configured": True},
+        )
+        return Response(self.get_serializer(account).data)

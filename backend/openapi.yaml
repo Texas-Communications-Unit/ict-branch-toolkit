@@ -75,6 +75,46 @@ paths:
       responses:
         '204':
           description: No response body
+  /api/auth/password-reset/confirm/:
+    post:
+      operationId: auth_password_reset_confirm_create
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PasswordResetConfirm'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PasswordResetConfirm'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PasswordResetConfirm'
+        required: true
+      responses:
+        '204':
+          description: No response body
+  /api/auth/password-reset/request/:
+    post:
+      operationId: auth_password_reset_request_create
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PasswordResetRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PasswordResetRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PasswordResetRequest'
+        required: true
+      responses:
+        '204':
+          description: No response body
   /api/auth/token/:
     post:
       operationId: auth_token_create
@@ -2058,6 +2098,74 @@ paths:
   /api/local-contingency-accounts/{username}/enable/:
     post:
       operationId: local_contingency_accounts_enable_create
+      parameters:
+      - in: path
+        name: username
+        schema:
+          type: string
+          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
+            only.
+        required: true
+      tags:
+      - local-contingency-accounts
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LocalContingencyAccount'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/LocalContingencyAccount'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/LocalContingencyAccount'
+        required: true
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LocalContingencyAccount'
+          description: ''
+  /api/local-contingency-accounts/{username}/send-password-reset/:
+    post:
+      operationId: local_contingency_accounts_send_password_reset_create
+      parameters:
+      - in: path
+        name: username
+        schema:
+          type: string
+          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
+            only.
+        required: true
+      tags:
+      - local-contingency-accounts
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LocalContingencyAccount'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/LocalContingencyAccount'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/LocalContingencyAccount'
+        required: true
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LocalContingencyAccount'
+          description: ''
+  /api/local-contingency-accounts/{username}/set-email/:
+    post:
+      operationId: local_contingency_accounts_set_email_create
       parameters:
       - in: path
         name: username
@@ -7164,6 +7272,10 @@ components:
         display_name:
           type: string
           readOnly: true
+        email:
+          type: string
+          format: email
+          readOnly: true
         role:
           type: string
           readOnly: true
@@ -7196,6 +7308,7 @@ components:
       required:
       - created_at
       - display_name
+      - email
       - is_active
       - linked_to_external_identity
       - reason
@@ -7974,6 +8087,34 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/TrunkedTalkgroup'
+    PasswordResetConfirm:
+      type: object
+      properties:
+        uid:
+          type: string
+          writeOnly: true
+          maxLength: 128
+        token:
+          type: string
+          writeOnly: true
+          maxLength: 256
+        new_password:
+          type: string
+          writeOnly: true
+          maxLength: 256
+      required:
+      - new_password
+      - token
+      - uid
+    PasswordResetRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 254
+      required:
+      - email
     PatchedAssignment:
       type: object
       properties:

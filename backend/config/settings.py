@@ -333,6 +333,42 @@ if DJANGO_FORCE_HTTPS:
 
 APP_VERSION = "0.2.0-rc.1"
 
+ICT_PUBLIC_BASE_URL = os.getenv("ICT_PUBLIC_BASE_URL", "http://localhost:5173").rstrip("/")
+_public_base_url = urlsplit(ICT_PUBLIC_BASE_URL)
+if (
+    _public_base_url.scheme not in {"http", "https"}
+    or not _public_base_url.hostname
+    or _public_base_url.username
+    or _public_base_url.password
+    or _public_base_url.path not in {"", "/"}
+    or _public_base_url.query
+    or _public_base_url.fragment
+):
+    raise ValueError("ICT_PUBLIC_BASE_URL must be an HTTP(S) origin without credentials or a path.")
+ICT_EMAIL_ENABLED = os.getenv("ICT_EMAIL_ENABLED", "false").lower() == "true"
+if ICT_EMAIL_ENABLED and DJANGO_FORCE_HTTPS and _public_base_url.scheme != "https":
+    raise ValueError("ICT_PUBLIC_BASE_URL must use HTTPS when email and HTTPS enforcement are on.")
+EMAIL_BACKEND = os.getenv(
+    "DJANGO_EMAIL_BACKEND",
+    "django.core.mail.backends.smtp.EmailBackend",
+)
+EMAIL_HOST = os.getenv("DJANGO_EMAIL_HOST", "localhost")
+EMAIL_PORT = int(os.getenv("DJANGO_EMAIL_PORT", "587"))
+if not 1 <= EMAIL_PORT <= 65535:
+    raise ValueError("DJANGO_EMAIL_PORT must be between 1 and 65535.")
+EMAIL_USE_TLS = os.getenv("DJANGO_EMAIL_USE_TLS", "true").lower() == "true"
+EMAIL_USE_SSL = os.getenv("DJANGO_EMAIL_USE_SSL", "false").lower() == "true"
+if EMAIL_USE_TLS and EMAIL_USE_SSL:
+    raise ValueError("DJANGO_EMAIL_USE_TLS and DJANGO_EMAIL_USE_SSL cannot both be true.")
+EMAIL_HOST_USER = os.getenv("DJANGO_EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = os.getenv("DJANGO_EMAIL_HOST_PASSWORD", "")
+DEFAULT_FROM_EMAIL = os.getenv(
+    "DJANGO_DEFAULT_FROM_EMAIL", "ICT Branch Toolkit <no-reply@localhost>"
+)
+PASSWORD_RESET_TIMEOUT = int(os.getenv("DJANGO_PASSWORD_RESET_TIMEOUT_SECONDS", "3600"))
+if not 900 <= PASSWORD_RESET_TIMEOUT <= 86400:
+    raise ValueError("DJANGO_PASSWORD_RESET_TIMEOUT_SECONDS must be between 900 and 86400.")
+
 SPECTACULAR_SETTINGS = {
     "TITLE": "ICT Branch Toolkit API",
     "DESCRIPTION": "Incident communications planning prototype API.",

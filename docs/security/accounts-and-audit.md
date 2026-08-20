@@ -33,6 +33,25 @@
 - Shared contingency accounts are prohibited. Hidden synthetic accounts are reserved for the
   controlled capacity probe and are not shown in the normal administrator account list.
 
+## Administration and email-based account recovery
+
+- Administrators use the same authenticated, role-controlled sign-in as other users. The
+  **Administration** workspace is shown only to users with account-management or extension-view
+  permission; there is no second administrator credential path to secure or maintain.
+- Administrators can create, enable, disable, and sign out local contingency accounts, update an
+  account email address, and send a setup/reset email. New accounts require a unique email address.
+- Setup/reset messages contain the username and a time-limited, single-use link. Passwords and
+  temporary credentials are never sent by email or stored in audit details.
+- The public reset-request endpoint always returns the same empty success response, including for
+  unknown or inactive accounts and delivery failures, to reduce account-enumeration risk.
+- A successful reset applies Django password validation, clears the first-use password-change
+  requirement, and revokes every existing API token for that account.
+- Email delivery is disabled by default and fails closed for administrator-initiated sends. Set
+  `ICT_EMAIL_ENABLED=true`, `ICT_PUBLIC_BASE_URL`, and the `DJANGO_EMAIL_*` SMTP settings before
+  relying on recovery email. Production public URLs must use HTTPS.
+- `DJANGO_PASSWORD_RESET_TIMEOUT_SECONDS` controls link validity and defaults to 3,600 seconds. Do
+  not place reset links in logs, tickets, chat, or screenshots.
+
 See [ADR-0007](../adr/0007-local-token-lifecycle.md) for the decision and accepted non-production
 limits.
 
@@ -186,8 +205,8 @@ for the test matrix, operator verification procedure, explicit limitations, and 
 
 ## Remaining prototype limitations
 
-The prototype does not yet provide multifactor authentication, password recovery workflows,
-external federation, automated CiviCRM eligibility synchronization, or incident-data retention
+The prototype does not yet provide multifactor authentication, external federation, automated
+CiviCRM eligibility synchronization, or incident-data retention
 schedules. Local tokens are bounded and revocable but remain bearer credentials. Audit rows are
 hash-chained inside the application database, but there is no external timestamp, signature,
 remote audit archive, or automated integrity alert. These risks require explicit security and

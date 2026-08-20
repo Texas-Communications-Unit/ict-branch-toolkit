@@ -1,10 +1,11 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import App from "../src/App";
 
 beforeEach(() => {
   sessionStorage.clear();
+  window.history.replaceState({}, "", "/");
   vi.unstubAllEnvs();
   vi.restoreAllMocks();
 });
@@ -165,23 +166,33 @@ test("signs in and lists incidents from the API", async () => {
   await userEvent.click(screen.getByRole("button", { name: "Sign in" }));
 
   await waitFor(() =>
-    expect(
-      screen.getByRole("button", { name: /^Synthetic Exercise/ }),
-    ).toBeInTheDocument(),
+    expect(screen.getByRole("tab", { name: "ICS 205" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    ),
   );
   expect(sessionStorage.getItem("ict-toolkit-token")).toBe("test-token");
   expect(sessionStorage.getItem("ict-toolkit-token-expires-at")).toBe(
     "2099-07-27T20:00:00Z",
   );
-  expect(screen.getByRole("tab", { name: "ICS 205" })).toHaveAttribute(
-    "aria-selected",
-    "true",
-  );
+  await userEvent.click(screen.getByRole("tab", { name: "Incidents" }));
+  expect(
+    screen.getByRole("button", { name: /^Synthetic Exercise/ }),
+  ).toBeInTheDocument();
+  await userEvent.click(screen.getByRole("tab", { name: "ICS 205" }));
+  expect(screen.getByRole("heading", { name: "ICS-205" })).toBeInTheDocument();
   await userEvent.click(screen.getByRole("tab", { name: "Map" }));
   expect(screen.getByTestId("map")).toBeInTheDocument();
   expect(screen.getByTestId("map-provider")).toHaveTextContent(
     "Neutral offline map active",
   );
+  expect(
+    screen.getByRole("region", { name: "Band and environment estimates" }),
+  ).toBeInTheDocument();
+  await userEvent.click(screen.getByRole("tab", { name: "RF Analysis" }));
+  expect(
+    screen.getByRole("region", { name: "Subscriber RF profiles" }),
+  ).toBeInTheDocument();
   await userEvent.click(screen.getByRole("tab", { name: "Resources" }));
   expect(
     screen.getByRole("heading", { name: "Channel library" }),
@@ -236,6 +247,75 @@ test("shows an actionable message when sign-in fails", async () => {
   await userEvent.type(screen.getByLabelText("Password"), "wrong");
   await userEvent.click(screen.getByRole("button", { name: "Sign in" }));
   expect(await screen.findByRole("alert")).toHaveTextContent("Sign-in failed");
+});
+
+test("requests a password reset without disclosing account existence", async () => {
+  const fetchMock = vi
+    .spyOn(globalThis, "fetch")
+    .mockResolvedValue(new Response(null, { status: 204 }));
+  render(<App />);
+
+  await userEvent.click(screen.getByText("Forgot your password?"));
+  await userEvent.type(
+    screen.getByLabelText("Account email address"),
+    "operator@example.invalid",
+  );
+  await userEvent.click(
+    screen.getByRole("button", { name: "Email password-reset link" }),
+  );
+
+  expect(fetchMock).toHaveBeenCalledWith(
+    "http://localhost:8000/api/auth/password-reset/request/",
+    expect.objectContaining({
+      method: "POST",
+      body: JSON.stringify({ email: "operator@example.invalid" }),
+    }),
+  );
+  expect(screen.getByRole("alert")).toHaveTextContent(
+    "If an active local account matches",
+  );
+});
+
+test("accepts a password-reset link and confirms the new password", async () => {
+  window.history.replaceState(
+    {},
+    "",
+    "/?reset_uid=synthetic-uid&reset_token=synthetic-token",
+  );
+  const fetchMock = vi
+    .spyOn(globalThis, "fetch")
+    .mockResolvedValue(new Response(null, { status: 204 }));
+  render(<App />);
+  const resetRegion = screen.getByRole("region", {
+    name: "Choose a new password",
+  });
+
+  await userEvent.type(
+    within(resetRegion).getByLabelText("New password"),
+    "replacement-safe-test-password-2026",
+  );
+  await userEvent.type(
+    within(resetRegion).getByLabelText("Confirm new password"),
+    "replacement-safe-test-password-2026",
+  );
+  await userEvent.click(
+    screen.getByRole("button", { name: "Set new password" }),
+  );
+
+  expect(fetchMock).toHaveBeenCalledWith(
+    "http://localhost:8000/api/auth/password-reset/confirm/",
+    expect.objectContaining({
+      method: "POST",
+      body: JSON.stringify({
+        uid: "synthetic-uid",
+        token: "synthetic-token",
+        new_password: "replacement-safe-test-password-2026",
+      }),
+    }),
+  );
+  expect(screen.getByRole("alert")).toHaveTextContent(
+    "Password reset complete",
+  );
 });
 
 test("returns to sign-in when the API rejects an active session", async () => {
