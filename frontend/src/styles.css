@@ -257,6 +257,49 @@ p {
   gap: 1.25rem;
   padding: 1.25rem 2rem;
 }
+
+.workspace-navigation {
+  padding: 1.25rem 2rem 0;
+}
+
+.workspace-tablist {
+  display: flex;
+  gap: 0.35rem;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--tx-comu-border);
+}
+
+.workspace-tab {
+  flex: 0 0 auto;
+  margin: 0;
+  padding: 0.75rem 1rem;
+  border: 1px solid transparent;
+  border-bottom: 3px solid transparent;
+  border-radius: 0.45rem 0.45rem 0 0;
+  background: transparent;
+  color: var(--tx-comu-slate);
+  font-weight: 700;
+}
+
+.workspace-tab:hover {
+  background: var(--tx-comu-white);
+  color: var(--tx-comu-navy);
+}
+
+.workspace-tab[aria-selected="true"] {
+  border-color: var(--tx-comu-border);
+  border-bottom-color: var(--tx-comu-red);
+  background: var(--tx-comu-white);
+  color: var(--tx-comu-navy);
+}
+
+.workspace-single {
+  grid-template-columns: 1fr;
+}
+
+.workspace-single > * {
+  grid-column: 1 / -1;
+}
 .planning-panel,
 .map-panel,
 .library-panel,
@@ -1035,6 +1078,9 @@ footer a {
   .workspace {
     grid-template-columns: 1fr;
     padding: 1rem;
+  }
+  .workspace-navigation {
+    padding: 1rem 1rem 0;
   }
   .app-header {
     padding: 1rem;
