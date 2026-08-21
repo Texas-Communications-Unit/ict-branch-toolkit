@@ -49,6 +49,7 @@ def resource_snapshot(data):
                 "rx": channel.rx_squelch,
                 "tx": channel.tx_squelch,
             },
+            "bandwidth_hz": channel.bandwidth_hz,
             "subscriber_programming_profile": programming_profile,
         }
     if talkgroup:

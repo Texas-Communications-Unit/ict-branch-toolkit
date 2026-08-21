@@ -75,7 +75,9 @@ def add_assignment(client, admin, revision, position, name):
             "assignment": "Synthetic exercise",
             "operating_classification": "fixed_pair",
             "rx_frequency_hz": 155000000 + position * 1000,
+            "rx_channel_width_hz": 12500,
             "tx_frequency_hz": 155000000 + position * 1000,
+            "tx_channel_width_hz": 12500,
             "mode": "Analog FM",
             "structured_note": "patch" if position == 1 else "",
             "remarks": "Synthetic data only",
@@ -193,6 +195,7 @@ def test_operating_classification_requires_explicit_consistent_intent(client):
         "function": "Alerting",
         "channel_name": "SYN BROADCAST",
         "tx_frequency_hz": 155_000_000,
+        "tx_channel_width_hz": 12_500,
     }
 
     missing_classification = client.post(
@@ -321,6 +324,7 @@ def test_pdf_is_approved_only_deterministic_and_audited(client):
     assert "INCIDENT RADIO COMMUNICATIONS PLAN" in text
     assert "Synthetic Tornado Exercise" in text
     assert "SYN CALL" in text
+    assert "155.0010 (N)" in text
     assert "Private Synthetic Contact" not in text
     assert "ICS 205" in text
     assert AuditEvent.objects.filter(action="plan_revision.pdf_exported").count() == 2
@@ -428,7 +432,9 @@ def test_pdf_continuation_pages_repeat_table_heading_and_page_numbers():
                 channel_name=f"SYN TAC {index}",
                 assignment="Synthetic operations",
                 rx_frequency_hz=155_000_000 + index * 1000,
+                rx_channel_width_hz=25_000,
                 tx_frequency_hz=155_000_000 + index * 1000,
+                tx_channel_width_hz=25_000,
                 mode="Analog FM",
                 remarks="Synthetic data only",
             )
@@ -444,6 +450,7 @@ def test_pdf_continuation_pages_repeat_table_heading_and_page_numbers():
         assert f"ICS 205 continuation {page_number} of 6" in text
     assert "SYN TAC 1" in reader.pages[0].extract_text()
     assert "SYN TAC 45" in reader.pages[-1].extract_text()
+    assert "155.0010 (W)" in reader.pages[0].extract_text()
 
 
 def test_official_fema_form_checksum_is_pinned():
