@@ -10,11 +10,12 @@ python manage.py probe_fcc_archive_capacity /temporary/path/l_LMpriv.zip --datas
 
 The JSON output reports archive digest, compressed and expanded sizes, expansion ratio, member count, available disk space, and confirms zero database writes. This validates archive structure and storage headroom; it does not import or reconcile records. Production import remains a separately approved operation.
 
-For the shared-test server, an authorized maintainer can manually dispatch the
-**Probe FCC archive capacity** workflow and select one dataset. The protected
-`shared-test` environment approval remains required. The workflow downloads the
-official archive to a mode-700 temporary server directory, runs the same
-no-write probe in the deployed backend container, verifies
-`database_writes=0`, and removes both server and container copies on exit.
+The **Sync FCC reference data** workflow runs each Monday at 09:00 UTC, after
+the FCC creates complete files Sunday at 05:00 Eastern. It can also be started
+manually for one dataset or all datasets. The workflow retains the current
+archives in a mode-700 server directory and skips database work when a digest
+is unchanged. For every changed archive it creates and validates a PostgreSQL
+backup, runs the no-write capacity validation, and transactionally reconciles
+the dataset. A digest marker is advanced only after a successful import.
 
 FCC reference results are planning decision support. They do not authorize frequency use, transmission, coordination, or site access.

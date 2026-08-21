@@ -1,13 +1,19 @@
-name: Probe FCC archive capacity
+name: Sync FCC reference data
 
 on:
+  schedule:
+    # FCC complete files are generated Sunday at 05:00 Eastern. This runs
+    # Monday at 09:00 UTC (03:00 CST / 04:00 CDT) after publication settles.
+    - cron: "0 9 * * 1"
   workflow_dispatch:
     inputs:
       dataset:
-        description: Official FCC complete archive to inspect without importing
+        description: FCC dataset to synchronize
         required: true
+        default: all
         type: choice
         options:
+          - all
           - asr
           - uls_commercial
           - uls_private
@@ -19,22 +25,20 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
 concurrency:
-  group: shared-test-fcc-capacity-probe
+  group: shared-test-fcc-data-sync
   cancel-in-progress: false
 
 jobs:
-  probe:
-    name: Probe official FCC archive without database writes
+  sync:
+    name: Download and reconcile official FCC complete files
     runs-on: ubuntu-latest
-    timeout-minutes: 30
-    environment: shared-test
+    timeout-minutes: 180
 
     steps:
-      - name: Check out approved main commit
+      - name: Check out current main
         uses: actions/checkout@v7
-
-      - name: Refuse non-main revisions
-        run: test "$GITHUB_SHA" = "$(git rev-parse origin/main)"
+        with:
+          ref: main
 
       - name: Validate required secrets
         env:
@@ -61,39 +65,46 @@ jobs:
           chmod 600 "$HOME/.ssh/deploy_key"
           chmod 644 "$HOME/.ssh/known_hosts"
 
-      - name: Upload no-write probe script
+      - name: Upload synchronization script
         env:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
           DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
           DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
         run: |
-          remote_script=".cache/ict-branch-toolkit/probe-fcc-${GITHUB_RUN_ID}.sh"
+          remote_script=".cache/ict-branch-toolkit/sync-fcc-${GITHUB_RUN_ID}.sh"
           ssh -i "$HOME/.ssh/deploy_key" -p "$DEPLOY_PORT" \
             -o BatchMode=yes -o ConnectTimeout=15 -o IdentitiesOnly=yes \
             -o StrictHostKeyChecking=yes "$DEPLOY_USER@$DEPLOY_HOST" \
             "install -d -m 700 '.cache/ict-branch-toolkit' && cat > '$remote_script' && chmod 700 '$remote_script'" \
-            < scripts/probe-fcc-shared-test.sh
+            < scripts/sync-fcc-shared-test.sh
 
-      - name: Run no-write capacity probe
+      - name: Synchronize selected FCC datasets
         env:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
           DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
           DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          REQUESTED_DATASET: ${{ inputs.dataset || 'all' }}
         run: |
-          remote_script=".cache/ict-branch-toolkit/probe-fcc-${GITHUB_RUN_ID}.sh"
-          ssh -i "$HOME/.ssh/deploy_key" -p "$DEPLOY_PORT" \
-            -o BatchMode=yes -o ConnectTimeout=15 -o IdentitiesOnly=yes \
-            -o StrictHostKeyChecking=yes "$DEPLOY_USER@$DEPLOY_HOST" \
-            "bash '$remote_script' '${{ inputs.dataset }}'"
+          remote_script=".cache/ict-branch-toolkit/sync-fcc-${GITHUB_RUN_ID}.sh"
+          datasets=(asr uls_commercial uls_private)
+          if [[ "$REQUESTED_DATASET" != "all" ]]; then
+            datasets=("$REQUESTED_DATASET")
+          fi
+          for dataset in "${datasets[@]}"; do
+            ssh -i "$HOME/.ssh/deploy_key" -p "$DEPLOY_PORT" \
+              -o BatchMode=yes -o ConnectTimeout=15 -o IdentitiesOnly=yes \
+              -o StrictHostKeyChecking=yes "$DEPLOY_USER@$DEPLOY_HOST" \
+              "bash '$remote_script' '$dataset'"
+          done
 
-      - name: Remove remote probe script
+      - name: Remove remote synchronization script
         if: always()
         env:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
           DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
           DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
         run: |
-          remote_script=".cache/ict-branch-toolkit/probe-fcc-${GITHUB_RUN_ID}.sh"
+          remote_script=".cache/ict-branch-toolkit/sync-fcc-${GITHUB_RUN_ID}.sh"
           ssh -i "$HOME/.ssh/deploy_key" -p "$DEPLOY_PORT" \
             -o BatchMode=yes -o ConnectTimeout=15 -o IdentitiesOnly=yes \
             -o StrictHostKeyChecking=yes "$DEPLOY_USER@$DEPLOY_HOST" \
