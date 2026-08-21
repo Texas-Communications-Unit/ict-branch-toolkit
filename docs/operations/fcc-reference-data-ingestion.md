@@ -39,10 +39,10 @@ scope change requires review and a new ADR or amendment.
 
 ## ULS selection rules
 
-Read the ULS license header before related records. Include a license when either
-rule is true:
+Read the ULS license header and licensee entity row before related records.
+Include a license when either rule is true:
 
-1. the FCC applicant type is `G` (governmental entity) and the record came from
+1. the FCC licensee entity applicant type is `G` (governmental entity) and the record came from
    one of the two approved land-mobile license archives; or
 2. its radio-service code appears in the allowlist below.
 
@@ -127,6 +127,35 @@ distances canonically in meters. Preserve original text and units beside parsed
 values when precision or interpretation could otherwise be lost.
 
 ## Import and update behavior
+
+### Initial complete-archive command
+
+The first implementation accepts a complete archive already downloaded from the
+approved FCC host. It performs validation only unless `--apply` is supplied. The
+archive basename must exactly match the selected dataset.
+
+```sh
+cd backend
+python manage.py import_fcc_archive /staging/r_tower.zip \
+  --dataset asr \
+  --source-url https://data.fcc.gov/download/pub/uls/complete/r_tower.zip
+```
+
+After reviewing the digest and record counts, an Administrator may apply that
+same unchanged archive:
+
+```sh
+python manage.py import_fcc_archive /staging/r_tower.zip \
+  --dataset asr \
+  --source-url https://data.fcc.gov/download/pub/uls/complete/r_tower.zip \
+  --apply --username <administrator>
+```
+
+Use `uls_private` with `l_LMpriv.zip` and `uls_commercial` with
+`l_LMcomm.zip`. Reapplying the same dataset and SHA-256 digest is an audited
+no-op. This command does not download archives or process daily transactions;
+those remain follow-up work after complete-file imports are operationally
+validated.
 
 1. Run an initial complete ASR and ULS import in a staging table or equivalent
    isolated import area.
