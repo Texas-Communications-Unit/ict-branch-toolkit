@@ -80,4 +80,3 @@ credentials. Importing all ULS services was rejected because broadcast,
 Amateur, personal-radio, aviation, marine, and unrelated market-based services
 are outside the stated requirement. A paid third-party data provider was
 rejected because the FCC supplies the required source data directly.
-
