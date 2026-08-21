@@ -27,7 +27,10 @@ def _local_date_and_time(value):
     return value.strftime("%m/%d/%Y"), value.strftime("%H%M")
 
 
-def _bandwidth_designator(item):
+def _bandwidth_designator(item, direction):
+    channel_width = getattr(item, f"{direction}_channel_width_hz")
+    if channel_width is not None:
+        return "N" if channel_width <= 12_500 else "W"
     snapshot = item.resource_snapshot if isinstance(item.resource_snapshot, dict) else {}
     bandwidth = snapshot.get("bandwidth_hz") or snapshot.get("emission_bandwidth_hz")
     try:
@@ -37,11 +40,11 @@ def _bandwidth_designator(item):
     return "N" if bandwidth <= 12_500 else "W"
 
 
-def _frequency(item, value):
+def _frequency(item, value, direction):
     if value is None:
         return ""
-    designation = _bandwidth_designator(item)
-    return f"{value / 1_000_000:.4f}{f' {designation}' if designation else ''}"
+    designation = _bandwidth_designator(item, direction)
+    return f"{value / 1_000_000:.4f}{f' ({designation})' if designation else ''}"
 
 
 def _official_mode(value):
@@ -158,11 +161,11 @@ def _page_values(revision, assignments, *, page_number, page_count, approval_pre
                 ),
                 f"AssignmentRow{row_number}": item.assignment if item else "",
                 f"RX Freq N or WRow{row_number}": (
-                    _frequency(item, item.rx_frequency_hz) if item else ""
+                    _frequency(item, item.rx_frequency_hz, "rx") if item else ""
                 ),
                 f"RX ToneNACRow{row_number}": item.rx_squelch if item else "",
                 f"TX Freq N or WRow{row_number}": (
-                    _frequency(item, item.tx_frequency_hz) if item else ""
+                    _frequency(item, item.tx_frequency_hz, "tx") if item else ""
                 ),
                 f"TX ToneNACRow{row_number}": item.tx_squelch if item else "",
                 f"Mode A D or MRow{row_number}": _official_mode(item.mode) if item else "",

@@ -376,6 +376,7 @@ SPECTACULAR_SETTINGS = {
     "SERVE_INCLUDE_SCHEMA": False,
     "ENUM_NAME_OVERRIDES": {
         "PlanRevisionStatusEnum": "apps.plans.models.PlanRevision.Status",
+        "AssignmentChannelWidthEnum": "apps.plans.models.Assignment.ChannelWidth",
         "ResourceChannelModeEnum": "apps.resources.models.ConventionalChannel.Mode",
         "FieldObservationReviewDecisionEnum": (
             "apps.rf_analysis.models.FieldObservationReview.Decision"

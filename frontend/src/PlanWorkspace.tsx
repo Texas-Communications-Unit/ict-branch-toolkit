@@ -74,8 +74,10 @@ const PRESENCE_FIELDS: Record<string, string> = {
   operatingClassification: "operating_classification",
   technologySubtype: "technology_subtype",
   rxMHz: "rx_frequency_hz",
+  rxChannelWidthHz: "rx_channel_width_hz",
   rxAccessCode: "rx_squelch",
   txMHz: "tx_frequency_hz",
+  txChannelWidthHz: "tx_channel_width_hz",
   txAccessCode: "tx_squelch",
   mode: "mode",
   structuredNote: "structured_note",
@@ -112,8 +114,11 @@ function displayTime(value?: string) {
   }).format(new Date(value));
 }
 
-function displayFrequency(value: number | null) {
-  return value === null ? "" : (value / 1_000_000).toFixed(4);
+function displayFrequency(value: number | null, channelWidthHz: number | null) {
+  if (value === null) return "";
+  const designator =
+    channelWidthHz === null ? "" : channelWidthHz <= 12_500 ? "N" : "W";
+  return `${(value / 1_000_000).toFixed(4)}${designator ? ` (${designator})` : ""}`;
 }
 
 function displayMode(value: string) {
@@ -479,8 +484,14 @@ export function PlanWorkspace({ incident }: { incident?: Incident }) {
         subscriber_profile_version:
           String(data.get("subscriberProfileVersion") ?? "") || null,
         rx_frequency_hz: rxFrequency,
+        rx_channel_width_hz: data.get("rxChannelWidthHz")
+          ? Number(data.get("rxChannelWidthHz"))
+          : null,
         rx_squelch: String(data.get("rxAccessCode") ?? "").trim(),
         tx_frequency_hz: txFrequency,
+        tx_channel_width_hz: data.get("txChannelWidthHz")
+          ? Number(data.get("txChannelWidthHz"))
+          : null,
         tx_squelch: String(data.get("txAccessCode") ?? "").trim(),
         mode: String(data.get("mode")),
         structured_note: String(data.get("structuredNote")),
@@ -995,6 +1006,17 @@ export function PlanWorkspace({ incident }: { incident?: Incident }) {
                     <input name="rxMHz" type="number" step="0.000001" min="0" />
                   </label>
                   <label>
+                    RX channel width
+                    <select name="rxChannelWidthHz" defaultValue="">
+                      <option value="" disabled>
+                        Select width
+                      </option>
+                      <option value="6250">6.25 kHz — N</option>
+                      <option value="12500">12.5 kHz — N</option>
+                      <option value="25000">25 kHz legacy wideband — W</option>
+                    </select>
+                  </label>
+                  <label>
                     RX access code
                     <input
                       name="rxAccessCode"
@@ -1005,6 +1027,17 @@ export function PlanWorkspace({ incident }: { incident?: Incident }) {
                   <label>
                     TX MHz
                     <input name="txMHz" type="number" step="0.000001" min="0" />
+                  </label>
+                  <label>
+                    TX channel width
+                    <select name="txChannelWidthHz" defaultValue="">
+                      <option value="" disabled>
+                        Select width
+                      </option>
+                      <option value="6250">6.25 kHz — N</option>
+                      <option value="12500">12.5 kHz — N</option>
+                      <option value="25000">25 kHz legacy wideband — W</option>
+                    </select>
                   </label>
                   <label>
                     TX access code
@@ -1118,9 +1151,19 @@ export function PlanWorkspace({ incident }: { incident?: Incident }) {
                           <td>{row.function}</td>
                           <td>{row.channel_name}</td>
                           <td>{row.assignment}</td>
-                          <td>{displayFrequency(row.rx_frequency_hz)}</td>
+                          <td>
+                            {displayFrequency(
+                              row.rx_frequency_hz,
+                              row.rx_channel_width_hz,
+                            )}
+                          </td>
                           <td>{row.rx_squelch}</td>
-                          <td>{displayFrequency(row.tx_frequency_hz)}</td>
+                          <td>
+                            {displayFrequency(
+                              row.tx_frequency_hz,
+                              row.tx_channel_width_hz,
+                            )}
+                          </td>
                           <td>{row.tx_squelch}</td>
                           <td>{displayMode(row.mode)}</td>
                           <td>
