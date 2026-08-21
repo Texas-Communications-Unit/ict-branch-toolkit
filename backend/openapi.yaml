@@ -4512,15 +4512,15 @@ components:
           nullable: true
         rx_channel_width_hz:
           nullable: true
+          maximum: 2147483647
           minimum: 0
-          maximum: 9223372036854775807
           oneOf:
           - $ref: '#/components/schemas/AssignmentChannelWidthEnum'
           - $ref: '#/components/schemas/NullEnum'
         tx_channel_width_hz:
           nullable: true
+          maximum: 2147483647
           minimum: 0
-          maximum: 9223372036854775807
           oneOf:
           - $ref: '#/components/schemas/AssignmentChannelWidthEnum'
           - $ref: '#/components/schemas/NullEnum'
@@ -8182,15 +8182,15 @@ components:
           nullable: true
         rx_channel_width_hz:
           nullable: true
+          maximum: 2147483647
           minimum: 0
-          maximum: 9223372036854775807
           oneOf:
           - $ref: '#/components/schemas/AssignmentChannelWidthEnum'
           - $ref: '#/components/schemas/NullEnum'
         tx_channel_width_hz:
           nullable: true
+          maximum: 2147483647
           minimum: 0
-          maximum: 9223372036854775807
           oneOf:
           - $ref: '#/components/schemas/AssignmentChannelWidthEnum'
           - $ref: '#/components/schemas/NullEnum'

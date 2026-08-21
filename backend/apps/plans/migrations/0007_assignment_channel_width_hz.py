@@ -1,3 +1,4 @@
+from django.core.validators import MaxValueValidator
 from django.db import migrations, models
 
 SUPPORTED_WIDTHS = {6_250, 12_500, 25_000}
@@ -37,6 +38,7 @@ class Migration(migrations.Migration):
                     (25000, "25 kHz legacy wideband"),
                 ],
                 null=True,
+                validators=[MaxValueValidator(2147483647)],
             ),
         ),
         migrations.AddField(
@@ -50,6 +52,7 @@ class Migration(migrations.Migration):
                     (25000, "25 kHz legacy wideband"),
                 ],
                 null=True,
+                validators=[MaxValueValidator(2147483647)],
             ),
         ),
         migrations.RunPython(populate_channel_widths, migrations.RunPython.noop),

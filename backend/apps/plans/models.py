@@ -171,11 +171,13 @@ class Assignment(models.Model):
         choices=ChannelWidth.choices,
         null=True,
         blank=True,
+        validators=[MaxValueValidator(2_147_483_647)],
     )
     tx_channel_width_hz = models.PositiveIntegerField(
         choices=ChannelWidth.choices,
         null=True,
         blank=True,
+        validators=[MaxValueValidator(2_147_483_647)],
     )
     rx_squelch = models.CharField(max_length=40, blank=True)
     tx_frequency_hz = models.BigIntegerField(null=True, blank=True)
