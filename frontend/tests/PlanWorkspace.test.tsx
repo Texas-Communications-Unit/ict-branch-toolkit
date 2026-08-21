@@ -64,8 +64,10 @@ const plan: ICS205Plan = {
           technology_subtype: "",
           subscriber_profile_version: null,
           rx_frequency_hz: 155_000_000,
+          rx_channel_width_hz: 12500,
           rx_squelch: "",
           tx_frequency_hz: 155_000_000,
+          tx_channel_width_hz: 12500,
           tx_squelch: "",
           mode: "Analog FM",
           remarks: "Saved first",
@@ -326,6 +328,10 @@ test("requires explicit confirmation for a transmit-only assignment", async () =
     within(form).getByLabelText("Operating classification"),
     "transmit_only",
   );
+  await user.selectOptions(
+    within(form).getByLabelText("TX channel width"),
+    "12500",
+  );
   await user.type(within(form).getByLabelText("TX MHz"), "155.25");
   await user.click(submit);
 
@@ -338,6 +344,7 @@ test("requires explicit confirmation for a transmit-only assignment", async () =
         changes: expect.objectContaining({
           operating_classification: "transmit_only",
           rx_frequency_hz: null,
+          tx_channel_width_hz: 12500,
           tx_frequency_hz: 155_250_000,
         }),
       }),

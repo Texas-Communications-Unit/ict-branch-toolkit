@@ -131,6 +131,11 @@ class Assignment(models.Model):
         PATCH = "patch", "Patch"
         OTHER = "other", "Other"
 
+    class ChannelWidth(models.IntegerChoices):
+        KHZ_6_25 = 6_250, "6.25 kHz"
+        KHZ_12_5 = 12_500, "12.5 kHz"
+        KHZ_25 = 25_000, "25 kHz legacy wideband"
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     revision = models.ForeignKey(PlanRevision, related_name="assignments", on_delete=models.PROTECT)
     position = models.PositiveIntegerField(validators=[MaxValueValidator(2_147_483_647)])
@@ -162,6 +167,18 @@ class Assignment(models.Model):
         blank=True,
     )
     rx_frequency_hz = models.BigIntegerField(null=True, blank=True)
+    rx_channel_width_hz = models.PositiveIntegerField(
+        choices=ChannelWidth.choices,
+        null=True,
+        blank=True,
+        validators=[MaxValueValidator(2_147_483_647)],
+    )
+    tx_channel_width_hz = models.PositiveIntegerField(
+        choices=ChannelWidth.choices,
+        null=True,
+        blank=True,
+        validators=[MaxValueValidator(2_147_483_647)],
+    )
     rx_squelch = models.CharField(max_length=40, blank=True)
     tx_frequency_hz = models.BigIntegerField(null=True, blank=True)
     tx_squelch = models.CharField(max_length=40, blank=True)

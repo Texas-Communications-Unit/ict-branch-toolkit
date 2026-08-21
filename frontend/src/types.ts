@@ -156,8 +156,10 @@ export interface PlanAssignment {
   technology_subtype: AssignmentTechnologySubtype;
   subscriber_profile_version: string | null;
   rx_frequency_hz: number | null;
+  rx_channel_width_hz: 6250 | 12500 | 25000 | null;
   rx_squelch: string;
   tx_frequency_hz: number | null;
+  tx_channel_width_hz: 6250 | 12500 | 25000 | null;
   tx_squelch: string;
   mode: string;
   remarks: string;

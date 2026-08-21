@@ -4510,6 +4510,20 @@ components:
           minimum: -9223372036854775808
           format: int64
           nullable: true
+        rx_channel_width_hz:
+          nullable: true
+          maximum: 2147483647
+          minimum: 0
+          oneOf:
+          - $ref: '#/components/schemas/AssignmentChannelWidthEnum'
+          - $ref: '#/components/schemas/NullEnum'
+        tx_channel_width_hz:
+          nullable: true
+          maximum: 2147483647
+          minimum: 0
+          oneOf:
+          - $ref: '#/components/schemas/AssignmentChannelWidthEnum'
+          - $ref: '#/components/schemas/NullEnum'
         rx_squelch:
           type: string
           maxLength: 40
@@ -4584,6 +4598,16 @@ components:
       - resource_snapshot
       - revision
       - updated_at
+    AssignmentChannelWidthEnum:
+      enum:
+      - 6250
+      - 12500
+      - 25000
+      type: integer
+      description: |-
+        * `6250` - 6.25 kHz
+        * `12500` - 12.5 kHz
+        * `25000` - 25 kHz legacy wideband
     AuthToken:
       type: object
       properties:
@@ -6495,8 +6519,10 @@ components:
       - operating_classification
       - technology_subtype
       - rx_frequency_hz
+      - rx_channel_width_hz
       - rx_squelch
       - tx_frequency_hz
+      - tx_channel_width_hz
       - tx_squelch
       - mode
       - remarks
@@ -6518,8 +6544,10 @@ components:
         * `operating_classification` - operating_classification
         * `technology_subtype` - technology_subtype
         * `rx_frequency_hz` - rx_frequency_hz
+        * `rx_channel_width_hz` - rx_channel_width_hz
         * `rx_squelch` - rx_squelch
         * `tx_frequency_hz` - tx_frequency_hz
+        * `tx_channel_width_hz` - tx_channel_width_hz
         * `tx_squelch` - tx_squelch
         * `mode` - mode
         * `remarks` - remarks
@@ -7395,6 +7423,9 @@ components:
         * `tower` - Tower
         * `mast` - Mast
         * `other` - Other
+    NullEnum:
+      enum:
+      - null
     OperatingClassificationEnum:
       enum:
       - fixed_pair
@@ -8149,6 +8180,20 @@ components:
           minimum: -9223372036854775808
           format: int64
           nullable: true
+        rx_channel_width_hz:
+          nullable: true
+          maximum: 2147483647
+          minimum: 0
+          oneOf:
+          - $ref: '#/components/schemas/AssignmentChannelWidthEnum'
+          - $ref: '#/components/schemas/NullEnum'
+        tx_channel_width_hz:
+          nullable: true
+          maximum: 2147483647
+          minimum: 0
+          oneOf:
+          - $ref: '#/components/schemas/AssignmentChannelWidthEnum'
+          - $ref: '#/components/schemas/NullEnum'
         rx_squelch:
           type: string
           maxLength: 40

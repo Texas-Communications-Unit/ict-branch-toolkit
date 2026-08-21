@@ -26,6 +26,13 @@ recognized modes to the official A, D, or M values and retains unrecognized mode
 text in Remarks. Preview and publication notices remain visible in Special
 Instructions.
 
+Frequency-based assignments retain an explicit channel width. Following FEMA's
+two-designator instruction and FCC land-mobile terminology, 6.25 kHz and 12.5
+kHz widths render as `N`, while legacy 25 kHz widths render as `W`. The value is
+shown after the four-decimal frequency in parentheses, such as `150.0001 (N)`.
+The toolkit does not introduce a nonstandard `UW` designator; an unknown width is
+left undesignated rather than inferred from the frequency or service.
+
 The official source URL and SHA-256 checksum are pinned beside the template. PDF
 tests verify the checksum, deterministic output, official headings, continuation
 pages, populated values, and removal of interactive widgets.

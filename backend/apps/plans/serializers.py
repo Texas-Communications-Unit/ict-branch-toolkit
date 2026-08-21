@@ -85,6 +85,33 @@ class AssignmentSerializer(serializers.ModelSerializer):
         has_rx = rx_frequency_hz is not None
         has_tx = tx_frequency_hz is not None
         intent_errors = {}
+        rx_channel_width_hz = attrs.get(
+            "rx_channel_width_hz",
+            getattr(self.instance, "rx_channel_width_hz", None),
+        )
+        tx_channel_width_hz = attrs.get(
+            "tx_channel_width_hz",
+            getattr(self.instance, "tx_channel_width_hz", None),
+        )
+        conventional_channel = attrs.get(
+            "conventional_channel",
+            getattr(self.instance, "conventional_channel", None),
+        )
+        if (
+            (rx_channel_width_hz is None or tx_channel_width_hz is None)
+            and conventional_channel
+            and conventional_channel.bandwidth_hz in Assignment.ChannelWidth.values
+        ):
+            if has_rx and rx_channel_width_hz is None:
+                rx_channel_width_hz = conventional_channel.bandwidth_hz
+                attrs["rx_channel_width_hz"] = rx_channel_width_hz
+            if has_tx and tx_channel_width_hz is None:
+                tx_channel_width_hz = conventional_channel.bandwidth_hz
+                attrs["tx_channel_width_hz"] = tx_channel_width_hz
+        if self.instance is None and has_rx and rx_channel_width_hz is None:
+            intent_errors["rx_channel_width_hz"] = "Select the receive channel width."
+        if self.instance is None and has_tx and tx_channel_width_hz is None:
+            intent_errors["tx_channel_width_hz"] = "Select the transmit channel width."
         if classification == Assignment.OperatingClassification.FIXED_PAIR and not (
             has_rx and has_tx
         ):
