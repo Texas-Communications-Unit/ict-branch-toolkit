@@ -200,6 +200,15 @@ administrator-only validation/import panel using a clearly synthetic example. Se
 [ADR-0002](docs/adr/0002-identity-authorization-and-audit.md), and
 [ADR-0007](docs/adr/0007-local-token-lifecycle.md).
 
+## FCC public reference-data scope
+
+The approved FCC integration scope is limited to Antenna Structure Registration
+(ASR), governmental land-mobile licenses, and commercial two-way land-mobile
+licenses. It uses the FCC's credential-free complete and daily public-access
+archives; broadcast, Amateur Radio, and unrelated ULS services are excluded.
+See [ADR-0023](docs/adr/0023-fcc-asr-and-land-mobile-reference-data.md) and the
+[FCC ingestion specification](docs/operations/fcc-reference-data-ingestion.md).
+
 ## P1.2 ICS-205 vertical slice
 
 The current branch adds incident/operational-period plans, numbered drafts, ordered assignment rows, controlled resource snapshots, Remote Base/Link/Patch relationships, optional protected contact details, revision comparison, approval locking, copy-forward, and a deterministic approved-only PDF. Backend permissions and audit records control every material action.
