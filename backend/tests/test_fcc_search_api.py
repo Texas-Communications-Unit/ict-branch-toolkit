@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 from django.contrib.auth import get_user_model
@@ -18,7 +18,7 @@ def test_authenticated_library_user_searches_current_fcc_records():
         source_url="https://data.fcc.gov/download/pub/uls/complete/l_LMpriv.zip",
         content_sha256="a" * 64,
         parser_version="test",
-        retrieved_at=datetime(2026, 8, 20, tzinfo=timezone.utc),
+        retrieved_at=datetime(2026, 8, 20, tzinfo=UTC),
         imported_by=user,
     )
     license_record = UlsLicense.objects.create(
