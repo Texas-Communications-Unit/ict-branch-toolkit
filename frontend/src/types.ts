@@ -1286,3 +1286,45 @@ export interface CreateDeconflictionFindingDispositionPayload {
   disposition: DeconflictionFindingDispositionValue;
   explanation: string;
 }
+
+export interface FccBatchSummary {
+  id: string;
+  dataset: "asr" | "uls_private" | "uls_commercial";
+  dataset_label: string;
+  archive_kind: "complete" | "daily";
+  archive_name: string;
+  source_url: string;
+  content_sha256: string;
+  parser_version: string;
+  retrieved_at: string;
+}
+
+export interface FccAntennaStructure {
+  id: string;
+  registration_number: string;
+  status_code: string;
+  owner_name: string;
+  owner_frn: string;
+  structure_type: string;
+  latitude: string | null;
+  longitude: string | null;
+  overall_height_m: string | null;
+  faa_study_number: string;
+  batch: FccBatchSummary;
+}
+
+export interface FccLicenseSearchResult {
+  id: string;
+  call_sign: string;
+  license_status: string;
+  radio_service_code: string;
+  licensee_name: string;
+  frn: string;
+  city: string;
+  state: string;
+  expiration_date: string | null;
+  location_count: number;
+  frequency_count: number;
+  frequencies_hz: number[];
+  batch: FccBatchSummary;
+}
