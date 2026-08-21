@@ -32,6 +32,7 @@ INSTALLED_APPS = [
     "apps.audit",
     "apps.incidents",
     "apps.resources",
+    "apps.fcc_data",
     "apps.plans",
     "apps.sites",
     "apps.rf_analysis",
