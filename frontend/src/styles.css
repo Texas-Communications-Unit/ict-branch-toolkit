@@ -730,6 +730,240 @@ footer {
   margin-bottom: 1rem;
 }
 
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.ics205-screen-form {
+  border: 2px solid #1c1c1c;
+  background: var(--tx-comu-white);
+  color: #111;
+  margin: 1rem 0;
+}
+
+.ics205-screen-form > h3 {
+  border-bottom: 2px solid #1c1c1c;
+  font-size: clamp(1.1rem, 2.2vw, 1.55rem);
+  margin: 0;
+  padding: 0.75rem;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.ics205-form-header {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1.45fr;
+}
+
+.ics205-form-header section {
+  border-bottom: 2px solid #1c1c1c;
+  display: grid;
+  gap: 0.15rem;
+  min-height: 6rem;
+  padding: 0.55rem;
+}
+
+.ics205-form-header section:not(:last-child) {
+  border-right: 2px solid #1c1c1c;
+}
+
+.ics205-entry-panel {
+  border-bottom: 2px solid #1c1c1c;
+  padding: 0.6rem;
+}
+
+.ics205-entry-panel > summary {
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.ics205-entry-panel .assignment-form {
+  background: var(--tx-comu-light);
+  margin: 0.75rem 0 0;
+  padding: 0.75rem;
+}
+
+.ics205-channel-section > strong,
+.ics205-special-instructions > strong {
+  display: block;
+  padding: 0.35rem 0.55rem;
+}
+
+.ics205-table-scroll {
+  overflow-x: auto;
+}
+
+.ics205-channel-table {
+  border-collapse: collapse;
+  font-size: 0.78rem;
+  min-width: 1120px;
+  table-layout: fixed;
+  width: 100%;
+}
+
+.ics205-channel-table th,
+.ics205-channel-table td {
+  border: 1px solid #1c1c1c;
+  overflow-wrap: anywhere;
+  padding: 0.4rem 0.3rem;
+  text-align: center;
+  vertical-align: top;
+}
+
+.ics205-channel-table th {
+  background: #f2f2f2;
+  font-weight: 750;
+  vertical-align: bottom;
+}
+
+.ics205-channel-table th:nth-child(1) {
+  width: 4%;
+}
+.ics205-channel-table th:nth-child(2) {
+  width: 4%;
+}
+.ics205-channel-table th:nth-child(3) {
+  width: 10%;
+}
+.ics205-channel-table th:nth-child(4) {
+  width: 14%;
+}
+.ics205-channel-table th:nth-child(5) {
+  width: 10%;
+}
+.ics205-channel-table th:nth-child(6),
+.ics205-channel-table th:nth-child(8) {
+  width: 7%;
+}
+.ics205-channel-table th:nth-child(7),
+.ics205-channel-table th:nth-child(9) {
+  width: 7%;
+}
+.ics205-channel-table th:nth-child(10) {
+  width: 7%;
+}
+.ics205-channel-table th:nth-child(11) {
+  width: 14%;
+}
+.ics205-channel-table th:nth-child(12) {
+  width: 10%;
+}
+
+.ics205-channel-table tbody > tr:not(.ics205-contact-row) {
+  min-height: 4rem;
+}
+
+.ics205-channel-table td:nth-child(3),
+.ics205-channel-table td:nth-child(4),
+.ics205-channel-table td:nth-child(5),
+.ics205-channel-table td:nth-child(11) {
+  text-align: left;
+}
+
+.ics205-row-controls {
+  white-space: nowrap;
+}
+
+.ics205-row-controls label {
+  align-items: center;
+  display: flex;
+  font-size: 0.72rem;
+  gap: 0.2rem;
+  justify-content: center;
+}
+
+.ics205-row-controls button {
+  font-size: 0.72rem;
+  margin: 0.15rem;
+  padding: 0.25rem 0.35rem;
+}
+
+.ics205-contact-row td {
+  background: var(--tx-comu-light);
+  text-align: left;
+}
+
+.ics205-contact-row .contact-publication-form {
+  border-top: 0;
+  margin: 0;
+  padding: 0.35rem;
+}
+
+.ics205-empty-row {
+  height: 5rem;
+  text-align: center !important;
+  vertical-align: middle !important;
+}
+
+.ics205-special-instructions {
+  border-top: 1px solid #1c1c1c;
+  min-height: 7rem;
+  padding-bottom: 0.5rem;
+}
+
+.ics205-special-instructions p {
+  margin: 0;
+  padding: 0 0.55rem;
+}
+
+.ics205-prepared-by,
+.ics205-form-footer {
+  border-top: 2px solid #1c1c1c;
+  display: grid;
+  gap: 0.6rem;
+  grid-template-columns: 1.4fr 1fr 1.2fr;
+  padding: 0.45rem 0.55rem;
+}
+
+.ics205-form-footer {
+  grid-template-columns: 0.6fr 0.6fr 1.8fr;
+}
+
+.ics205-prepared-by form {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.ics205-prepared-by form label {
+  font-size: 0.75rem;
+}
+
+.ics205-prepared-by form button {
+  justify-self: start;
+  padding: 0.35rem 0.55rem;
+}
+
+.ics205-form-footer span,
+.ics205-form-footer strong {
+  border-right: 1px solid #1c1c1c;
+}
+
+@media (max-width: 800px) {
+  .ics205-form-header,
+  .ics205-prepared-by,
+  .ics205-form-footer {
+    grid-template-columns: 1fr;
+  }
+
+  .ics205-form-header section:not(:last-child) {
+    border-right: 0;
+  }
+
+  .ics205-prepared-by span,
+  .ics205-form-footer span,
+  .ics205-form-footer strong {
+    border-right: 0;
+  }
+}
+
 .assignment-form details {
   border: 1px solid var(--tx-comu-border);
   border-radius: 6px;
