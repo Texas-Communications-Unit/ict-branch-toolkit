@@ -78,7 +78,7 @@ class UlsLicenseSerializer(serializers.ModelSerializer):
             "batch",
         ]
 
-    def get_frequencies_hz(self, obj):
+    def get_frequencies_hz(self, obj) -> list[int]:
         return list(
             obj.frequencies.order_by("frequency_hz")
             .values_list("frequency_hz", flat=True)
