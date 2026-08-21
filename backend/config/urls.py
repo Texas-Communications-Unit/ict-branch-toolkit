@@ -34,6 +34,7 @@ urlpatterns = [
     path("api/", include("apps.accounts.urls")),
     path("api/", include("apps.incidents.urls")),
     path("api/", include("apps.resources.urls")),
+    path("api/", include("apps.fcc_data.urls")),
     path("api/", include("apps.plans.urls")),
     path("api/", include("apps.sites.urls")),
     path("api/", include("apps.rf_analysis.urls")),

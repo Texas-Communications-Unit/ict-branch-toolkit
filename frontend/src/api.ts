@@ -29,6 +29,8 @@ import type {
   CreateExtensionExecutionPayload,
   ExternalIdentityStatus,
   FieldObservation,
+  FccAntennaStructure,
+  FccLicenseSearchResult,
   GeocoderSearchResult,
   HAATCalculation,
   ImportResult,
@@ -1177,4 +1179,23 @@ export async function downloadExtensionExecution(
   anchor.download = `${execution.extension_key}-${execution.capability}.json`;
   anchor.click();
   URL.revokeObjectURL(url);
+}
+
+function fccQuery(params: Record<string, string>): string {
+  const query = new URLSearchParams(
+    Object.entries(params).filter(([, value]) => value.trim() !== ""),
+  );
+  return query.toString();
+}
+
+export function searchFccLicenses(
+  params: Record<string, string>,
+): Promise<Paginated<FccLicenseSearchResult>> {
+  return request(`/api/fcc-licenses/?${fccQuery(params)}`);
+}
+
+export function searchFccAntennaStructures(
+  params: Record<string, string>,
+): Promise<Paginated<FccAntennaStructure>> {
+  return request(`/api/fcc-antenna-structures/?${fccQuery(params)}`);
 }

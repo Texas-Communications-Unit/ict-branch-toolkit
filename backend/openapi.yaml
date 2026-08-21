@@ -1290,6 +1290,104 @@ paths:
               schema:
                 $ref: '#/components/schemas/ExternalIdentityStatus'
           description: ''
+  /api/fcc-antenna-structures/:
+    get:
+      operationId: fcc_antenna_structures_list
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      tags:
+      - fcc-antenna-structures
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedAntennaStructureList'
+          description: ''
+  /api/fcc-antenna-structures/{id}/:
+    get:
+      operationId: fcc_antenna_structures_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this antenna structure.
+        required: true
+      tags:
+      - fcc-antenna-structures
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AntennaStructure'
+          description: ''
+  /api/fcc-licenses/:
+    get:
+      operationId: fcc_licenses_list
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      tags:
+      - fcc-licenses
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedUlsLicenseList'
+          description: ''
+  /api/fcc-licenses/{id}/:
+    get:
+      operationId: fcc_licenses_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this uls license.
+        required: true
+      tags:
+      - fcc-licenses
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UlsLicense'
+          description: ''
   /api/field-observations/:
     get:
       operationId: field_observations_list
@@ -4476,6 +4574,88 @@ components:
         * `unknown` - Unknown
         * `dbi` - dBi
         * `dbd` - dBd
+    AntennaStructure:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        registration_number:
+          type: string
+          maxLength: 20
+        status_code:
+          type: string
+          maxLength: 8
+        owner_name:
+          type: string
+          maxLength: 300
+        owner_frn:
+          type: string
+          maxLength: 20
+        structure_type:
+          type: string
+          maxLength: 40
+        latitude:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,7})?$
+          nullable: true
+        longitude:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,4}(?:\.\d{0,7})?$
+          nullable: true
+        structure_height_m:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,7}(?:\.\d{0,3})?$
+          nullable: true
+        ground_elevation_m:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,7}(?:\.\d{0,3})?$
+          nullable: true
+        overall_height_m:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,7}(?:\.\d{0,3})?$
+          nullable: true
+        overall_height_amsl_m:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,7}(?:\.\d{0,3})?$
+          nullable: true
+        faa_study_number:
+          type: string
+          maxLength: 80
+        painting_lighting:
+          type: string
+          maxLength: 120
+        construction_date:
+          type: string
+          format: date
+          nullable: true
+        dismantlement_date:
+          type: string
+          format: date
+          nullable: true
+        batch:
+          allOf:
+          - $ref: '#/components/schemas/FccBatchSummary'
+          readOnly: true
+      required:
+      - batch
+      - id
+      - registration_number
+    ArchiveKindEnum:
+      enum:
+      - complete
+      - daily
+      type: string
+      description: |-
+        * `complete` - Complete reconciliation
+        * `daily` - Daily transaction
     Assignment:
       type: object
       properties:
@@ -5579,6 +5759,16 @@ components:
       - permissions
       - role
       - username
+    DatasetEnum:
+      enum:
+      - asr
+      - uls_private
+      - uls_commercial
+      type: string
+      description: |-
+        * `asr` - Antenna Structure Registration
+        * `uls_private` - ULS private land mobile
+        * `uls_commercial` - ULS commercial land mobile
     DeconflictionAnalysis:
       type: object
       properties:
@@ -6508,6 +6698,46 @@ components:
       - provider
       - role_field
       - warning
+    FccBatchSummary:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        dataset:
+          $ref: '#/components/schemas/DatasetEnum'
+        dataset_label:
+          type: string
+          readOnly: true
+        archive_kind:
+          $ref: '#/components/schemas/ArchiveKindEnum'
+        archive_name:
+          type: string
+          maxLength: 80
+        source_url:
+          type: string
+          format: uri
+          maxLength: 500
+        content_sha256:
+          type: string
+          pattern: ^[0-9a-f]{64}$
+          maxLength: 64
+        parser_version:
+          type: string
+          maxLength: 40
+        retrieved_at:
+          type: string
+          format: date-time
+      required:
+      - archive_name
+      - content_sha256
+      - dataset
+      - dataset_label
+      - id
+      - parser_version
+      - retrieved_at
+      - source_url
     FieldNameEnum:
       enum:
       - prepared_by_name
@@ -7497,6 +7727,29 @@ components:
       - name
       - starts_at
       - updated_at
+    PaginatedAntennaStructureList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/AntennaStructure'
     PaginatedAssignmentList:
       type: object
       required:
@@ -8118,6 +8371,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/TrunkedTalkgroup'
+    PaginatedUlsLicenseList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/UlsLicense'
     PasswordResetConfirm:
       type: object
       properties:
@@ -10450,6 +10726,87 @@ components:
       - release
       - system_name
       - talkgroup_id
+    UlsLicense:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        call_sign:
+          type: string
+          maxLength: 20
+        license_status:
+          type: string
+          maxLength: 8
+        radio_service_code:
+          type: string
+          maxLength: 8
+        applicant_type_code:
+          type: string
+          maxLength: 8
+        selection_rule:
+          type: string
+          maxLength: 40
+        licensee_name:
+          type: string
+          maxLength: 300
+        frn:
+          type: string
+          maxLength: 20
+        address:
+          type: string
+          maxLength: 300
+        city:
+          type: string
+          maxLength: 120
+        state:
+          type: string
+          maxLength: 8
+        postal_code:
+          type: string
+          maxLength: 20
+        grant_date:
+          type: string
+          format: date
+          nullable: true
+        expiration_date:
+          type: string
+          format: date
+          nullable: true
+        cancellation_date:
+          type: string
+          format: date
+          nullable: true
+        last_action_date:
+          type: string
+          format: date
+          nullable: true
+        location_count:
+          type: integer
+          readOnly: true
+        frequency_count:
+          type: integer
+          readOnly: true
+        frequencies_hz:
+          type: array
+          items:
+            type: integer
+          readOnly: true
+        batch:
+          allOf:
+          - $ref: '#/components/schemas/FccBatchSummary'
+          readOnly: true
+      required:
+      - batch
+      - call_sign
+      - frequencies_hz
+      - frequency_count
+      - id
+      - license_status
+      - location_count
+      - radio_service_code
+      - selection_rule
     UnauthorizedVisibilityEnum:
       enum:
       - omitted

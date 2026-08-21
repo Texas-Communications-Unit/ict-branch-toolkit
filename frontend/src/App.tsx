@@ -24,6 +24,7 @@ import { CoverageEstimateWorkspace } from "./CoverageEstimateWorkspace";
 import { DirectionalCoverageWorkspace } from "./DirectionalCoverageWorkspace";
 import { DeconflictionWorkspace } from "./DeconflictionWorkspace";
 import { FieldCalibrationWorkspace } from "./FieldCalibrationWorkspace";
+import { FccReferenceWorkspace } from "./FccReferenceWorkspace";
 import { ExtensionWorkspace } from "./ExtensionWorkspace";
 import { MapShell } from "./MapShell";
 import { PlanWorkspace } from "./PlanWorkspace";
@@ -883,6 +884,12 @@ export default function App() {
                   </section>
                 </>
               ),
+            },
+            {
+              id: "fcc-reference",
+              label: "FCC Reference",
+              layout: "single",
+              content: <FccReferenceWorkspace />,
             },
             ...(currentUser?.permissions.includes("account.manage") ||
             currentUser?.permissions.includes("extension.view")
