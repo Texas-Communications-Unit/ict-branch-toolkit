@@ -206,6 +206,30 @@ test("shows presence and requires an explicit conflict decision", async () => {
   );
 });
 
+test("presents the working plan in the official ICS 205 structure", async () => {
+  api.listCollaborationChanges.mockResolvedValue([]);
+  render(<PlanWorkspace incident={incident} />);
+
+  expect(
+    await screen.findByRole("heading", {
+      name: "Incident Radio Communications Plan (ICS 205)",
+    }),
+  ).toBeVisible();
+  expect(screen.getByText("1. Incident Name:")).toBeVisible();
+  expect(screen.getByText("3. Operational Period:")).toBeVisible();
+  expect(screen.getByRole("columnheader", { name: "Function" })).toBeVisible();
+  expect(
+    screen.getByRole("columnheader", {
+      name: "Channel Name/Trunked Radio System Talkgroup",
+    }),
+  ).toBeVisible();
+  expect(screen.getByRole("cell", { name: "SYN CALL" })).toBeVisible();
+  expect(screen.getByText("5. Special Instructions:")).toBeVisible();
+  expect(
+    screen.getByText("6. Prepared by (Communications Unit Leader)"),
+  ).toBeVisible();
+});
+
 test("submits a new assignment with the loaded revision version", async () => {
   const user = userEvent.setup();
   api.listCollaborationChanges.mockResolvedValue([]);

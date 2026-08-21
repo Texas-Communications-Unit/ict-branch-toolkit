@@ -1,4 +1,5 @@
 import json
+from hashlib import sha256
 from io import BytesIO
 
 import pytest
@@ -10,7 +11,16 @@ from apps.accounts.models import Role, UserRoleAssignment
 from apps.audit.models import AuditEvent
 from apps.incidents.models import Incident, IncidentMembership, OperationalPeriod
 from apps.plans.models import Assignment, AssignmentRelationship, ICS205Plan, PlanRevision
-from apps.plans.pdf import render_ics205
+from apps.plans.pdf import FORM_SHA256, FORM_TEMPLATE, render_ics205
+
+
+def assert_flattened_pdf(reader):
+    assert not reader.get_fields()
+    for page in reader.pages:
+        annotations = page.get("/Annots", [])
+        assert all(
+            annotation.get_object().get("/Subtype") != "/Widget" for annotation in annotations
+        )
 
 
 def auth_header(user):
@@ -305,12 +315,14 @@ def test_pdf_is_approved_only_deterministic_and_audited(client):
     assert first.status_code == 200
     assert first.content == second.content
     assert first["Content-Type"] == "application/pdf"
-    text = "\n".join(page.extract_text() or "" for page in PdfReader(BytesIO(first.content)).pages)
+    reader = PdfReader(BytesIO(first.content))
+    assert_flattened_pdf(reader)
+    text = "\n".join(page.extract_text() or "" for page in reader.pages)
     assert "INCIDENT RADIO COMMUNICATIONS PLAN" in text
     assert "Synthetic Tornado Exercise" in text
     assert "SYN CALL" in text
     assert "Private Synthetic Contact" not in text
-    assert "Page 1" in text
+    assert "ICS 205" in text
     assert AuditEvent.objects.filter(action="plan_revision.pdf_exported").count() == 2
 
 
@@ -424,11 +436,18 @@ def test_pdf_continuation_pages_repeat_table_heading_and_page_numbers():
         ]
     )
     reader = PdfReader(BytesIO(render_ics205(revision)))
-    assert len(reader.pages) >= 2
+    assert len(reader.pages) == 6
+    assert_flattened_pdf(reader)
     for page_number, page in enumerate(reader.pages, 1):
         text = page.extract_text()
-        assert "Channel / Talkgroup" in text
-        assert f"Page {page_number}" in text
+        assert "INCIDENT RADIO COMMUNICATIONS PLAN (ICS 205)" in text
+        assert f"ICS 205 continuation {page_number} of 6" in text
+    assert "SYN TAC 1" in reader.pages[0].extract_text()
+    assert "SYN TAC 45" in reader.pages[-1].extract_text()
+
+
+def test_official_fema_form_checksum_is_pinned():
+    assert sha256(FORM_TEMPLATE.read_bytes()).hexdigest() == FORM_SHA256
 
 
 @pytest.mark.django_db

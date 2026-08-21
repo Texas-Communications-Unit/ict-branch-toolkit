@@ -1,6 +1,6 @@
 # ADR-0003: ICS-205 revision and PDF boundaries
 
-- Status: Accepted for P1.2
+- Status: Superseded in part by ADR-0022
 - Date: 2026-07-23
 - Decision owners: Maintainers
 
@@ -22,4 +22,4 @@ Historical approvals and resource provenance survive later edits and library upd
 
 ## Alternatives considered
 
-Mutable plans with event reconstruction were rejected because correct historical rebuilding would be harder to verify. Storing assignments only as JSON was rejected because ordering, relationships, authorization, and validation require explicit records. Editing the official FEMA PDF template directly was deferred until maintainers approve final form fidelity and redistribution boundaries.
+Mutable plans with event reconstruction were rejected because correct historical rebuilding would be harder to verify. Storing assignments only as JSON was rejected because ordering, relationships, authorization, and validation require explicit records. Editing the official FEMA PDF template directly was initially deferred. ADR-0022 records the later decision to use the official FEMA ICS Form 205 v3.1 template.

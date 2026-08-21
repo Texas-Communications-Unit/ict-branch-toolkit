@@ -1,4 +1,5 @@
 import {
+  Fragment,
   FormEvent,
   useCallback,
   useEffect,
@@ -89,7 +90,46 @@ const PRESENCE_FIELDS: Record<string, string> = {
   contact_24_hour: "contact_24_hour",
   publicationPurpose: "contact_publication_purpose",
   publicationPlacement: "contact_publication_placement",
+  preparedByName: "prepared_by_name",
+  preparedByPosition: "prepared_by_position",
 };
+
+function displayDate(value?: string) {
+  if (!value) return "Not set";
+  return new Intl.DateTimeFormat("en-US", {
+    month: "2-digit",
+    day: "2-digit",
+    year: "numeric",
+  }).format(new Date(value));
+}
+
+function displayTime(value?: string) {
+  if (!value) return "Not set";
+  return new Intl.DateTimeFormat("en-US", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(new Date(value));
+}
+
+function displayFrequency(value: number | null) {
+  return value === null ? "" : (value / 1_000_000).toFixed(4);
+}
+
+function displayMode(value: string) {
+  const normalized = value.trim().toUpperCase();
+  if (["A", "D", "M"].includes(normalized)) return normalized;
+  if (normalized.includes("MIX")) return "M";
+  if (normalized.includes("ANALOG") || ["FM", "FMN"].includes(normalized)) {
+    return "A";
+  }
+  if (
+    ["DIGITAL", "P25", "DMR", "NXDN"].some((item) => normalized.includes(item))
+  ) {
+    return "D";
+  }
+  return "";
+}
 
 export function PlanWorkspace({ incident }: { incident?: Incident }) {
   const [plans, setPlans] = useState<ICS205Plan[]>([]);
@@ -189,6 +229,9 @@ export function PlanWorkspace({ incident }: { incident?: Incident }) {
   const canApprove = incident?.permissions.includes("plan.approve");
   const canExport = incident?.permissions.includes("plan.export");
   const revisionId = revision?.id;
+  const operationalPeriod = incident?.operational_periods.find(
+    (period) => period.id === plan?.operational_period,
+  );
 
   useEffect(() => {
     if (!revisionId) {
@@ -327,6 +370,19 @@ export function PlanWorkspace({ incident }: { incident?: Incident }) {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
     await run(() => createPlan(incident!.id, String(data.get("period"))));
+  }
+
+  async function handlePreparedBy(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const data = new FormData(event.currentTarget);
+    await runMutation({
+      operation: "revision.update",
+      baseVersion: revision!.collaboration_version,
+      changes: {
+        prepared_by_name: String(data.get("preparedByName")),
+        prepared_by_position: String(data.get("preparedByPosition")),
+      },
+    });
   }
 
   async function handleAssignment(event: FormEvent<HTMLFormElement>) {
@@ -855,272 +911,429 @@ export function PlanWorkspace({ incident }: { incident?: Incident }) {
               </div>
             </section>
           )}
-          {canEdit && (
-            <form className="assignment-form" onSubmit={handleAssignment}>
-              <label>
-                Function
-                <input name="function" required />
-              </label>
-              <label>
-                Channel or talkgroup
-                <input name="channelName" required />
-              </label>
-              <label>
-                Assignment
-                <input name="assignment" />
-              </label>
-              <label>
-                Operating classification
-                <select name="operatingClassification" required defaultValue="">
-                  <option value="" disabled>
-                    Select classification
-                  </option>
-                  {OPERATING_CLASSIFICATIONS.map((classification) => (
-                    <option
-                      key={classification.value}
-                      value={classification.value}
-                    >
-                      {classification.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Named-system subtype
-                <select name="technologySubtype" defaultValue="">
-                  <option value="">Not applicable</option>
-                  {TECHNOLOGY_SUBTYPES.map((subtype) => (
-                    <option key={subtype.value} value={subtype.value}>
-                      {subtype.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                RX MHz
-                <input name="rxMHz" type="number" step="0.000001" min="0" />
-              </label>
-              <label>
-                RX access code
-                <input
-                  name="rxAccessCode"
-                  maxLength={40}
-                  placeholder="CTCSS, DCS, NAC, or equivalent"
-                />
-              </label>
-              <label>
-                TX MHz
-                <input name="txMHz" type="number" step="0.000001" min="0" />
-              </label>
-              <label>
-                TX access code
-                <input
-                  name="txAccessCode"
-                  maxLength={40}
-                  placeholder="CTCSS, DCS, NAC, or equivalent"
-                />
-              </label>
-              <label>
-                Approved subscriber programming profile
-                <select name="subscriberProfileVersion" defaultValue="">
-                  <option value="">No profile selected</option>
-                  {subscriberProfileVersions.map(({ version, label }) => (
-                    <option key={version.id} value={version.id}>
-                      {label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <p className="form-note">
-                If exactly one frequency is blank, the Toolkit will ask you to
-                confirm transmit-only or receive-only intent. Named systems and
-                dynamic pools intentionally omit both fixed frequencies.
-              </p>
-              <label>
-                Mode
-                <input name="mode" />
-              </label>
-              <label>
-                Structured note
-                <select name="structuredNote">
-                  <option value="">None</option>
-                  <option value="remote_base">Remote Base</option>
-                  <option value="link">Link</option>
-                  <option value="patch">Patch</option>
-                  <option value="other">Other</option>
-                </select>
-              </label>
-              <label>
-                Remarks
-                <input name="remarks" />
-              </label>
-              <details>
-                <summary>Optional contact details</summary>
-                <label>
-                  Contact name
-                  <input name="contactName" />
-                </label>
-                <label>
-                  Site address
-                  <input name="siteAddress" />
-                </label>
-                <label>
-                  Phone numbers
-                  <input name="phoneNumbers" />
-                </label>
-                <label>
-                  24-hour contact
-                  <input name="contact24Hour" />
-                </label>
-              </details>
-              <button type="submit">Insert assignment row</button>
-            </form>
-          )}
-          <div className="assignment-list" aria-label="ICS-205 assignment rows">
-            {revision.assignments.map((row, index) => (
-              <article
-                className="assignment-row"
-                key={row.id}
-                data-presence-object={row.id}
-              >
-                {canEdit && (
-                  <input
-                    aria-label={`Select ${row.channel_name} for relationship`}
-                    type="checkbox"
-                    checked={selectedRows.includes(row.id)}
-                    onChange={(event) =>
-                      setSelectedRows((current) =>
-                        event.target.checked
-                          ? [...current, row.id]
-                          : current.filter((id) => id !== row.id),
-                      )
-                    }
-                  />
-                )}
-                {canEdit &&
-                  (row.contact_name ||
-                    row.site_address ||
-                    row.phone_numbers ||
-                    row.contact_24_hour) && (
-                    <form
-                      className="contact-publication-form"
-                      onSubmit={(event) =>
-                        void configureContactPublication(event, row)
-                      }
-                    >
-                      <strong>ICS 205 contact publication</strong>
-                      {[
-                        ["contact_name", "Contact name", row.contact_name],
-                        ["site_address", "Site address", row.site_address],
-                        ["phone_numbers", "Phone numbers", row.phone_numbers],
-                        [
-                          "contact_24_hour",
-                          "24-hour contact",
-                          row.contact_24_hour,
-                        ],
-                      ].map(
-                        ([field, label, value]) =>
-                          value && (
-                            <label key={field}>
-                              <input
-                                type="checkbox"
-                                name={field}
-                                defaultChecked={row.published_contact_fields.includes(
-                                  field as
-                                    | "contact_name"
-                                    | "site_address"
-                                    | "phone_numbers"
-                                    | "contact_24_hour",
-                                )}
-                              />
-                              {label}
-                            </label>
-                          ),
-                      )}
-                      <label>
-                        Operational purpose
-                        <input
-                          name="publicationPurpose"
-                          defaultValue={row.contact_publication_purpose}
-                          placeholder="SOW, gateway, property, fuel, or technical support"
-                        />
-                      </label>
-                      <label>
-                        Official-form placement
-                        <select
-                          name="publicationPlacement"
-                          defaultValue={row.contact_publication_placement}
-                        >
-                          <option value="remarks">
-                            This assignment row’s Remarks
-                          </option>
-                          <option value="special_instructions">
-                            Plan-wide Special Instructions
-                          </option>
-                        </select>
-                      </label>
-                      <button type="submit">Save publication selection</button>
-                    </form>
-                  )}
-                <span className="row-number">{index + 1}</span>
-                <div>
-                  <strong>{row.function}</strong>
-                  <span>{row.channel_name}</span>
-                  <small>
-                    {OPERATING_CLASSIFICATIONS.find(
-                      (classification) =>
-                        classification.value === row.operating_classification,
-                    )?.label ?? row.operating_classification}
-                    {row.technology_subtype
-                      ? ` · ${
-                          TECHNOLOGY_SUBTYPES.find(
-                            (subtype) =>
-                              subtype.value === row.technology_subtype,
-                          )?.label ?? row.technology_subtype
-                        }`
-                      : ""}
-                  </small>
-                </div>
-                <span>{row.assignment}</span>
+          <section
+            className="ics205-screen-form"
+            aria-labelledby="ics205-form-title"
+          >
+            <h3 id="ics205-form-title">
+              Incident Radio Communications Plan (ICS 205)
+            </h3>
+            <div className="ics205-form-header">
+              <section>
+                <strong>1. Incident Name:</strong>
+                <span>{incident.name}</span>
+              </section>
+              <section>
+                <strong>2. Date/Time Prepared:</strong>
                 <span>
-                  RX{" "}
-                  {row.rx_frequency_hz
-                    ? `${(row.rx_frequency_hz / 1_000_000).toFixed(6)} MHz`
-                    : "not used"}
-                  {" · "}TX{" "}
-                  {row.tx_frequency_hz
-                    ? `${(row.tx_frequency_hz / 1_000_000).toFixed(6)} MHz`
-                    : "not used"}
+                  {revision.approved_at
+                    ? `${displayDate(revision.approved_at)} ${displayTime(revision.approved_at)}`
+                    : "Completed when approved"}
                 </span>
-                {canEdit && (
-                  <div className="row-actions">
-                    <button
-                      type="button"
-                      aria-label={`Move ${row.channel_name} up`}
-                      disabled={index === 0}
-                      onClick={() => void move(row, -1)}
+              </section>
+              <section>
+                <strong>3. Operational Period:</strong>
+                <span>
+                  Date From: {displayDate(operationalPeriod?.starts_at)}
+                </span>
+                <span>Date To: {displayDate(operationalPeriod?.ends_at)}</span>
+                <span>
+                  Time From: {displayTime(operationalPeriod?.starts_at)}
+                </span>
+                <span>Time To: {displayTime(operationalPeriod?.ends_at)}</span>
+              </section>
+            </div>
+            {canEdit && (
+              <details className="ics205-entry-panel" open>
+                <summary>Add a Basic Radio Channel Use row</summary>
+                <form className="assignment-form" onSubmit={handleAssignment}>
+                  <label>
+                    Function
+                    <input name="function" required />
+                  </label>
+                  <label>
+                    Channel or talkgroup
+                    <input name="channelName" required />
+                  </label>
+                  <label>
+                    Assignment
+                    <input name="assignment" />
+                  </label>
+                  <label>
+                    Operating classification
+                    <select
+                      name="operatingClassification"
+                      required
+                      defaultValue=""
                     >
-                      ↑
-                    </button>
-                    <button
-                      type="button"
-                      aria-label={`Move ${row.channel_name} down`}
-                      disabled={index === revision.assignments.length - 1}
-                      onClick={() => void move(row, 1)}
-                    >
-                      ↓
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => void deleteAssignment(row)}
-                    >
-                      Delete
-                    </button>
-                  </div>
-                )}
-              </article>
-            ))}
-          </div>
+                      <option value="" disabled>
+                        Select classification
+                      </option>
+                      {OPERATING_CLASSIFICATIONS.map((classification) => (
+                        <option
+                          key={classification.value}
+                          value={classification.value}
+                        >
+                          {classification.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    Named-system subtype
+                    <select name="technologySubtype" defaultValue="">
+                      <option value="">Not applicable</option>
+                      {TECHNOLOGY_SUBTYPES.map((subtype) => (
+                        <option key={subtype.value} value={subtype.value}>
+                          {subtype.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    RX MHz
+                    <input name="rxMHz" type="number" step="0.000001" min="0" />
+                  </label>
+                  <label>
+                    RX access code
+                    <input
+                      name="rxAccessCode"
+                      maxLength={40}
+                      placeholder="CTCSS, DCS, NAC, or equivalent"
+                    />
+                  </label>
+                  <label>
+                    TX MHz
+                    <input name="txMHz" type="number" step="0.000001" min="0" />
+                  </label>
+                  <label>
+                    TX access code
+                    <input
+                      name="txAccessCode"
+                      maxLength={40}
+                      placeholder="CTCSS, DCS, NAC, or equivalent"
+                    />
+                  </label>
+                  <label>
+                    Approved subscriber programming profile
+                    <select name="subscriberProfileVersion" defaultValue="">
+                      <option value="">No profile selected</option>
+                      {subscriberProfileVersions.map(({ version, label }) => (
+                        <option key={version.id} value={version.id}>
+                          {label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <p className="form-note">
+                    If exactly one frequency is blank, the Toolkit will ask you
+                    to confirm transmit-only or receive-only intent. Named
+                    systems and dynamic pools intentionally omit both fixed
+                    frequencies.
+                  </p>
+                  <label>
+                    Mode
+                    <input name="mode" />
+                  </label>
+                  <label>
+                    Structured note
+                    <select name="structuredNote">
+                      <option value="">None</option>
+                      <option value="remote_base">Remote Base</option>
+                      <option value="link">Link</option>
+                      <option value="patch">Patch</option>
+                      <option value="other">Other</option>
+                    </select>
+                  </label>
+                  <label>
+                    Remarks
+                    <input name="remarks" />
+                  </label>
+                  <details>
+                    <summary>Optional contact details</summary>
+                    <label>
+                      Contact name
+                      <input name="contactName" />
+                    </label>
+                    <label>
+                      Site address
+                      <input name="siteAddress" />
+                    </label>
+                    <label>
+                      Phone numbers
+                      <input name="phoneNumbers" />
+                    </label>
+                    <label>
+                      24-hour contact
+                      <input name="contact24Hour" />
+                    </label>
+                  </details>
+                  <button type="submit">Insert assignment row</button>
+                </form>
+              </details>
+            )}
+            <div className="ics205-channel-section">
+              <strong>4. Basic Radio Channel Use:</strong>
+              <div className="ics205-table-scroll">
+                <table className="ics205-channel-table">
+                  <caption className="sr-only">ICS-205 assignment rows</caption>
+                  <thead>
+                    <tr>
+                      <th scope="col">
+                        Zone
+                        <br />
+                        Grp.
+                      </th>
+                      <th scope="col">Ch #</th>
+                      <th scope="col">Function</th>
+                      <th scope="col">
+                        Channel Name/Trunked Radio System Talkgroup
+                      </th>
+                      <th scope="col">Assignment</th>
+                      <th scope="col">
+                        RX Freq
+                        <br />N or W
+                      </th>
+                      <th scope="col">RX Tone/NAC</th>
+                      <th scope="col">
+                        TX Freq
+                        <br />N or W
+                      </th>
+                      <th scope="col">TX Tone/NAC</th>
+                      <th scope="col">
+                        Mode
+                        <br />
+                        (A, D, or M)
+                      </th>
+                      <th scope="col">Remarks</th>
+                      {canEdit && <th scope="col">Row controls</th>}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {revision.assignments.map((row, index) => (
+                      <Fragment key={row.id}>
+                        <tr data-presence-object={row.id}>
+                          <td aria-label="Zone or group"></td>
+                          <td>{index + 1}</td>
+                          <td>{row.function}</td>
+                          <td>{row.channel_name}</td>
+                          <td>{row.assignment}</td>
+                          <td>{displayFrequency(row.rx_frequency_hz)}</td>
+                          <td>{row.rx_squelch}</td>
+                          <td>{displayFrequency(row.tx_frequency_hz)}</td>
+                          <td>{row.tx_squelch}</td>
+                          <td>{displayMode(row.mode)}</td>
+                          <td>
+                            {row.structured_note && (
+                              <strong>
+                                {row.structured_note.replaceAll("_", " ")}{" "}
+                                ·{" "}
+                              </strong>
+                            )}
+                            {row.remarks ||
+                              (displayMode(row.mode) ? "" : row.mode)}
+                          </td>
+                          {canEdit && (
+                            <td className="ics205-row-controls">
+                              <label>
+                                <input
+                                  aria-label={`Select ${row.channel_name} for relationship`}
+                                  type="checkbox"
+                                  checked={selectedRows.includes(row.id)}
+                                  onChange={(event) =>
+                                    setSelectedRows((current) =>
+                                      event.target.checked
+                                        ? [...current, row.id]
+                                        : current.filter((id) => id !== row.id),
+                                    )
+                                  }
+                                />
+                                Select
+                              </label>
+                              <button
+                                type="button"
+                                aria-label={`Move ${row.channel_name} up`}
+                                disabled={index === 0}
+                                onClick={() => void move(row, -1)}
+                              >
+                                ↑
+                              </button>
+                              <button
+                                type="button"
+                                aria-label={`Move ${row.channel_name} down`}
+                                disabled={
+                                  index === revision.assignments.length - 1
+                                }
+                                onClick={() => void move(row, 1)}
+                              >
+                                ↓
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => void deleteAssignment(row)}
+                              >
+                                Delete
+                              </button>
+                            </td>
+                          )}
+                        </tr>
+                        {canEdit &&
+                          (row.contact_name ||
+                            row.site_address ||
+                            row.phone_numbers ||
+                            row.contact_24_hour) && (
+                            <tr className="ics205-contact-row">
+                              <td colSpan={12}>
+                                <form
+                                  className="contact-publication-form"
+                                  onSubmit={(event) =>
+                                    void configureContactPublication(event, row)
+                                  }
+                                >
+                                  <strong>
+                                    ICS 205 contact publication for row{" "}
+                                    {index + 1}
+                                  </strong>
+                                  {[
+                                    [
+                                      "contact_name",
+                                      "Contact name",
+                                      row.contact_name,
+                                    ],
+                                    [
+                                      "site_address",
+                                      "Site address",
+                                      row.site_address,
+                                    ],
+                                    [
+                                      "phone_numbers",
+                                      "Phone numbers",
+                                      row.phone_numbers,
+                                    ],
+                                    [
+                                      "contact_24_hour",
+                                      "24-hour contact",
+                                      row.contact_24_hour,
+                                    ],
+                                  ].map(
+                                    ([field, label, value]) =>
+                                      value && (
+                                        <label key={field}>
+                                          <input
+                                            type="checkbox"
+                                            name={field}
+                                            defaultChecked={row.published_contact_fields.includes(
+                                              field as
+                                                | "contact_name"
+                                                | "site_address"
+                                                | "phone_numbers"
+                                                | "contact_24_hour",
+                                            )}
+                                          />
+                                          {label}
+                                        </label>
+                                      ),
+                                  )}
+                                  <label>
+                                    Operational purpose
+                                    <input
+                                      name="publicationPurpose"
+                                      defaultValue={
+                                        row.contact_publication_purpose
+                                      }
+                                      placeholder="SOW, gateway, property, fuel, or technical support"
+                                    />
+                                  </label>
+                                  <label>
+                                    Official-form placement
+                                    <select
+                                      name="publicationPlacement"
+                                      defaultValue={
+                                        row.contact_publication_placement
+                                      }
+                                    >
+                                      <option value="remarks">
+                                        This row’s Remarks
+                                      </option>
+                                      <option value="special_instructions">
+                                        Plan-wide Special Instructions
+                                      </option>
+                                    </select>
+                                  </label>
+                                  <button type="submit">
+                                    Save publication selection
+                                  </button>
+                                </form>
+                              </td>
+                            </tr>
+                          )}
+                      </Fragment>
+                    ))}
+                    {revision.assignments.length === 0 && (
+                      <tr>
+                        <td
+                          colSpan={canEdit ? 12 : 11}
+                          className="ics205-empty-row"
+                        >
+                          No radio channel rows have been entered.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <section className="ics205-special-instructions">
+              <strong>5. Special Instructions:</strong>
+              <p>
+                Planning output only. This form is not frequency coordination
+                approval, spectrum authorization, a propagation study, or a
+                guarantee of coverage.
+              </p>
+            </section>
+            <div className="ics205-prepared-by">
+              <strong>6. Prepared by (Communications Unit Leader)</strong>
+              {canEdit ? (
+                <form onSubmit={handlePreparedBy}>
+                  <label>
+                    Name
+                    <input
+                      name="preparedByName"
+                      defaultValue={revision.prepared_by_name}
+                      maxLength={160}
+                    />
+                  </label>
+                  <label>
+                    Position
+                    <input
+                      name="preparedByPosition"
+                      defaultValue={revision.prepared_by_position}
+                      maxLength={160}
+                    />
+                  </label>
+                  <button type="submit">Save preparer</button>
+                </form>
+              ) : (
+                <span>
+                  Name: {revision.prepared_by_name || "Not entered"}
+                  {revision.prepared_by_position
+                    ? ` · ${revision.prepared_by_position}`
+                    : ""}
+                </span>
+              )}
+              <span>Signature: Not captured electronically</span>
+            </div>
+            <div className="ics205-form-footer">
+              <strong>ICS 205</strong>
+              <span>IAP Page _____</span>
+              <span>
+                Date/Time:{" "}
+                {revision.approved_at
+                  ? `${displayDate(revision.approved_at)} ${displayTime(revision.approved_at)}`
+                  : "Pending approval"}
+              </span>
+            </div>
+          </section>
           {canEdit && selectedRows.length >= 2 && (
             <button
               type="button"
