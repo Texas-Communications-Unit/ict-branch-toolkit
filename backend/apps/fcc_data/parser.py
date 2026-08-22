@@ -495,7 +495,12 @@ def _parse_uls(archive: zipfile.ZipFile, members: dict[str, zipfile.ZipInfo], ma
                 "source_frequency_id": _value(fields, 15),
             }
         )
-    return licenses, locations, _unique_records(frequencies), _unique_records(emissions)
+    return (
+        licenses,
+        _unique_records(locations),
+        _unique_records(frequencies),
+        _unique_records(emissions),
+    )
 
 
 def parse_fcc_archive(

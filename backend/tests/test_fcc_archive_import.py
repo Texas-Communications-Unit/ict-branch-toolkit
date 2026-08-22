@@ -399,6 +399,61 @@ def test_duplicate_filter_reuses_the_large_source_list():
     assert result == [{"value": 1}, {"value": 2}]
 
 
+def test_parse_uls_deduplicates_exact_locations_and_retains_reused_location_numbers(tmp_path):
+    archive = tmp_path / "l_LMpriv.zip"
+    _uls_archive(archive)
+    with zipfile.ZipFile(archive, "r") as source:
+        members = {name: source.read(name).decode("latin-1") for name in source.namelist()}
+    location_rows = members["LO.dat"].splitlines()
+    conflicting_location = location_rows[0].split("|")
+    conflicting_location[12] = "Lewisville"
+    conflicting_location[19:27] = ["33", "2", "48.0", "N", "96", "59", "42.0", "W"]
+    members["LO.dat"] = "\n".join(
+        [*location_rows, location_rows[0], "|".join(conflicting_location)]
+    ) + "\n"
+    _write_zip(archive, members)
+
+    parsed = parse_fcc_archive(archive, dataset=FccImportBatch.Dataset.ULS_PRIVATE)
+
+    government_locations = [
+        location
+        for location in parsed.locations
+        if location["license_source_id"] == "1001" and location["location_number"] == 1
+    ]
+    assert len(government_locations) == 2
+    assert [location["city"] for location in government_locations] == ["Denton", "Lewisville"]
+
+
+@pytest.mark.django_db
+def test_apply_complete_archive_accepts_reused_location_numbers(tmp_path):
+    archive = tmp_path / "l_LMpriv.zip"
+    _uls_archive(archive)
+    with zipfile.ZipFile(archive, "r") as source:
+        members = {name: source.read(name).decode("latin-1") for name in source.namelist()}
+    location_rows = members["LO.dat"].splitlines()
+    additional_location = location_rows[0].split("|")
+    additional_location[12] = "Lewisville"
+    members["LO.dat"] = "\n".join([*location_rows, "|".join(additional_location)]) + "\n"
+    _write_zip(archive, members)
+    parsed = parse_fcc_archive(archive, dataset=FccImportBatch.Dataset.ULS_PRIVATE)
+    actor = get_user_model().objects.create_user(username="fcc-location-admin", password="unused")
+    UserRoleAssignment.objects.create(user=actor, role=Role.ADMINISTRATOR, assigned_by=actor)
+
+    apply_complete_archive(
+        parsed=parsed,
+        source_url="https://data.fcc.gov/download/pub/uls/complete/l_LMpriv.zip",
+        retrieved_at=datetime(2026, 8, 22, tzinfo=UTC),
+        actor=actor,
+    )
+
+    license_record = UlsLicense.objects.get(unique_system_identifier="1001")
+    assert list(
+        UlsLocation.objects.filter(license=license_record, location_number=1)
+        .order_by("city")
+        .values_list("city", flat=True)
+    ) == ["Denton", "Lewisville"]
+
+
 def test_parser_rejects_wrong_name_and_unsafe_member(tmp_path):
     wrong_name = tmp_path / "amateur.zip"
     _uls_archive(wrong_name)
