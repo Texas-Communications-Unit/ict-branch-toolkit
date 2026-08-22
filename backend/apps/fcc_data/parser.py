@@ -5,7 +5,7 @@ import io
 import zipfile
 from dataclasses import dataclass, field
 from datetime import date
-from decimal import Decimal, InvalidOperation
+from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 from pathlib import Path, PurePosixPath
 
 from django.core.exceptions import ValidationError
@@ -135,23 +135,24 @@ def _frequency_hz(value: str) -> int | None:
     if frequency_mhz is None or frequency_mhz == 0:
         return None
     frequency_hz = frequency_mhz * 1_000_000
-    if frequency_hz != frequency_hz.to_integral_value():
-        raise FccArchiveError(f"FCC frequency cannot be represented as integer hertz: {value!r}.")
-    result = int(frequency_hz)
+    rounded_hz = frequency_hz.to_integral_value(rounding=ROUND_HALF_UP)
+    result = int(rounded_hz)
     if not 1 <= result <= MAX_FCC_FREQUENCY_HZ:
         raise FccArchiveError(f"FCC frequency is outside the supported range: {value!r}.")
     return result
 
 
 def _unique_records(records: list[dict]) -> list[dict]:
-    unique = []
     seen = set()
+    write_index = 0
     for record in records:
         identity = tuple(sorted(record.items()))
         if identity not in seen:
             seen.add(identity)
-            unique.append(record)
-    return unique
+            records[write_index] = record
+            write_index += 1
+    del records[write_index:]
+    return records
 
 
 def _dms(

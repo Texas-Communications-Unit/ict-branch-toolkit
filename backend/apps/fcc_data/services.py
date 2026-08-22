@@ -14,6 +14,22 @@ from .models import (
 )
 from .parser import PARSER_VERSION, ParsedFccArchive
 
+IMPORT_BATCH_SIZE = 5_000
+
+
+def _chunks(records, size=None):
+    size = size or IMPORT_BATCH_SIZE
+    for start in range(0, len(records), size):
+        yield records[start : start + size]
+
+
+def _bulk_create(model, records, factory):
+    for records_chunk in _chunks(records):
+        model.objects.bulk_create(
+            [factory(record) for record in records_chunk],
+            batch_size=IMPORT_BATCH_SIZE,
+        )
+
 
 @transaction.atomic
 def apply_complete_archive(*, parsed: ParsedFccArchive, source_url: str, retrieved_at, actor):
@@ -38,21 +54,30 @@ def apply_complete_archive(*, parsed: ParsedFccArchive, source_url: str, retriev
         imported_by=actor,
     )
     if parsed.structures:
-        AntennaStructure.objects.bulk_create(
-            [AntennaStructure(batch=batch, **record) for record in parsed.structures]
+        _bulk_create(
+            AntennaStructure,
+            parsed.structures,
+            lambda record: AntennaStructure(batch=batch, **record),
         )
     if parsed.licenses:
-        licenses = [UlsLicense(batch=batch, **record) for record in parsed.licenses]
-        UlsLicense.objects.bulk_create(licenses)
-        license_by_source_id = {license.unique_system_identifier: license for license in licenses}
+        _bulk_create(
+            UlsLicense,
+            parsed.licenses,
+            lambda record: UlsLicense(batch=batch, **record),
+        )
+        license_ids_by_source_id = dict(
+            UlsLicense.objects.filter(batch=batch)
+            .values_list("unique_system_identifier", "id")
+            .iterator(chunk_size=IMPORT_BATCH_SIZE)
+        )
 
         def related(model, records):
-            objects = []
-            for record in records:
+            def make_object(record):
                 values = dict(record)
                 source_id = values.pop("license_source_id")
-                objects.append(model(license=license_by_source_id[source_id], **values))
-            model.objects.bulk_create(objects)
+                return model(license_id=license_ids_by_source_id[source_id], **values)
+
+            _bulk_create(model, records, make_object)
 
         related(UlsLocation, parsed.locations)
         related(UlsFrequency, parsed.frequencies)
