@@ -6810,9 +6810,8 @@ components:
       properties:
         antenna_number:
           type: integer
-          maximum: 9223372036854775807
+          maximum: 2147483647
           minimum: 0
-          format: int64
         frequency_hz:
           type: integer
           maximum: 10000000000
@@ -6830,9 +6829,8 @@ components:
       properties:
         antenna_number:
           type: integer
-          maximum: 9223372036854775807
+          maximum: 2147483647
           minimum: 0
-          format: int64
         station_class_code:
           type: string
           maxLength: 12
@@ -6853,9 +6851,8 @@ components:
           nullable: true
         number_of_units:
           type: integer
-          maximum: 9223372036854775807
+          maximum: 2147483647
           minimum: 0
-          format: int64
           nullable: true
       required:
       - antenna_number
@@ -6911,9 +6908,8 @@ components:
       properties:
         location_number:
           type: integer
-          maximum: 9223372036854775807
+          maximum: 2147483647
           minimum: 0
-          format: int64
         location_type_code:
           type: string
           maxLength: 8
