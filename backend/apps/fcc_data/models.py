@@ -5,6 +5,7 @@ from django.core.validators import MaxValueValidator, MinValueValidator, RegexVa
 from django.db import models
 
 sha256_validator = RegexValidator(r"^[0-9a-f]{64}$", "Enter a lowercase SHA-256 digest.")
+MAX_FCC_FREQUENCY_HZ = 300_000_000_000
 
 
 class FccImportBatch(models.Model):
@@ -174,7 +175,7 @@ class UlsFrequency(models.Model):
     antenna_number = models.PositiveIntegerField()
     station_class_code = models.CharField(max_length=12, blank=True)
     frequency_hz = models.BigIntegerField(
-        validators=[MinValueValidator(1), MaxValueValidator(10_000_000_000)]
+        validators=[MinValueValidator(1), MaxValueValidator(MAX_FCC_FREQUENCY_HZ)]
     )
     output_power_w = models.DecimalField(max_digits=15, decimal_places=3, null=True, blank=True)
     effective_radiated_power_w = models.DecimalField(
@@ -209,7 +210,7 @@ class UlsEmission(models.Model):
     location_number = models.PositiveIntegerField()
     antenna_number = models.PositiveIntegerField()
     frequency_hz = models.BigIntegerField(
-        validators=[MinValueValidator(1), MaxValueValidator(10_000_000_000)]
+        validators=[MinValueValidator(1), MaxValueValidator(MAX_FCC_FREQUENCY_HZ)]
     )
     emission_designator = models.CharField(max_length=40)
     source_frequency_id = models.CharField(max_length=24, blank=True)

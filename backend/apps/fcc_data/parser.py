@@ -10,7 +10,7 @@ from pathlib import Path, PurePosixPath
 
 from django.core.exceptions import ValidationError
 
-from .models import FccImportBatch
+from .models import MAX_FCC_FREQUENCY_HZ, FccImportBatch
 
 PARSER_VERSION = "fcc-public-access-v1"
 MAX_ARCHIVE_BYTES = 1_000_000_000
@@ -138,7 +138,7 @@ def _frequency_hz(value: str) -> int | None:
     if frequency_hz != frequency_hz.to_integral_value():
         raise FccArchiveError(f"FCC frequency cannot be represented as integer hertz: {value!r}.")
     result = int(frequency_hz)
-    if not 1 <= result <= 10_000_000_000:
+    if not 1 <= result <= MAX_FCC_FREQUENCY_HZ:
         raise FccArchiveError(f"FCC frequency is outside the supported range: {value!r}.")
     return result
 
