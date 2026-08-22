@@ -232,6 +232,23 @@ def test_parse_asr_complete_archive(tmp_path):
     assert str(structure["longitude"]) == "-97.1375000"
 
 
+def test_parse_asr_retains_structure_with_incomplete_coordinate_as_unknown(tmp_path):
+    archive = tmp_path / "r_tower.zip"
+    _asr_archive(archive)
+    with zipfile.ZipFile(archive, "r") as source:
+        members = {name: source.read(name).decode("latin-1") for name in source.namelist()}
+    coordinate = members["CO.dat"].split("|")
+    coordinate[8] = ""
+    members["CO.dat"] = "|".join(coordinate)
+    _write_zip(archive, members)
+
+    parsed = parse_fcc_archive(archive, dataset=FccImportBatch.Dataset.ASR)
+
+    assert parsed.record_counts == {"antenna_structures": 1}
+    assert parsed.structures[0]["latitude"] is None
+    assert parsed.structures[0]["longitude"] is None
+
+
 def test_parse_uls_selects_government_and_two_way_services(tmp_path):
     archive = tmp_path / "l_LMpriv.zip"
     _uls_archive(archive)

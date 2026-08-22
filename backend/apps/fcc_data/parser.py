@@ -158,7 +158,7 @@ def _dms(degrees: str, minutes: str, seconds: str, direction: str) -> Decimal | 
     if not any((degrees, minutes, seconds)):
         return None
     if not all((degrees, minutes, seconds, direction)):
-        raise FccArchiveError("FCC coordinate components must be supplied together.")
+        return None
     try:
         result = Decimal(degrees) + Decimal(minutes) / 60 + Decimal(seconds) / 3600
     except InvalidOperation as error:
@@ -171,6 +171,12 @@ def _dms(degrees: str, minutes: str, seconds: str, direction: str) -> Decimal | 
     if not Decimal("-180") <= result <= Decimal("180"):
         raise FccArchiveError("FCC coordinate is outside the supported range.")
     return result.quantize(Decimal("0.0000001"))
+
+
+def _coordinate_pair(latitude: Decimal | None, longitude: Decimal | None):
+    if latitude is None or longitude is None:
+        return None, None
+    return latitude, longitude
 
 
 def _archive_digest(path: Path, *, maximum: int) -> str:
@@ -249,7 +255,7 @@ def _parse_asr(archive: zipfile.ZipFile, members: dict[str, zipfile.ZipInfo], ma
     ):
         registration_number = _value(fields, 3)
         if registration_number and registration_number not in coordinates:
-            coordinates[registration_number] = (
+            coordinates[registration_number] = _coordinate_pair(
                 _dms(
                     _value(fields, 6),
                     _value(fields, 7),
@@ -361,6 +367,20 @@ def _parse_uls(archive: zipfile.ZipFile, members: dict[str, zipfile.ZipInfo], ma
         location_number = _integer(_value(fields, 8))
         if unique_id not in included_ids or location_number is None:
             continue
+        latitude, longitude = _coordinate_pair(
+            _dms(
+                _value(fields, 19),
+                _value(fields, 20),
+                _value(fields, 21),
+                _value(fields, 22),
+            ),
+            _dms(
+                _value(fields, 23),
+                _value(fields, 24),
+                _value(fields, 25),
+                _value(fields, 26),
+            ),
+        )
         locations.append(
             {
                 "license_source_id": unique_id,
@@ -371,18 +391,8 @@ def _parse_uls(archive: zipfile.ZipFile, members: dict[str, zipfile.ZipInfo], ma
                 "city": _value(fields, 12),
                 "county": _value(fields, 13),
                 "state": _value(fields, 14),
-                "latitude": _dms(
-                    _value(fields, 19),
-                    _value(fields, 20),
-                    _value(fields, 21),
-                    _value(fields, 22),
-                ),
-                "longitude": _dms(
-                    _value(fields, 23),
-                    _value(fields, 24),
-                    _value(fields, 25),
-                    _value(fields, 26),
-                ),
+                "latitude": latitude,
+                "longitude": longitude,
                 "ground_elevation_m": _decimal(_value(fields, 38)),
                 "asr_registration_number": _value(fields, 37),
                 "structure_type": _value(fields, 40),
