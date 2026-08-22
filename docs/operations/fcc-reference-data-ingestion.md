@@ -130,6 +130,12 @@ distinct location row, remove only exact duplicate rows, and associate related
 frequency and emission records with each matching location when presenting the
 license.
 
+The complete ULS files also contain a small number of negative values in FCC
+antenna-number and number-of-units fields. Preserve those signed source values
+so frequency and emission rows continue to join on the FCC-provided antenna
+identifier. Do not reinterpret a negative source value as a physical quantity
+or replace it with an invented identifier.
+
 Store frequencies as integer hertz, coordinates as WGS 84, and heights and
 distances canonically in meters. Preserve original text and units beside parsed
 values when precision or interpretation could otherwise be lost.

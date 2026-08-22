@@ -120,9 +120,12 @@ class UlsLicenseSerializer(serializers.ModelSerializer):
 
 
 class FccTowerFrequencySerializer(serializers.ModelSerializer):
-    antenna_number = serializers.IntegerField(min_value=0, max_value=2_147_483_647)
+    antenna_number = serializers.IntegerField(min_value=-2_147_483_648, max_value=2_147_483_647)
     number_of_units = serializers.IntegerField(
-        min_value=0, max_value=2_147_483_647, allow_null=True, required=False
+        min_value=-2_147_483_648,
+        max_value=2_147_483_647,
+        allow_null=True,
+        required=False,
     )
 
     class Meta:
@@ -138,7 +141,7 @@ class FccTowerFrequencySerializer(serializers.ModelSerializer):
 
 
 class FccTowerEmissionSerializer(serializers.ModelSerializer):
-    antenna_number = serializers.IntegerField(min_value=0, max_value=2_147_483_647)
+    antenna_number = serializers.IntegerField(min_value=-2_147_483_648, max_value=2_147_483_647)
 
     class Meta:
         model = UlsEmission

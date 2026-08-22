@@ -6918,7 +6918,7 @@ components:
         antenna_number:
           type: integer
           maximum: 2147483647
-          minimum: 0
+          minimum: -2147483648
         frequency_hz:
           type: integer
           maximum: 300000000000
@@ -6937,7 +6937,7 @@ components:
         antenna_number:
           type: integer
           maximum: 2147483647
-          minimum: 0
+          minimum: -2147483648
         station_class_code:
           type: string
           maxLength: 12
@@ -6959,7 +6959,7 @@ components:
         number_of_units:
           type: integer
           maximum: 2147483647
-          minimum: 0
+          minimum: -2147483648
           nullable: true
       required:
       - antenna_number
