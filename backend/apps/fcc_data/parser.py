@@ -5,7 +5,7 @@ import io
 import zipfile
 from dataclasses import dataclass, field
 from datetime import date
-from decimal import Decimal, InvalidOperation
+from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 from pathlib import Path, PurePosixPath
 
 from django.core.exceptions import ValidationError
@@ -135,9 +135,8 @@ def _frequency_hz(value: str) -> int | None:
     if frequency_mhz is None or frequency_mhz == 0:
         return None
     frequency_hz = frequency_mhz * 1_000_000
-    if frequency_hz != frequency_hz.to_integral_value():
-        raise FccArchiveError(f"FCC frequency cannot be represented as integer hertz: {value!r}.")
-    result = int(frequency_hz)
+    rounded_hz = frequency_hz.to_integral_value(rounding=ROUND_HALF_UP)
+    result = int(rounded_hz)
     if not 1 <= result <= MAX_FCC_FREQUENCY_HZ:
         raise FccArchiveError(f"FCC frequency is outside the supported range: {value!r}.")
     return result

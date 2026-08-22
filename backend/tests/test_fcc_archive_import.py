@@ -15,7 +15,7 @@ from apps.fcc_data.models import (
     UlsLicense,
     UlsLocation,
 )
-from apps.fcc_data.parser import FccArchiveError, parse_fcc_archive
+from apps.fcc_data.parser import FccArchiveError, _frequency_hz, parse_fcc_archive
 from apps.fcc_data.services import apply_complete_archive
 
 
@@ -354,6 +354,12 @@ def test_parse_uls_skips_zero_frequency_placeholders(tmp_path):
 
     assert [record["frequency_hz"] for record in parsed.frequencies] == [451012500]
     assert [record["frequency_hz"] for record in parsed.emissions] == [451012500]
+
+
+def test_frequency_conversion_rounds_subhertz_source_precision():
+    assert _frequency_hz("486.73750007") == 486_737_500
+    assert _frequency_hz("486.73750050") == 486_737_501
+    assert _frequency_hz("486.73750051") == 486_737_501
 
 
 def test_parser_rejects_wrong_name_and_unsafe_member(tmp_path):
