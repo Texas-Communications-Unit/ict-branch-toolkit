@@ -408,9 +408,9 @@ def test_parse_uls_deduplicates_exact_locations_and_retains_reused_location_numb
     conflicting_location = location_rows[0].split("|")
     conflicting_location[12] = "Lewisville"
     conflicting_location[19:27] = ["33", "2", "48.0", "N", "96", "59", "42.0", "W"]
-    members["LO.dat"] = "\n".join(
-        [*location_rows, location_rows[0], "|".join(conflicting_location)]
-    ) + "\n"
+    members["LO.dat"] = (
+        "\n".join([*location_rows, location_rows[0], "|".join(conflicting_location)]) + "\n"
+    )
     _write_zip(archive, members)
 
     parsed = parse_fcc_archive(archive, dataset=FccImportBatch.Dataset.ULS_PRIVATE)
