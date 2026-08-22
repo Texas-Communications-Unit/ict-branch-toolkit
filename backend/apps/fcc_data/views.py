@@ -1,6 +1,7 @@
 from decimal import Decimal, InvalidOperation
 
-from django.db.models import Count, Q
+from django.db.models import Avg, Count, F, Min, Q, Value
+from django.db.models.functions import Floor
 from drf_spectacular.utils import OpenApiParameter, extend_schema, extend_schema_view
 from rest_framework import viewsets
 from rest_framework.decorators import action
@@ -14,6 +15,8 @@ from apps.accounts.policy import LIBRARY_VIEW
 from .models import AntennaStructure, UlsEmission, UlsFrequency, UlsLicense, UlsLocation
 from .serializers import (
     AntennaStructureSerializer,
+    FccMapFeatureCollectionSerializer,
+    FccMapFeatureSerializer,
     FccTowerDetailSerializer,
     UlsLicenseSerializer,
 )
@@ -46,11 +49,17 @@ class FccReadOnlyViewSet(viewsets.ReadOnlyModelViewSet):
 )
 class AntennaStructureViewSet(FccReadOnlyViewSet):
     serializer_class = AntennaStructureSerializer
+    policy_actions = {
+        **FccReadOnlyViewSet.policy_actions,
+        "map_features": LIBRARY_VIEW,
+        "tower_details": LIBRARY_VIEW,
+    }
 
-    def get_queryset(self):
+    def _filtered_queryset(self):
         queryset = AntennaStructure.objects.select_related("batch").filter(batch__is_current=True)
         search = self.request.query_params.get("search", "").strip()
         status_code = self.request.query_params.get("status", "").strip()
+        structure_type = self.request.query_params.get("structure_type", "").strip()
         if search:
             queryset = queryset.filter(
                 Q(registration_number__icontains=search)
@@ -61,6 +70,12 @@ class AntennaStructureViewSet(FccReadOnlyViewSet):
             )
         if status_code:
             queryset = queryset.filter(status_code__iexact=status_code)
+        if structure_type:
+            queryset = queryset.filter(structure_type__iexact=structure_type)
+        return queryset
+
+    def _bounded_queryset(self):
+        queryset = self._filtered_queryset()
         bounds = [
             self.request.query_params.get(name) for name in ("west", "south", "east", "north")
         ]
@@ -82,6 +97,97 @@ class AntennaStructureViewSet(FccReadOnlyViewSet):
                 latitude__lte=north,
             )
         return queryset
+
+    def get_queryset(self):
+        return self._bounded_queryset()
+
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(name="west", type=float, required=True),
+            OpenApiParameter(name="south", type=float, required=True),
+            OpenApiParameter(name="east", type=float, required=True),
+            OpenApiParameter(name="north", type=float, required=True),
+            OpenApiParameter(name="zoom", type=float, required=True),
+            OpenApiParameter(name="search", type=str, required=False),
+            OpenApiParameter(name="status", type=str, required=False),
+            OpenApiParameter(name="structure_type", type=str, required=False),
+        ],
+        responses=FccMapFeatureCollectionSerializer,
+    )
+    @action(detail=False, methods=["get"], url_path="map-features")
+    def map_features(self, request):
+        required_bounds = ("west", "south", "east", "north")
+        if not all(request.query_params.get(name, "").strip() for name in required_bounds):
+            raise ValidationError("west, south, east, and north are required.")
+        try:
+            zoom = float(request.query_params.get("zoom", ""))
+        except (TypeError, ValueError) as error:
+            raise ValidationError("zoom must be a number between 0 and 22.") from error
+        if not 0 <= zoom <= 22:
+            raise ValidationError("zoom must be a number between 0 and 22.")
+
+        queryset = self._bounded_queryset()
+        total_count = queryset.count()
+        if zoom >= 16:
+            towers = list(queryset.order_by("registration_number")[:2000])
+            features = [
+                {
+                    "kind": "tower",
+                    "key": str(tower.id),
+                    "latitude": float(tower.latitude),
+                    "longitude": float(tower.longitude),
+                    "count": 1,
+                    "tower": tower,
+                }
+                for tower in towers
+            ]
+        else:
+            cell_size = Decimal(str(360 / (2 ** (zoom + 4))))
+            groups = list(
+                queryset.order_by()
+                .annotate(
+                    latitude_bucket=Floor(F("latitude") / Value(cell_size)),
+                    longitude_bucket=Floor(F("longitude") / Value(cell_size)),
+                )
+                .values("latitude_bucket", "longitude_bucket")
+                .annotate(
+                    count=Count("id"),
+                    latitude=Avg("latitude"),
+                    longitude=Avg("longitude"),
+                    registration_number=Min("registration_number"),
+                )
+                .order_by("latitude_bucket", "longitude_bucket")
+            )
+            single_registrations = [
+                group["registration_number"] for group in groups if group["count"] == 1
+            ]
+            single_towers = {
+                tower.registration_number: tower
+                for tower in queryset.filter(registration_number__in=single_registrations)
+            }
+            features = []
+            for group in groups:
+                tower = single_towers.get(group["registration_number"])
+                features.append(
+                    {
+                        "kind": "tower" if tower else "cluster",
+                        "key": str(tower.id)
+                        if tower
+                        else f"{group['latitude_bucket']}:{group['longitude_bucket']}",
+                        "latitude": float(group["latitude"]),
+                        "longitude": float(group["longitude"]),
+                        "count": group["count"],
+                        "tower": tower,
+                    }
+                )
+        return Response(
+            {
+                "count": total_count,
+                "feature_count": len(features),
+                "truncated": zoom >= 16 and total_count > len(features),
+                "results": FccMapFeatureSerializer(features, many=True).data,
+            }
+        )
 
     @extend_schema(responses=FccTowerDetailSerializer)
     @action(detail=True, methods=["get"], url_path="tower-details")

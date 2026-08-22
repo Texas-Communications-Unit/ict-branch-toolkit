@@ -1063,6 +1063,42 @@ footer {
   outline-offset: 3px;
 }
 
+.fcc-tower-cluster {
+  align-items: center;
+  background: var(--tx-comu-blue);
+  border: 3px solid rgb(255 255 255 / 90%);
+  border-radius: 999px;
+  box-shadow: 0 1px 6px rgb(0 0 0 / 50%);
+  color: white;
+  cursor: pointer;
+  display: flex;
+  font-size: 0.72rem;
+  font-weight: 700;
+  height: 2.5rem;
+  justify-content: center;
+  min-height: 2.5rem;
+  min-width: 2.5rem;
+  padding: 0.25rem;
+}
+
+.fcc-tower-cluster:focus-visible {
+  outline: 3px solid var(--tx-comu-red);
+  outline-offset: 3px;
+}
+
+.fcc-map-filters {
+  align-items: end;
+  display: grid;
+  gap: 0.65rem;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  margin-top: 0.8rem;
+}
+
+.fcc-map-filters label {
+  display: grid;
+  gap: 0.25rem;
+}
+
 .fcc-tower-results ul {
   display: grid;
   gap: 0.35rem;

@@ -155,6 +155,36 @@ def _unique_records(records: list[dict]) -> list[dict]:
     return records
 
 
+def _repair_entity_delimiters(fields: list[str]) -> list[str]:
+    """Repair the two known FCC EN rows containing unescaped pipe characters."""
+    while len(fields) > 30:
+        if (
+            len(fields) == 31
+            and _value(fields, 7)
+            and _value(fields, 8)
+            and len(_value(fields, 18)) == 2
+            and _value(fields, 23).isdigit()
+            and len(_value(fields, 24)) == 1
+        ):
+            fields[7] = f"{fields[7].strip()} | {fields[8].strip()}"
+            del fields[8]
+        elif (
+            len(fields) == 31
+            and len(_value(fields, 17)) == 2
+            and _value(fields, 20)
+            and _value(fields, 21)
+            and _value(fields, 23).isdigit()
+            and len(_value(fields, 24)) == 1
+        ):
+            fields[20] = f"{fields[20].strip()} | {fields[21].strip()}"
+            del fields[21]
+        else:
+            raise FccArchiveError(
+                "FCC EN record contains an unsupported unescaped field delimiter."
+            )
+    return fields
+
+
 def _dms(
     degrees: str, minutes: str, seconds: str, direction: str, *, coordinate_type: str
 ) -> Decimal | None:
@@ -323,6 +353,7 @@ def _parse_uls(archive: zipfile.ZipFile, members: dict[str, zipfile.ZipInfo], ma
     for fields in _rows(
         archive, members["EN.dat"], expected_record_type="EN", maximum_records=maximum
     ):
+        fields = _repair_entity_delimiters(fields)
         unique_id = _value(fields, 1)
         if unique_id and _value(fields, 5) == "L" and unique_id not in entities:
             entities[unique_id] = fields

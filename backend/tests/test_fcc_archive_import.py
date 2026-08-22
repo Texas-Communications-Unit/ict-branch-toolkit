@@ -338,6 +338,29 @@ def test_parse_uls_supports_included_radiolocation_frequency(tmp_path):
     assert parsed.emissions[0]["frequency_hz"] == 24_150_000_000
 
 
+def test_parse_uls_repairs_unescaped_entity_delimiters(tmp_path):
+    archive = tmp_path / "l_LMpriv.zip"
+    _uls_archive(archive)
+    with zipfile.ZipFile(archive, "r") as source:
+        members = {name: source.read(name).decode("latin-1") for name in source.namelist()}
+    entity_rows = members["EN.dat"].splitlines()
+    entity_rows[0] = entity_rows[0].replace("Synthetic County", "Synthetic | County")
+    contact_fields = entity_rows[1].split("|")
+    contact_fields[20] = "Director"
+    contact_fields.insert(21, "Facilities")
+    entity_rows[1] = "|".join(contact_fields)
+    members["EN.dat"] = "\n".join(entity_rows) + "\n"
+    _write_zip(archive, members)
+
+    parsed = parse_fcc_archive(archive, dataset=FccImportBatch.Dataset.ULS_PRIVATE)
+
+    assert parsed.licenses[0]["licensee_name"] == "Synthetic | County"
+    assert parsed.licenses[0]["applicant_type_code"] == "G"
+    assert parsed.licenses[0]["frn"] == "0000000001"
+    assert parsed.licenses[1]["applicant_type_code"] == "C"
+    assert parsed.licenses[1]["frn"] == "0000000002"
+
+
 def test_parse_uls_skips_zero_frequency_placeholders(tmp_path):
     archive = tmp_path / "l_LMpriv.zip"
     _uls_archive(archive)
