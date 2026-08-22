@@ -74,6 +74,7 @@ jobs:
           remote_script=".cache/ict-branch-toolkit/sync-fcc-${GITHUB_RUN_ID}.sh"
           ssh -i "$HOME/.ssh/deploy_key" -p "$DEPLOY_PORT" \
             -o BatchMode=yes -o ConnectTimeout=15 -o IdentitiesOnly=yes \
+            -o ServerAliveInterval=30 -o ServerAliveCountMax=20 \
             -o StrictHostKeyChecking=yes "$DEPLOY_USER@$DEPLOY_HOST" \
             "install -d -m 700 '.cache/ict-branch-toolkit' && cat > '$remote_script' && chmod 700 '$remote_script'" \
             < scripts/sync-fcc-shared-test.sh
@@ -93,6 +94,7 @@ jobs:
           for dataset in "${datasets[@]}"; do
             ssh -i "$HOME/.ssh/deploy_key" -p "$DEPLOY_PORT" \
               -o BatchMode=yes -o ConnectTimeout=15 -o IdentitiesOnly=yes \
+              -o ServerAliveInterval=30 -o ServerAliveCountMax=20 \
               -o StrictHostKeyChecking=yes "$DEPLOY_USER@$DEPLOY_HOST" \
               "bash '$remote_script' '$dataset'"
           done
@@ -107,6 +109,7 @@ jobs:
           remote_script=".cache/ict-branch-toolkit/sync-fcc-${GITHUB_RUN_ID}.sh"
           ssh -i "$HOME/.ssh/deploy_key" -p "$DEPLOY_PORT" \
             -o BatchMode=yes -o ConnectTimeout=15 -o IdentitiesOnly=yes \
+            -o ServerAliveInterval=30 -o ServerAliveCountMax=20 \
             -o StrictHostKeyChecking=yes "$DEPLOY_USER@$DEPLOY_HOST" \
             "rm -f -- '$remote_script'"
 
