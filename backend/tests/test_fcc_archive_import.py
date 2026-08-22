@@ -338,6 +338,41 @@ def test_parse_uls_supports_included_radiolocation_frequency(tmp_path):
     assert parsed.emissions[0]["frequency_hz"] == 24_150_000_000
 
 
+@pytest.mark.django_db
+def test_parse_and_apply_uls_preserves_signed_fcc_source_values(tmp_path):
+    archive = tmp_path / "l_LMpriv.zip"
+    _uls_archive(archive)
+    with zipfile.ZipFile(archive, "r") as source:
+        members = {name: source.read(name).decode("latin-1") for name in source.namelist()}
+    frequency_rows = members["FR.dat"].splitlines()
+    signed_frequency = frequency_rows[0].split("|")
+    signed_frequency[7] = "-10"
+    signed_frequency[24] = "-1"
+    frequency_rows[0] = "|".join(signed_frequency)
+    members["FR.dat"] = "\n".join(frequency_rows) + "\n"
+    emission_rows = members["EM.dat"].splitlines()
+    signed_emission = emission_rows[0].split("|")
+    signed_emission[6] = "-10"
+    emission_rows[0] = "|".join(signed_emission)
+    members["EM.dat"] = "\n".join(emission_rows) + "\n"
+    _write_zip(archive, members)
+
+    parsed = parse_fcc_archive(archive, dataset=FccImportBatch.Dataset.ULS_PRIVATE)
+    actor = get_user_model().objects.create_user(username="fcc-sentinel-admin", password="unused")
+    UserRoleAssignment.objects.create(user=actor, role=Role.ADMINISTRATOR, assigned_by=actor)
+    apply_complete_archive(
+        parsed=parsed,
+        source_url="https://data.fcc.gov/download/pub/uls/complete/l_LMpriv.zip",
+        retrieved_at=datetime(2026, 8, 22, tzinfo=UTC),
+        actor=actor,
+    )
+
+    frequency = UlsFrequency.objects.get(license__unique_system_identifier="1001")
+    emission = UlsEmission.objects.get(license__unique_system_identifier="1001")
+    assert (frequency.antenna_number, frequency.number_of_units) == (-10, -1)
+    assert emission.antenna_number == -10
+
+
 def test_parse_uls_repairs_unescaped_entity_delimiters(tmp_path):
     archive = tmp_path / "l_LMpriv.zip"
     _uls_archive(archive)

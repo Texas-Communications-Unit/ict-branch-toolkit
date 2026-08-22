@@ -175,7 +175,7 @@ class UlsFrequency(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     license = models.ForeignKey(UlsLicense, related_name="frequencies", on_delete=models.PROTECT)
     location_number = models.PositiveIntegerField()
-    antenna_number = models.PositiveIntegerField()
+    antenna_number = models.IntegerField()
     station_class_code = models.CharField(max_length=12, blank=True)
     frequency_hz = models.BigIntegerField(
         validators=[MinValueValidator(1), MaxValueValidator(MAX_FCC_FREQUENCY_HZ)]
@@ -184,7 +184,7 @@ class UlsFrequency(models.Model):
     effective_radiated_power_w = models.DecimalField(
         max_digits=15, decimal_places=3, null=True, blank=True
     )
-    number_of_units = models.PositiveIntegerField(null=True, blank=True)
+    number_of_units = models.IntegerField(null=True, blank=True)
     source_frequency_id = models.CharField(max_length=24, blank=True)
 
     class Meta:
@@ -211,7 +211,7 @@ class UlsEmission(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     license = models.ForeignKey(UlsLicense, related_name="emissions", on_delete=models.PROTECT)
     location_number = models.PositiveIntegerField()
-    antenna_number = models.PositiveIntegerField()
+    antenna_number = models.IntegerField()
     frequency_hz = models.BigIntegerField(
         validators=[MinValueValidator(1), MaxValueValidator(MAX_FCC_FREQUENCY_HZ)]
     )
