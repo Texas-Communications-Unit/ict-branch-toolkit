@@ -62,7 +62,7 @@ jobs:
       - run: python manage.py migrate --noinput
       - name: Validate recovery scripts
         run: >-
-          shellcheck ../scripts/database-recovery.sh ../scripts/deploy-shared-test.sh
+          shellcheck ../scripts/database-recovery.sh ../scripts/deploy-shared-test.sh ../scripts/sync-fcc-shared-test.sh
           ../scripts/run-shared-test-capacity.sh
           ../scripts/test-postgresql-recovery.sh
       - name: Validate capacity report safeguards

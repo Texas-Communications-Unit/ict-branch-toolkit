@@ -43,20 +43,9 @@ if [[ -n "$(git status --porcelain)" ]]; then
   exit 1
 fi
 
-python3 - "$source_url" "$download_path" <<'PY'
-import pathlib
-import sys
-import urllib.request
-
-source_url, destination = sys.argv[1:]
-request = urllib.request.Request(source_url, headers={"User-Agent": "ICT-Branch-Toolkit/1.0"})
-with urllib.request.urlopen(request, timeout=120) as response:
-    if response.status != 200:
-        raise RuntimeError(f"FCC download returned HTTP {response.status}")
-    with pathlib.Path(destination).open("wb") as output:
-        while chunk := response.read(1024 * 1024):
-            output.write(chunk)
-PY
+curl --fail --location --retry 4 --retry-all-errors --connect-timeout 30 \
+  --user-agent "ICT-Branch-Toolkit/1.0 (toolkit@tx-comu.org)" \
+  --output "$download_path" "$source_url"
 test -s "$download_path"
 download_digest="$(sha256sum "$download_path" | cut -d ' ' -f 1)"
 mv -f -- "$download_path" "$archive_path"

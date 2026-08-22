@@ -1328,3 +1328,56 @@ export interface FccLicenseSearchResult {
   frequencies_hz: number[];
   batch: FccBatchSummary;
 }
+
+export interface FccTowerFrequency {
+  antenna_number: number;
+  station_class_code: string;
+  frequency_hz: number;
+  output_power_w: string | null;
+  effective_radiated_power_w: string | null;
+  number_of_units: number | null;
+}
+
+export interface FccTowerEmission {
+  antenna_number: number;
+  frequency_hz: number;
+  emission_designator: string;
+}
+
+export interface FccTowerLocation {
+  location_number: number;
+  location_type_code: string;
+  location_class_code: string;
+  address: string;
+  city: string;
+  county: string;
+  state: string;
+  latitude: string | null;
+  longitude: string | null;
+  ground_elevation_m: string | null;
+  asr_registration_number: string;
+  structure_type: string;
+  frequencies: FccTowerFrequency[];
+  emissions: FccTowerEmission[];
+}
+
+export interface FccTowerLicense {
+  id: string;
+  call_sign: string;
+  license_status: string;
+  radio_service_code: string;
+  licensee_name: string;
+  frn: string;
+  grant_date: string | null;
+  expiration_date: string | null;
+  tower_locations: FccTowerLocation[];
+  batch: FccBatchSummary;
+}
+
+export interface FccTowerDetail {
+  structure: FccAntennaStructure;
+  licenses: FccTowerLicense[];
+  license_count: number;
+  truncated: boolean;
+  disclaimer: string;
+}
