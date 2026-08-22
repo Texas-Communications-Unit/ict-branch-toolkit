@@ -122,6 +122,14 @@ import. Normalize only after retaining the raw source value.
   and
 - source archive metadata, source row keys, digest, and parser version.
 
+FCC complete ULS files occasionally contain multiple distinct `LO` rows with
+the same unique system identifier and location number, including rows with
+different fixed-site coordinates. Treat that pair as a relationship key for
+frequency and emission records, not as a unique location-row key. Retain every
+distinct location row, remove only exact duplicate rows, and associate related
+frequency and emission records with each matching location when presenting the
+license.
+
 Store frequencies as integer hertz, coordinates as WGS 84, and heights and
 distances canonically in meters. Preserve original text and units beside parsed
 values when precision or interpretation could otherwise be lost.

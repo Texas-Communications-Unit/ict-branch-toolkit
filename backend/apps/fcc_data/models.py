@@ -147,11 +147,14 @@ class UlsLocation(models.Model):
 
     class Meta:
         ordering = ["license", "location_number"]
-        indexes = [models.Index(fields=["asr_registration_number"])]
-        constraints = [
-            models.UniqueConstraint(
-                fields=["license", "location_number"], name="unique_uls_location_license"
+        indexes = [
+            models.Index(fields=["asr_registration_number"]),
+            models.Index(
+                fields=["license", "location_number"],
+                name="fcc_uls_loc_license_num_idx",
             ),
+        ]
+        constraints = [
             models.CheckConstraint(
                 condition=models.Q(latitude__isnull=True)
                 | (models.Q(latitude__gte=-90) & models.Q(latitude__lte=90)),
