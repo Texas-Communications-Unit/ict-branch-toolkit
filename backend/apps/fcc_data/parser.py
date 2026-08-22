@@ -414,15 +414,12 @@ def _parse_uls(archive: zipfile.ZipFile, members: dict[str, zipfile.ZipInfo], ma
         archive, members["FR.dat"], expected_record_type="FR", maximum_records=maximum
     ):
         unique_id = _value(fields, 1)
+        if unique_id not in included_ids:
+            continue
         frequency_hz = _frequency_hz(_value(fields, 10))
         location_number = _integer(_value(fields, 6))
         antenna_number = _integer(_value(fields, 7))
-        if (
-            unique_id not in included_ids
-            or frequency_hz is None
-            or location_number is None
-            or antenna_number is None
-        ):
+        if frequency_hz is None or location_number is None or antenna_number is None:
             continue
         frequencies.append(
             {
@@ -443,13 +440,14 @@ def _parse_uls(archive: zipfile.ZipFile, members: dict[str, zipfile.ZipInfo], ma
         archive, members["EM.dat"], expected_record_type="EM", maximum_records=maximum
     ):
         unique_id = _value(fields, 1)
+        if unique_id not in included_ids:
+            continue
         frequency_hz = _frequency_hz(_value(fields, 7))
         location_number = _integer(_value(fields, 5))
         antenna_number = _integer(_value(fields, 6))
         designator = _value(fields, 9)
         if (
-            unique_id not in included_ids
-            or frequency_hz is None
+            frequency_hz is None
             or location_number is None
             or antenna_number is None
             or not designator
