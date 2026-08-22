@@ -143,14 +143,16 @@ def _frequency_hz(value: str) -> int | None:
 
 
 def _unique_records(records: list[dict]) -> list[dict]:
-    unique = []
     seen = set()
+    write_index = 0
     for record in records:
         identity = tuple(sorted(record.items()))
         if identity not in seen:
             seen.add(identity)
-            unique.append(record)
-    return unique
+            records[write_index] = record
+            write_index += 1
+    del records[write_index:]
+    return records
 
 
 def _dms(

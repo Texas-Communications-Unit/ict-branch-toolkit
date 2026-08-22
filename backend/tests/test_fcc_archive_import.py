@@ -15,7 +15,12 @@ from apps.fcc_data.models import (
     UlsLicense,
     UlsLocation,
 )
-from apps.fcc_data.parser import FccArchiveError, _frequency_hz, parse_fcc_archive
+from apps.fcc_data.parser import (
+    FccArchiveError,
+    _frequency_hz,
+    _unique_records,
+    parse_fcc_archive,
+)
 from apps.fcc_data.services import apply_complete_archive
 
 
@@ -362,6 +367,15 @@ def test_frequency_conversion_rounds_subhertz_source_precision():
     assert _frequency_hz("486.73750051") == 486_737_501
 
 
+def test_duplicate_filter_reuses_the_large_source_list():
+    records = [{"value": 1}, {"value": 2}, {"value": 1}]
+
+    result = _unique_records(records)
+
+    assert result is records
+    assert result == [{"value": 1}, {"value": 2}]
+
+
 def test_parser_rejects_wrong_name_and_unsafe_member(tmp_path):
     wrong_name = tmp_path / "amateur.zip"
     _uls_archive(wrong_name)
@@ -414,6 +428,39 @@ def test_apply_complete_archive_is_atomic_current_and_idempotent(tmp_path):
     assert UlsLocation.objects.count() == 2
     assert UlsFrequency.objects.count() == 2
     assert UlsEmission.objects.count() == 2
+
+
+@pytest.mark.django_db
+def test_apply_complete_archive_bounds_bulk_insert_memory(tmp_path, monkeypatch):
+    from django.db.models.query import QuerySet
+
+    from apps.fcc_data import services
+
+    archive = tmp_path / "l_LMpriv.zip"
+    _uls_archive(archive)
+    parsed = parse_fcc_archive(archive, dataset=FccImportBatch.Dataset.ULS_PRIVATE)
+    actor = get_user_model().objects.create_user(username="fcc-batch-admin", password="unused")
+    UserRoleAssignment.objects.create(user=actor, role=Role.ADMINISTRATOR, assigned_by=actor)
+    original_bulk_create = QuerySet.bulk_create
+    fcc_batch_sizes = []
+
+    def tracking_bulk_create(queryset, objects, **kwargs):
+        if queryset.model._meta.app_label == "fcc_data":
+            fcc_batch_sizes.append(len(objects))
+        return original_bulk_create(queryset, objects, **kwargs)
+
+    monkeypatch.setattr(services, "IMPORT_BATCH_SIZE", 1)
+    monkeypatch.setattr(QuerySet, "bulk_create", tracking_bulk_create)
+
+    apply_complete_archive(
+        parsed=parsed,
+        source_url="https://data.fcc.gov/download/pub/uls/complete/l_LMpriv.zip",
+        retrieved_at=datetime(2026, 8, 21, tzinfo=UTC),
+        actor=actor,
+    )
+
+    assert fcc_batch_sizes
+    assert max(fcc_batch_sizes) == 1
 
 
 @pytest.mark.django_db
