@@ -287,6 +287,29 @@ def test_parse_uls_treats_invalid_axis_direction_as_unknown(tmp_path):
     assert parsed.locations[0]["longitude"] is None
 
 
+def test_parse_uls_does_not_validate_frequencies_for_excluded_services(tmp_path):
+    archive = tmp_path / "l_LMpriv.zip"
+    _uls_archive(archive)
+    with zipfile.ZipFile(archive, "r") as source:
+        members = {name: source.read(name).decode("latin-1") for name in source.namelist()}
+    frequency_rows = members["FR.dat"].splitlines()
+    excluded_frequency = frequency_rows[2].split("|")
+    excluded_frequency[10] = "24150.00000000"
+    frequency_rows[2] = "|".join(excluded_frequency)
+    members["FR.dat"] = "\n".join(frequency_rows) + "\n"
+    emission_rows = members["EM.dat"].splitlines()
+    excluded_emission = emission_rows[2].split("|")
+    excluded_emission[7] = "24150.00000000"
+    emission_rows[2] = "|".join(excluded_emission)
+    members["EM.dat"] = "\n".join(emission_rows) + "\n"
+    _write_zip(archive, members)
+
+    parsed = parse_fcc_archive(archive, dataset=FccImportBatch.Dataset.ULS_PRIVATE)
+
+    assert [record["frequency_hz"] for record in parsed.frequencies] == [155752500, 451012500]
+    assert [record["frequency_hz"] for record in parsed.emissions] == [155752500, 451012500]
+
+
 def test_parser_rejects_wrong_name_and_unsafe_member(tmp_path):
     wrong_name = tmp_path / "amateur.zip"
     _uls_archive(wrong_name)
