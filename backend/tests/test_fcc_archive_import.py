@@ -269,6 +269,24 @@ def test_parse_uls_selects_government_and_two_way_services(tmp_path):
     }
 
 
+def test_parse_uls_treats_invalid_axis_direction_as_unknown(tmp_path):
+    archive = tmp_path / "l_LMpriv.zip"
+    _uls_archive(archive)
+    with zipfile.ZipFile(archive, "r") as source:
+        members = {name: source.read(name).decode("latin-1") for name in source.namelist()}
+    locations = members["LO.dat"].splitlines()
+    first_location = locations[0].split("|")
+    first_location[26] = "2"
+    locations[0] = "|".join(first_location)
+    members["LO.dat"] = "\n".join(locations) + "\n"
+    _write_zip(archive, members)
+
+    parsed = parse_fcc_archive(archive, dataset=FccImportBatch.Dataset.ULS_PRIVATE)
+
+    assert parsed.locations[0]["latitude"] is None
+    assert parsed.locations[0]["longitude"] is None
+
+
 def test_parser_rejects_wrong_name_and_unsafe_member(tmp_path):
     wrong_name = tmp_path / "amateur.zip"
     _uls_archive(wrong_name)
