@@ -1294,6 +1294,18 @@ paths:
     get:
       operationId: fcc_antenna_structures_list
       parameters:
+      - in: query
+        name: east
+        schema:
+          type: number
+          format: double
+        description: Eastern WGS 84 longitude; requires all four map bounds.
+      - in: query
+        name: north
+        schema:
+          type: number
+          format: double
+        description: Northern WGS 84 latitude; requires all four map bounds.
       - name: page
         required: false
         in: query
@@ -1306,6 +1318,18 @@ paths:
         description: Number of results to return per page.
         schema:
           type: integer
+      - in: query
+        name: south
+        schema:
+          type: number
+          format: double
+        description: Southern WGS 84 latitude; requires all four map bounds.
+      - in: query
+        name: west
+        schema:
+          type: number
+          format: double
+        description: Western WGS 84 longitude; requires all four map bounds.
       tags:
       - fcc-antenna-structures
       security:
@@ -1338,6 +1362,28 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AntennaStructure'
+          description: ''
+  /api/fcc-antenna-structures/{id}/tower-details/:
+    get:
+      operationId: fcc_antenna_structures_tower_details_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this antenna structure.
+        required: true
+      tags:
+      - fcc-antenna-structures
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FccTowerDetail'
           description: ''
   /api/fcc-licenses/:
     get:
@@ -6738,6 +6784,185 @@ components:
       - parser_version
       - retrieved_at
       - source_url
+    FccTowerDetail:
+      type: object
+      properties:
+        structure:
+          $ref: '#/components/schemas/AntennaStructure'
+        licenses:
+          type: array
+          items:
+            $ref: '#/components/schemas/FccTowerLicense'
+        license_count:
+          type: integer
+        truncated:
+          type: boolean
+        disclaimer:
+          type: string
+      required:
+      - disclaimer
+      - license_count
+      - licenses
+      - structure
+      - truncated
+    FccTowerEmission:
+      type: object
+      properties:
+        antenna_number:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        frequency_hz:
+          type: integer
+          maximum: 10000000000
+          minimum: 1
+          format: int64
+        emission_designator:
+          type: string
+          maxLength: 40
+      required:
+      - antenna_number
+      - emission_designator
+      - frequency_hz
+    FccTowerFrequency:
+      type: object
+      properties:
+        antenna_number:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        station_class_code:
+          type: string
+          maxLength: 12
+        frequency_hz:
+          type: integer
+          maximum: 10000000000
+          minimum: 1
+          format: int64
+        output_power_w:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,3})?$
+          nullable: true
+        effective_radiated_power_w:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,3})?$
+          nullable: true
+        number_of_units:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          nullable: true
+      required:
+      - antenna_number
+      - frequency_hz
+    FccTowerLicense:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        call_sign:
+          type: string
+          maxLength: 20
+        license_status:
+          type: string
+          maxLength: 8
+        radio_service_code:
+          type: string
+          maxLength: 8
+        licensee_name:
+          type: string
+          maxLength: 300
+        frn:
+          type: string
+          maxLength: 20
+        grant_date:
+          type: string
+          format: date
+          nullable: true
+        expiration_date:
+          type: string
+          format: date
+          nullable: true
+        tower_locations:
+          type: array
+          items:
+            $ref: '#/components/schemas/FccTowerLocation'
+          readOnly: true
+        batch:
+          allOf:
+          - $ref: '#/components/schemas/FccBatchSummary'
+          readOnly: true
+      required:
+      - batch
+      - call_sign
+      - id
+      - license_status
+      - radio_service_code
+      - tower_locations
+    FccTowerLocation:
+      type: object
+      properties:
+        location_number:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        location_type_code:
+          type: string
+          maxLength: 8
+        location_class_code:
+          type: string
+          maxLength: 8
+        address:
+          type: string
+          maxLength: 300
+        city:
+          type: string
+          maxLength: 120
+        county:
+          type: string
+          maxLength: 120
+        state:
+          type: string
+          maxLength: 8
+        latitude:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,7})?$
+          nullable: true
+        longitude:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,4}(?:\.\d{0,7})?$
+          nullable: true
+        ground_elevation_m:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,7}(?:\.\d{0,3})?$
+          nullable: true
+        asr_registration_number:
+          type: string
+          maxLength: 20
+        structure_type:
+          type: string
+          maxLength: 40
+        frequencies:
+          type: array
+          items:
+            $ref: '#/components/schemas/FccTowerFrequency'
+          readOnly: true
+        emissions:
+          type: array
+          items:
+            $ref: '#/components/schemas/FccTowerEmission'
+          readOnly: true
+      required:
+      - emissions
+      - frequencies
+      - location_number
     FieldNameEnum:
       enum:
       - prepared_by_name

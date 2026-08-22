@@ -71,6 +71,7 @@ class AntennaStructure(models.Model):
 
     class Meta:
         ordering = ["registration_number"]
+        indexes = [models.Index(fields=["batch", "latitude", "longitude"])]
         constraints = [
             models.UniqueConstraint(
                 fields=["batch", "registration_number"], name="unique_asr_registration_batch"
@@ -145,6 +146,7 @@ class UlsLocation(models.Model):
 
     class Meta:
         ordering = ["license", "location_number"]
+        indexes = [models.Index(fields=["asr_registration_number"])]
         constraints = [
             models.UniqueConstraint(
                 fields=["license", "location_number"], name="unique_uls_location_license"

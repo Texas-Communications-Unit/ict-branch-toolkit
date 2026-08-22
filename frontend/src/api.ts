@@ -31,6 +31,7 @@ import type {
   FieldObservation,
   FccAntennaStructure,
   FccLicenseSearchResult,
+  FccTowerDetail,
   GeocoderSearchResult,
   HAATCalculation,
   ImportResult,
@@ -1198,4 +1199,12 @@ export function searchFccAntennaStructures(
   params: Record<string, string>,
 ): Promise<Paginated<FccAntennaStructure>> {
   return request(`/api/fcc-antenna-structures/?${fccQuery(params)}`);
+}
+
+export function getFccTowerDetails(
+  structureId: string,
+): Promise<FccTowerDetail> {
+  return request(
+    `/api/fcc-antenna-structures/${encodeURIComponent(structureId)}/tower-details/`,
+  );
 }

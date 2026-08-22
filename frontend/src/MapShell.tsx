@@ -20,6 +20,7 @@ import {
   createSiteAssignment,
   deleteSiteAssignment,
   downloadSpatialExport,
+  getFccTowerDetails,
   listCoverageEstimates,
   listDirectionalCoverageAnalyses,
   listPlans,
@@ -27,6 +28,7 @@ import {
   listSiteAssignments,
   parseCoordinate,
   searchAddress,
+  searchFccAntennaStructures,
   updateRadioSite,
 } from "./api";
 import { resolveMapProvider } from "./mapProvider";
@@ -36,6 +38,8 @@ import type {
   CoordinateParseResult,
   ICS205Plan,
   Incident,
+  FccAntennaStructure,
+  FccTowerDetail,
   RadioSite,
   SiteAssignment,
 } from "./types";
@@ -101,6 +105,7 @@ export function MapShell({ incident }: { incident?: Incident }) {
   const container = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const markersRef = useRef<maplibregl.Marker[]>([]);
+  const fccMarkersRef = useRef<maplibregl.Marker[]>([]);
   const previewMarkerRef = useRef<maplibregl.Marker | null>(null);
   const configuredMap = useMemo(() => resolveMapProvider(import.meta.env), []);
   const [sites, setSites] = useState<RadioSite[]>([]);
@@ -116,6 +121,13 @@ export function MapShell({ incident }: { incident?: Incident }) {
   const [parsed, setParsed] = useState<CoordinateParseResult>();
   const [message, setMessage] = useState("");
   const [mapStatus, setMapStatus] = useState("");
+  const [fccLayerEnabled, setFccLayerEnabled] = useState(false);
+  const [fccTowers, setFccTowers] = useState<FccAntennaStructure[]>([]);
+  const [fccTowerCount, setFccTowerCount] = useState(0);
+  const [selectedFccTower, setSelectedFccTower] = useState<FccTowerDetail>();
+  const [fccStatus, setFccStatus] = useState(
+    "FCC tower layer is off. Zoom to an area and enable it when needed.",
+  );
   const [addressResults, setAddressResults] = useState<
     { label: string; latitude: number; longitude: number; provider: string }[]
   >([]);
@@ -322,6 +334,8 @@ export function MapShell({ incident }: { incident?: Incident }) {
     return () => {
       markersRef.current.forEach((marker) => marker.remove());
       markersRef.current = [];
+      fccMarkersRef.current.forEach((marker) => marker.remove());
+      fccMarkersRef.current = [];
       previewMarkerRef.current?.remove();
       previewMarkerRef.current = null;
       mapRef.current = null;
@@ -574,6 +588,80 @@ export function MapShell({ incident }: { incident?: Incident }) {
     else map.once("load", render);
   }, [canEdit, coverageEstimates, directionalAnalyses, refresh, sites]);
 
+  const selectFccTower = useCallback(async (tower: FccAntennaStructure) => {
+    try {
+      setFccStatus(`Loading FCC details for ASR ${tower.registration_number}.`);
+      const detail = await getFccTowerDetails(tower.id);
+      setSelectedFccTower(detail);
+      setFccStatus(
+        `Loaded ASR ${tower.registration_number} with ${detail.license_count} associated license record(s).`,
+      );
+    } catch (error) {
+      setFccStatus(
+        error instanceof Error
+          ? error.message
+          : "Unable to load FCC tower details.",
+      );
+    }
+  }, []);
+
+  const refreshFccTowers = useCallback(async () => {
+    const map = mapRef.current;
+    if (!map) return;
+    const bounds = map.getBounds();
+    setFccStatus("Loading FCC antenna structures in the current map view.");
+    try {
+      const result = await searchFccAntennaStructures({
+        west: bounds.getWest().toString(),
+        south: bounds.getSouth().toString(),
+        east: bounds.getEast().toString(),
+        north: bounds.getNorth().toString(),
+        page_size: "500",
+      });
+      setFccTowers(result.results);
+      setFccTowerCount(result.count);
+      setFccStatus(
+        result.count > result.results.length
+          ? `Showing the first ${result.results.length} of ${result.count} FCC structures in this view. Zoom in and refresh for complete local results.`
+          : `Showing ${result.count} FCC structure${result.count === 1 ? "" : "s"} in this view.`,
+      );
+    } catch (error) {
+      setFccStatus(
+        error instanceof Error
+          ? error.message
+          : "Unable to load the FCC tower layer.",
+      );
+    }
+  }, []);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    fccMarkersRef.current.forEach((marker) => marker.remove());
+    fccMarkersRef.current = [];
+    if (!fccLayerEnabled) return;
+    fccMarkersRef.current = fccTowers.flatMap((tower) => {
+      if (tower.latitude === null || tower.longitude === null) return [];
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "fcc-tower-marker";
+      button.setAttribute(
+        "aria-label",
+        `Open FCC details for ASR ${tower.registration_number}`,
+      );
+      button.title = `ASR ${tower.registration_number} — ${tower.owner_name || "owner not listed"}`;
+      button.addEventListener("click", (event) => {
+        event.stopPropagation();
+        void selectFccTower(tower);
+      });
+      return [
+        new maplibregl.Marker({ element: button })
+          .setLngLat([Number(tower.longitude), Number(tower.latitude)])
+          .addTo(map),
+      ];
+    });
+  }, [fccLayerEnabled, fccTowers, selectFccTower]);
+
   async function handleParse() {
     try {
       const result = await parseCoordinate(coordinateText);
@@ -762,6 +850,202 @@ export function MapShell({ incident }: { incident?: Incident }) {
       >
         View all Texas
       </button>
+      <section
+        className="fcc-map-layer"
+        aria-labelledby="fcc-map-layer-heading"
+      >
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow">Authoritative public reference layer</p>
+            <h3 id="fcc-map-layer-heading">FCC antenna structures</h3>
+          </div>
+          <span className="count">
+            {fccLayerEnabled ? fccTowerCount : "Off"}
+          </span>
+        </div>
+        <div className="button-row">
+          <button
+            type="button"
+            className="secondary-button"
+            aria-pressed={fccLayerEnabled}
+            onClick={() => {
+              const enabled = !fccLayerEnabled;
+              setFccLayerEnabled(enabled);
+              setSelectedFccTower(undefined);
+              if (enabled) void refreshFccTowers();
+              else {
+                setFccTowers([]);
+                setFccTowerCount(0);
+                setFccStatus("FCC tower layer is off.");
+              }
+            }}
+          >
+            {fccLayerEnabled ? "Turn off FCC towers" : "Turn on FCC towers"}
+          </button>
+          {fccLayerEnabled && (
+            <button
+              type="button"
+              className="secondary-button"
+              onClick={() => void refreshFccTowers()}
+            >
+              Refresh towers in current view
+            </button>
+          )}
+        </div>
+        <p
+          role={fccLayerEnabled ? "status" : undefined}
+          aria-live={fccLayerEnabled ? "polite" : undefined}
+          className="site-message"
+        >
+          {fccStatus}
+        </p>
+        {fccLayerEnabled && fccTowers.length > 0 && (
+          <div className="fcc-tower-results">
+            <h4>Structures in the current view</h4>
+            <ul aria-label="FCC antenna structures in the current map view">
+              {fccTowers.slice(0, 100).map((tower) => (
+                <li key={tower.id}>
+                  <button
+                    type="button"
+                    className="secondary-button"
+                    onClick={() => void selectFccTower(tower)}
+                  >
+                    ASR {tower.registration_number}
+                    {tower.owner_name ? ` — ${tower.owner_name}` : ""}
+                  </button>
+                </li>
+              ))}
+            </ul>
+            {fccTowers.length > 100 && (
+              <p className="empty">
+                The accessible list shows the first 100 points. Zoom in and
+                refresh to narrow the current view.
+              </p>
+            )}
+          </div>
+        )}
+        {selectedFccTower && (
+          <article
+            className="fcc-tower-detail"
+            aria-labelledby="fcc-tower-detail-heading"
+          >
+            <h4 id="fcc-tower-detail-heading">
+              ASR {selectedFccTower.structure.registration_number}
+            </h4>
+            <dl className="coordinate-preview">
+              <div>
+                <dt>Owner</dt>
+                <dd>{selectedFccTower.structure.owner_name || "Not listed"}</dd>
+              </div>
+              <div>
+                <dt>Status</dt>
+                <dd>
+                  {selectedFccTower.structure.status_code || "Not listed"}
+                </dd>
+              </div>
+              <div>
+                <dt>Structure</dt>
+                <dd>
+                  {selectedFccTower.structure.structure_type || "Not listed"}
+                </dd>
+              </div>
+              <div>
+                <dt>Coordinates</dt>
+                <dd>
+                  {selectedFccTower.structure.latitude},{" "}
+                  {selectedFccTower.structure.longitude}
+                </dd>
+              </div>
+              <div>
+                <dt>Overall height</dt>
+                <dd>
+                  {selectedFccTower.structure.overall_height_m
+                    ? `${selectedFccTower.structure.overall_height_m} m`
+                    : "Not listed"}
+                </dd>
+              </div>
+              <div>
+                <dt>FAA study</dt>
+                <dd>
+                  {selectedFccTower.structure.faa_study_number || "Not listed"}
+                </dd>
+              </div>
+            </dl>
+            <h5>Associated FCC licenses ({selectedFccTower.license_count})</h5>
+            {selectedFccTower.licenses.length === 0 ? (
+              <p className="empty">
+                No imported ULS location references this ASR registration.
+              </p>
+            ) : (
+              selectedFccTower.licenses.map((license) => (
+                <section className="resource-card" key={license.id}>
+                  <strong>
+                    {license.call_sign} —{" "}
+                    {license.licensee_name || "Licensee not listed"}
+                  </strong>
+                  <span>
+                    Service {license.radio_service_code} · Status{" "}
+                    {license.license_status}
+                  </span>
+                  {license.tower_locations.map((location) => (
+                    <div key={location.location_number}>
+                      <small>
+                        Location {location.location_number} · {location.city}
+                        {location.city && location.state ? ", " : ""}
+                        {location.state}
+                      </small>
+                      {location.frequencies.length === 0 ? (
+                        <p>No frequencies listed for this tower location.</p>
+                      ) : (
+                        <ul>
+                          {location.frequencies.map((frequency, index) => {
+                            const emissions = location.emissions
+                              .filter(
+                                (item) =>
+                                  item.frequency_hz === frequency.frequency_hz,
+                              )
+                              .map((item) => item.emission_designator)
+                              .filter(
+                                (value, itemIndex, values) =>
+                                  values.indexOf(value) === itemIndex,
+                              );
+                            return (
+                              <li
+                                key={`${frequency.frequency_hz}-${frequency.antenna_number}-${index}`}
+                              >
+                                {(frequency.frequency_hz / 1_000_000).toFixed(
+                                  6,
+                                )}{" "}
+                                MHz
+                                {frequency.station_class_code
+                                  ? ` · ${frequency.station_class_code}`
+                                  : ""}
+                                {emissions.length
+                                  ? ` · ${emissions.join(", ")}`
+                                  : ""}
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      )}
+                    </div>
+                  ))}
+                  <small>
+                    {license.batch.dataset_label} · retrieved{" "}
+                    {new Date(license.batch.retrieved_at).toLocaleDateString()}
+                  </small>
+                </section>
+              ))
+            )}
+            {selectedFccTower.truncated && (
+              <p className="empty">
+                Only the first 100 associated licenses are shown.
+              </p>
+            )}
+            <p className="map-note">{selectedFccTower.disclaimer}</p>
+          </article>
+        )}
+      </section>
       {configuredMap.mode === "external" ? (
         <div className="map-provider" data-testid="map-provider">
           <p>

@@ -6,6 +6,14 @@ class MockMap {
   addSource() {}
   fitBounds() {}
   flyTo() {}
+  getBounds() {
+    return {
+      getWest: () => -98,
+      getSouth: () => 32,
+      getEast: () => -96,
+      getNorth: () => 34,
+    };
+  }
   getSource() {
     return undefined;
   }

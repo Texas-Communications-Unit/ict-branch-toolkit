@@ -1038,6 +1038,58 @@ footer {
   margin-top: 1rem;
 }
 
+.fcc-map-layer {
+  border: 1px solid var(--tx-comu-border);
+  border-radius: 6px;
+  margin-top: 1rem;
+  padding: 0.9rem;
+}
+
+.fcc-tower-marker {
+  background: var(--tx-comu-navy);
+  border: 2px solid white;
+  border-radius: 50%;
+  box-shadow: 0 1px 4px rgb(0 0 0 / 45%);
+  cursor: pointer;
+  height: 1rem;
+  min-height: 1rem;
+  min-width: 1rem;
+  padding: 0;
+  width: 1rem;
+}
+
+.fcc-tower-marker:focus-visible {
+  outline: 3px solid var(--tx-comu-red);
+  outline-offset: 3px;
+}
+
+.fcc-tower-results ul {
+  display: grid;
+  gap: 0.35rem;
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  list-style: none;
+  margin: 0;
+  max-height: 18rem;
+  overflow: auto;
+  padding: 0;
+}
+
+.fcc-tower-results button {
+  height: 100%;
+  text-align: left;
+  width: 100%;
+}
+
+.fcc-tower-detail {
+  border-top: 2px solid var(--tx-comu-blue);
+  margin-top: 1rem;
+  padding-top: 1rem;
+}
+
+.fcc-tower-detail .resource-card {
+  margin-top: 0.65rem;
+}
+
 .site-message,
 .export-panel {
   background: var(--tx-comu-light);

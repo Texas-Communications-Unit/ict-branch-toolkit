@@ -10,6 +10,7 @@ const api = vi.hoisted(() => ({
   createSiteAssignment: vi.fn(),
   deleteSiteAssignment: vi.fn(),
   downloadSpatialExport: vi.fn(),
+  getFccTowerDetails: vi.fn(),
   listCoverageEstimates: vi.fn(),
   listDirectionalCoverageAnalyses: vi.fn(),
   listPlans: vi.fn(),
@@ -17,6 +18,7 @@ const api = vi.hoisted(() => ({
   listSiteAssignments: vi.fn(),
   parseCoordinate: vi.fn(),
   searchAddress: vi.fn(),
+  searchFccAntennaStructures: vi.fn(),
   updateRadioSite: vi.fn(),
 }));
 
@@ -75,6 +77,12 @@ beforeEach(() => {
     label: "Synthetic operating area",
   });
   api.deleteSiteAssignment.mockResolvedValue(undefined);
+  api.searchFccAntennaStructures.mockResolvedValue({
+    count: 0,
+    next: null,
+    previous: null,
+    results: [],
+  });
 });
 
 async function prepareSiteForm(user: ReturnType<typeof userEvent.setup>) {
@@ -103,6 +111,107 @@ test("resets the captured radio-site form only after a successful save", async (
   expect(screen.getByLabelText("Site name")).toHaveValue("");
   expect(screen.getByLabelText("Coordinate")).toHaveValue("");
   expect(screen.getByLabelText("Description")).toHaveValue("");
+});
+
+test("loads FCC towers by map bounds and exposes license details without map interaction", async () => {
+  const user = userEvent.setup();
+  const tower = {
+    id: "tower-1",
+    registration_number: "1234567",
+    status_code: "C",
+    owner_name: "Synthetic County",
+    owner_frn: "",
+    structure_type: "GTOWER",
+    latitude: "33.2000000",
+    longitude: "-97.1000000",
+    overall_height_m: "120.000",
+    faa_study_number: "",
+    batch: {
+      id: "asr-batch-1",
+      dataset: "asr",
+      dataset_label: "Antenna Structure Registration",
+      archive_kind: "complete",
+      archive_name: "r_tower.zip",
+      source_url: "https://example.invalid/r_tower.zip",
+      content_sha256: "a".repeat(64),
+      parser_version: "test",
+      retrieved_at: "2026-08-21T12:00:00Z",
+    },
+  };
+  api.searchFccAntennaStructures.mockResolvedValue({
+    count: 1,
+    next: null,
+    previous: null,
+    results: [tower],
+  });
+  api.getFccTowerDetails.mockResolvedValue({
+    structure: tower,
+    license_count: 1,
+    truncated: false,
+    disclaimer: "FCC reference data does not authorize transmission.",
+    licenses: [
+      {
+        id: "license-1",
+        call_sign: "WQTEST1",
+        license_status: "A",
+        radio_service_code: "PW",
+        licensee_name: "Synthetic County",
+        frn: "",
+        grant_date: null,
+        expiration_date: null,
+        batch: tower.batch,
+        tower_locations: [
+          {
+            location_number: 1,
+            location_type_code: "F",
+            location_class_code: "",
+            address: "",
+            city: "Denton",
+            county: "Denton",
+            state: "TX",
+            latitude: tower.latitude,
+            longitude: tower.longitude,
+            ground_elevation_m: null,
+            asr_registration_number: tower.registration_number,
+            structure_type: tower.structure_type,
+            frequencies: [
+              {
+                antenna_number: 1,
+                station_class_code: "FB2",
+                frequency_hz: 155000000,
+                output_power_w: null,
+                effective_radiated_power_w: null,
+                number_of_units: null,
+              },
+            ],
+            emissions: [
+              {
+                antenna_number: 1,
+                frequency_hz: 155000000,
+                emission_designator: "11K2F3E",
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  });
+  render(<MapShell incident={incident} />);
+
+  await user.click(screen.getByRole("button", { name: "Turn on FCC towers" }));
+  expect(
+    await screen.findByRole("button", { name: /ASR 1234567/ }),
+  ).toBeInTheDocument();
+  expect(api.searchFccAntennaStructures).toHaveBeenCalledWith(
+    expect.objectContaining({ west: "-98", east: "-96" }),
+  );
+
+  await user.click(screen.getByRole("button", { name: /ASR 1234567/ }));
+  expect(await screen.findByText(/WQTEST1/)).toBeInTheDocument();
+  expect(screen.getByText(/155\.000000 MHz/)).toBeInTheDocument();
+  expect(
+    screen.getByText(/does not authorize transmission/),
+  ).toBeInTheDocument();
 });
 
 test("retains radio-site form values when the save fails", async () => {
