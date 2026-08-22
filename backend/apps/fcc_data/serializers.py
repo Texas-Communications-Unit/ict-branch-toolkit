@@ -1,3 +1,5 @@
+from urllib.parse import quote
+
 from rest_framework import serializers
 
 from .models import (
@@ -30,6 +32,7 @@ class FccBatchSummarySerializer(serializers.ModelSerializer):
 
 class AntennaStructureSerializer(serializers.ModelSerializer):
     batch = FccBatchSummarySerializer(read_only=True)
+    fcc_record_url = serializers.SerializerMethodField()
 
     class Meta:
         model = AntennaStructure
@@ -50,8 +53,31 @@ class AntennaStructureSerializer(serializers.ModelSerializer):
             "painting_lighting",
             "construction_date",
             "dismantlement_date",
+            "fcc_record_url",
             "batch",
         ]
+
+    def get_fcc_record_url(self, obj) -> str:
+        if not obj.unique_system_identifier:
+            return "https://wireless2.fcc.gov/UlsApp/AsrSearch/asrSearch.jsp"
+        key = quote(obj.unique_system_identifier, safe="")
+        return f"https://wireless2.fcc.gov/UlsApp/AsrSearch/asrRegistration.jsp?regKey={key}"
+
+
+class FccMapFeatureSerializer(serializers.Serializer):
+    kind = serializers.ChoiceField(choices=["cluster", "tower"])
+    key = serializers.CharField()
+    latitude = serializers.FloatField()
+    longitude = serializers.FloatField()
+    count = serializers.IntegerField(min_value=1)
+    tower = AntennaStructureSerializer(required=False, allow_null=True)
+
+
+class FccMapFeatureCollectionSerializer(serializers.Serializer):
+    count = serializers.IntegerField(min_value=0)
+    feature_count = serializers.IntegerField(min_value=0)
+    truncated = serializers.BooleanField()
+    results = FccMapFeatureSerializer(many=True)
 
 
 class UlsLicenseSerializer(serializers.ModelSerializer):
@@ -147,6 +173,7 @@ class FccTowerLocationSerializer(serializers.ModelSerializer):
 class FccTowerLicenseSerializer(serializers.ModelSerializer):
     batch = FccBatchSummarySerializer(read_only=True)
     tower_locations = FccTowerLocationSerializer(many=True, read_only=True)
+    fcc_record_url = serializers.SerializerMethodField()
 
     class Meta:
         model = UlsLicense
@@ -160,8 +187,13 @@ class FccTowerLicenseSerializer(serializers.ModelSerializer):
             "grant_date",
             "expiration_date",
             "tower_locations",
+            "fcc_record_url",
             "batch",
         ]
+
+    def get_fcc_record_url(self, obj) -> str:
+        key = quote(obj.unique_system_identifier, safe="")
+        return f"https://wireless2.fcc.gov/UlsApp/UlsSearch/license.jsp?licKey={key}"
 
 
 class FccTowerDetailSerializer(serializers.Serializer):

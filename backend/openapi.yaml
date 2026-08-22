@@ -1385,6 +1385,63 @@ paths:
               schema:
                 $ref: '#/components/schemas/FccTowerDetail'
           description: ''
+  /api/fcc-antenna-structures/map-features/:
+    get:
+      operationId: fcc_antenna_structures_map_features_retrieve
+      parameters:
+      - in: query
+        name: east
+        schema:
+          type: number
+          format: double
+        required: true
+      - in: query
+        name: north
+        schema:
+          type: number
+          format: double
+        required: true
+      - in: query
+        name: search
+        schema:
+          type: string
+      - in: query
+        name: south
+        schema:
+          type: number
+          format: double
+        required: true
+      - in: query
+        name: status
+        schema:
+          type: string
+      - in: query
+        name: structure_type
+        schema:
+          type: string
+      - in: query
+        name: west
+        schema:
+          type: number
+          format: double
+        required: true
+      - in: query
+        name: zoom
+        schema:
+          type: number
+          format: double
+        required: true
+      tags:
+      - fcc-antenna-structures
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FccMapFeatureCollection'
+          description: ''
   /api/fcc-licenses/:
     get:
       operationId: fcc_licenses_list
@@ -4686,12 +4743,16 @@ components:
           type: string
           format: date
           nullable: true
+        fcc_record_url:
+          type: string
+          readOnly: true
         batch:
           allOf:
           - $ref: '#/components/schemas/FccBatchSummary'
           readOnly: true
       required:
       - batch
+      - fcc_record_url
       - id
       - registration_number
     ArchiveKindEnum:
@@ -6784,6 +6845,52 @@ components:
       - parser_version
       - retrieved_at
       - source_url
+    FccMapFeature:
+      type: object
+      properties:
+        kind:
+          $ref: '#/components/schemas/KindEnum'
+        key:
+          type: string
+        latitude:
+          type: number
+          format: double
+        longitude:
+          type: number
+          format: double
+        count:
+          type: integer
+          minimum: 1
+        tower:
+          allOf:
+          - $ref: '#/components/schemas/AntennaStructure'
+          nullable: true
+      required:
+      - count
+      - key
+      - kind
+      - latitude
+      - longitude
+    FccMapFeatureCollection:
+      type: object
+      properties:
+        count:
+          type: integer
+          minimum: 0
+        feature_count:
+          type: integer
+          minimum: 0
+        truncated:
+          type: boolean
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/FccMapFeature'
+      required:
+      - count
+      - feature_count
+      - results
+      - truncated
     FccTowerDetail:
       type: object
       properties:
@@ -6892,6 +6999,9 @@ components:
           items:
             $ref: '#/components/schemas/FccTowerLocation'
           readOnly: true
+        fcc_record_url:
+          type: string
+          readOnly: true
         batch:
           allOf:
           - $ref: '#/components/schemas/FccBatchSummary'
@@ -6899,6 +7009,7 @@ components:
       required:
       - batch
       - call_sign
+      - fcc_record_url
       - id
       - license_status
       - radio_service_code
@@ -7734,6 +7845,14 @@ components:
         * `complete` - Complete
         * `failed` - Failed
         * `cancelled` - Cancelled
+    KindEnum:
+      enum:
+      - cluster
+      - tower
+      type: string
+      description: |-
+        * `cluster` - cluster
+        * `tower` - tower
     LimitingPathEnum:
       enum:
       - talk_out

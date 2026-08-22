@@ -20,6 +20,7 @@ import {
   createSiteAssignment,
   deleteSiteAssignment,
   downloadSpatialExport,
+  getFccMapFeatures,
   getFccTowerDetails,
   listCoverageEstimates,
   listDirectionalCoverageAnalyses,
@@ -28,7 +29,6 @@ import {
   listSiteAssignments,
   parseCoordinate,
   searchAddress,
-  searchFccAntennaStructures,
   updateRadioSite,
 } from "./api";
 import { resolveMapProvider } from "./mapProvider";
@@ -39,6 +39,7 @@ import type {
   ICS205Plan,
   Incident,
   FccAntennaStructure,
+  FccMapFeature,
   FccTowerDetail,
   RadioSite,
   SiteAssignment,
@@ -122,8 +123,11 @@ export function MapShell({ incident }: { incident?: Incident }) {
   const [message, setMessage] = useState("");
   const [mapStatus, setMapStatus] = useState("");
   const [fccLayerEnabled, setFccLayerEnabled] = useState(false);
-  const [fccTowers, setFccTowers] = useState<FccAntennaStructure[]>([]);
+  const [fccFeatures, setFccFeatures] = useState<FccMapFeature[]>([]);
   const [fccTowerCount, setFccTowerCount] = useState(0);
+  const [fccSearch, setFccSearch] = useState("");
+  const [fccStatusFilter, setFccStatusFilter] = useState("");
+  const [fccStructureType, setFccStructureType] = useState("");
   const [selectedFccTower, setSelectedFccTower] = useState<FccTowerDetail>();
   const [fccStatus, setFccStatus] = useState(
     "FCC tower layer is off. Zoom to an area and enable it when needed.",
@@ -605,34 +609,46 @@ export function MapShell({ incident }: { incident?: Incident }) {
     }
   }, []);
 
-  const refreshFccTowers = useCallback(async () => {
-    const map = mapRef.current;
-    if (!map) return;
-    const bounds = map.getBounds();
-    setFccStatus("Loading FCC antenna structures in the current map view.");
-    try {
-      const result = await searchFccAntennaStructures({
-        west: bounds.getWest().toString(),
-        south: bounds.getSouth().toString(),
-        east: bounds.getEast().toString(),
-        north: bounds.getNorth().toString(),
-        page_size: "500",
-      });
-      setFccTowers(result.results);
-      setFccTowerCount(result.count);
-      setFccStatus(
-        result.count > result.results.length
-          ? `Showing the first ${result.results.length} of ${result.count} FCC structures in this view. Zoom in and refresh for complete local results.`
-          : `Showing ${result.count} FCC structure${result.count === 1 ? "" : "s"} in this view.`,
-      );
-    } catch (error) {
-      setFccStatus(
-        error instanceof Error
-          ? error.message
-          : "Unable to load the FCC tower layer.",
-      );
-    }
-  }, []);
+  const refreshFccTowers = useCallback(
+    async (
+      filters = {
+        search: fccSearch,
+        status: fccStatusFilter,
+        structureType: fccStructureType,
+      },
+    ) => {
+      const map = mapRef.current;
+      if (!map) return;
+      const bounds = map.getBounds();
+      setFccStatus("Loading FCC antenna structures in the current map view.");
+      try {
+        const result = await getFccMapFeatures({
+          west: bounds.getWest().toString(),
+          south: bounds.getSouth().toString(),
+          east: bounds.getEast().toString(),
+          north: bounds.getNorth().toString(),
+          zoom: map.getZoom().toString(),
+          search: filters.search,
+          status: filters.status,
+          structure_type: filters.structureType,
+        });
+        setFccFeatures(result.results);
+        setFccTowerCount(result.count);
+        setFccStatus(
+          result.truncated
+            ? `Showing the first ${result.feature_count} of ${result.count} FCC structures in this close view. Zoom in or filter to narrow the results.`
+            : `Showing ${result.feature_count} map symbol${result.feature_count === 1 ? "" : "s"} representing ${result.count} FCC structure${result.count === 1 ? "" : "s"} in this view.`,
+        );
+      } catch (error) {
+        setFccStatus(
+          error instanceof Error
+            ? error.message
+            : "Unable to load the FCC tower layer.",
+        );
+      }
+    },
+    [fccSearch, fccStatusFilter, fccStructureType],
+  );
 
   useEffect(() => {
     const map = mapRef.current;
@@ -640,8 +656,29 @@ export function MapShell({ incident }: { incident?: Incident }) {
     fccMarkersRef.current.forEach((marker) => marker.remove());
     fccMarkersRef.current = [];
     if (!fccLayerEnabled) return;
-    fccMarkersRef.current = fccTowers.flatMap((tower) => {
-      if (tower.latitude === null || tower.longitude === null) return [];
+    fccMarkersRef.current = fccFeatures.map((feature) => {
+      if (feature.kind === "cluster") {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "fcc-tower-cluster";
+        button.textContent = feature.count.toLocaleString();
+        button.setAttribute(
+          "aria-label",
+          `Zoom to cluster of ${feature.count} FCC antenna structures`,
+        );
+        button.addEventListener("click", (event) => {
+          event.stopPropagation();
+          map.once("moveend", () => void refreshFccTowers());
+          map.flyTo({
+            center: [feature.longitude, feature.latitude],
+            zoom: Math.min(map.getZoom() + 2, 18),
+          });
+        });
+        return new maplibregl.Marker({ element: button })
+          .setLngLat([feature.longitude, feature.latitude])
+          .addTo(map);
+      }
+      const tower = feature.tower as FccAntennaStructure;
       const button = document.createElement("button");
       button.type = "button";
       button.className = "fcc-tower-marker";
@@ -654,13 +691,20 @@ export function MapShell({ incident }: { incident?: Incident }) {
         event.stopPropagation();
         void selectFccTower(tower);
       });
-      return [
-        new maplibregl.Marker({ element: button })
-          .setLngLat([Number(tower.longitude), Number(tower.latitude)])
-          .addTo(map),
-      ];
+      const popupContent = document.createElement("div");
+      const heading = document.createElement("strong");
+      heading.textContent = `ASR ${tower.registration_number}`;
+      const summary = document.createElement("p");
+      summary.textContent = `${tower.owner_name || "Owner not listed"} · ${tower.structure_type || "Structure type not listed"}`;
+      popupContent.append(heading, summary);
+      return new maplibregl.Marker({ element: button })
+        .setLngLat([feature.longitude, feature.latitude])
+        .setPopup(
+          new maplibregl.Popup({ offset: 22 }).setDOMContent(popupContent),
+        )
+        .addTo(map);
     });
-  }, [fccLayerEnabled, fccTowers, selectFccTower]);
+  }, [fccFeatures, fccLayerEnabled, refreshFccTowers, selectFccTower]);
 
   async function handleParse() {
     try {
@@ -874,7 +918,7 @@ export function MapShell({ incident }: { incident?: Incident }) {
               setSelectedFccTower(undefined);
               if (enabled) void refreshFccTowers();
               else {
-                setFccTowers([]);
+                setFccFeatures([]);
                 setFccTowerCount(0);
                 setFccStatus("FCC tower layer is off.");
               }
@@ -892,6 +936,60 @@ export function MapShell({ incident }: { incident?: Incident }) {
             </button>
           )}
         </div>
+        {fccLayerEnabled && (
+          <form
+            className="fcc-map-filters"
+            onSubmit={(event) => {
+              event.preventDefault();
+              setSelectedFccTower(undefined);
+              void refreshFccTowers();
+            }}
+          >
+            <label>
+              Owner, ASR, FAA study, or type
+              <input
+                value={fccSearch}
+                onChange={(event) => setFccSearch(event.target.value)}
+              />
+            </label>
+            <label>
+              FCC status code
+              <input
+                value={fccStatusFilter}
+                onChange={(event) => setFccStatusFilter(event.target.value)}
+                maxLength={8}
+              />
+            </label>
+            <label>
+              Structure type
+              <input
+                value={fccStructureType}
+                onChange={(event) => setFccStructureType(event.target.value)}
+                maxLength={40}
+              />
+            </label>
+            <button type="submit" className="secondary-button">
+              Apply tower filters
+            </button>
+            <button
+              type="button"
+              className="secondary-button"
+              onClick={() => {
+                setFccSearch("");
+                setFccStatusFilter("");
+                setFccStructureType("");
+                setSelectedFccTower(undefined);
+                void refreshFccTowers({
+                  search: "",
+                  status: "",
+                  structureType: "",
+                });
+              }}
+            >
+              Clear filters
+            </button>
+          </form>
+        )}
         <p
           role={fccLayerEnabled ? "status" : undefined}
           aria-live={fccLayerEnabled ? "polite" : undefined}
@@ -899,27 +997,48 @@ export function MapShell({ incident }: { incident?: Incident }) {
         >
           {fccStatus}
         </p>
-        {fccLayerEnabled && fccTowers.length > 0 && (
+        {fccLayerEnabled && fccFeatures.length > 0 && (
           <div className="fcc-tower-results">
-            <h4>Structures in the current view</h4>
-            <ul aria-label="FCC antenna structures in the current map view">
-              {fccTowers.slice(0, 100).map((tower) => (
-                <li key={tower.id}>
-                  <button
-                    type="button"
-                    className="secondary-button"
-                    onClick={() => void selectFccTower(tower)}
-                  >
-                    ASR {tower.registration_number}
-                    {tower.owner_name ? ` — ${tower.owner_name}` : ""}
-                  </button>
+            <h4>Map symbols in the current view</h4>
+            <ul aria-label="FCC map symbols in the current map view">
+              {fccFeatures.slice(0, 100).map((feature) => (
+                <li key={feature.key}>
+                  {feature.kind === "tower" && feature.tower ? (
+                    <button
+                      type="button"
+                      className="secondary-button"
+                      onClick={() => void selectFccTower(feature.tower!)}
+                    >
+                      ASR {feature.tower.registration_number}
+                      {feature.tower.owner_name
+                        ? ` — ${feature.tower.owner_name}`
+                        : ""}
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      className="secondary-button"
+                      onClick={() => {
+                        const map = mapRef.current;
+                        if (!map) return;
+                        map.once("moveend", () => void refreshFccTowers());
+                        map.flyTo({
+                          center: [feature.longitude, feature.latitude],
+                          zoom: Math.min(map.getZoom() + 2, 18),
+                        });
+                      }}
+                    >
+                      Zoom to {feature.count.toLocaleString()} clustered
+                      structures
+                    </button>
+                  )}
                 </li>
               ))}
             </ul>
-            {fccTowers.length > 100 && (
+            {fccFeatures.length > 100 && (
               <p className="empty">
-                The accessible list shows the first 100 points. Zoom in and
-                refresh to narrow the current view.
+                The accessible list shows the first 100 map symbols. Zoom in or
+                apply filters to narrow the current view.
               </p>
             )}
           </div>
@@ -932,6 +1051,15 @@ export function MapShell({ incident }: { incident?: Incident }) {
             <h4 id="fcc-tower-detail-heading">
               ASR {selectedFccTower.structure.registration_number}
             </h4>
+            <p>
+              <a
+                href={selectedFccTower.structure.fcc_record_url}
+                target="_blank"
+                rel="noreferrer"
+              >
+                Open this structure in FCC ASR
+              </a>
+            </p>
             <dl className="coordinate-preview">
               <div>
                 <dt>Owner</dt>
@@ -983,6 +1111,13 @@ export function MapShell({ incident }: { incident?: Incident }) {
                     {license.call_sign} —{" "}
                     {license.licensee_name || "Licensee not listed"}
                   </strong>
+                  <a
+                    href={license.fcc_record_url}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Open {license.call_sign} in FCC ULS
+                  </a>
                   <span>
                     Service {license.radio_service_code} · Status{" "}
                     {license.license_status}

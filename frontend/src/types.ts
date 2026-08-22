@@ -1310,7 +1310,24 @@ export interface FccAntennaStructure {
   longitude: string | null;
   overall_height_m: string | null;
   faa_study_number: string;
+  fcc_record_url: string;
   batch: FccBatchSummary;
+}
+
+export interface FccMapFeature {
+  kind: "cluster" | "tower";
+  key: string;
+  latitude: number;
+  longitude: number;
+  count: number;
+  tower: FccAntennaStructure | null;
+}
+
+export interface FccMapFeatureCollection {
+  count: number;
+  feature_count: number;
+  truncated: boolean;
+  results: FccMapFeature[];
 }
 
 export interface FccLicenseSearchResult {
@@ -1370,6 +1387,7 @@ export interface FccTowerLicense {
   frn: string;
   grant_date: string | null;
   expiration_date: string | null;
+  fcc_record_url: string;
   tower_locations: FccTowerLocation[];
   batch: FccBatchSummary;
 }

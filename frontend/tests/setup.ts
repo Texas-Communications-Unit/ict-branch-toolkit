@@ -6,6 +6,9 @@ class MockMap {
   addSource() {}
   fitBounds() {}
   flyTo() {}
+  getZoom() {
+    return 7;
+  }
   getBounds() {
     return {
       getWest: () => -98,
@@ -48,6 +51,9 @@ class MockMarker {
 }
 
 class MockPopup {
+  setDOMContent() {
+    return this;
+  }
   setText() {
     return this;
   }

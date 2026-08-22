@@ -10,6 +10,7 @@ const api = vi.hoisted(() => ({
   createSiteAssignment: vi.fn(),
   deleteSiteAssignment: vi.fn(),
   downloadSpatialExport: vi.fn(),
+  getFccMapFeatures: vi.fn(),
   getFccTowerDetails: vi.fn(),
   listCoverageEstimates: vi.fn(),
   listDirectionalCoverageAnalyses: vi.fn(),
@@ -18,7 +19,6 @@ const api = vi.hoisted(() => ({
   listSiteAssignments: vi.fn(),
   parseCoordinate: vi.fn(),
   searchAddress: vi.fn(),
-  searchFccAntennaStructures: vi.fn(),
   updateRadioSite: vi.fn(),
 }));
 
@@ -77,10 +77,10 @@ beforeEach(() => {
     label: "Synthetic operating area",
   });
   api.deleteSiteAssignment.mockResolvedValue(undefined);
-  api.searchFccAntennaStructures.mockResolvedValue({
+  api.getFccMapFeatures.mockResolvedValue({
     count: 0,
-    next: null,
-    previous: null,
+    feature_count: 0,
+    truncated: false,
     results: [],
   });
 });
@@ -126,6 +126,7 @@ test("loads FCC towers by map bounds and exposes license details without map int
     longitude: "-97.1000000",
     overall_height_m: "120.000",
     faa_study_number: "",
+    fcc_record_url: "https://wireless2.fcc.gov/synthetic-asr",
     batch: {
       id: "asr-batch-1",
       dataset: "asr",
@@ -138,11 +139,20 @@ test("loads FCC towers by map bounds and exposes license details without map int
       retrieved_at: "2026-08-21T12:00:00Z",
     },
   };
-  api.searchFccAntennaStructures.mockResolvedValue({
+  api.getFccMapFeatures.mockResolvedValue({
     count: 1,
-    next: null,
-    previous: null,
-    results: [tower],
+    feature_count: 1,
+    truncated: false,
+    results: [
+      {
+        kind: "tower",
+        key: tower.id,
+        latitude: Number(tower.latitude),
+        longitude: Number(tower.longitude),
+        count: 1,
+        tower,
+      },
+    ],
   });
   api.getFccTowerDetails.mockResolvedValue({
     structure: tower,
@@ -159,6 +169,7 @@ test("loads FCC towers by map bounds and exposes license details without map int
         frn: "",
         grant_date: null,
         expiration_date: null,
+        fcc_record_url: "https://wireless2.fcc.gov/synthetic-license",
         batch: tower.batch,
         tower_locations: [
           {
@@ -202,16 +213,52 @@ test("loads FCC towers by map bounds and exposes license details without map int
   expect(
     await screen.findByRole("button", { name: /ASR 1234567/ }),
   ).toBeInTheDocument();
-  expect(api.searchFccAntennaStructures).toHaveBeenCalledWith(
-    expect.objectContaining({ west: "-98", east: "-96" }),
+  expect(api.getFccMapFeatures).toHaveBeenCalledWith(
+    expect.objectContaining({ west: "-98", east: "-96", zoom: "7" }),
   );
 
   await user.click(screen.getByRole("button", { name: /ASR 1234567/ }));
-  expect(await screen.findByText(/WQTEST1/)).toBeInTheDocument();
+  expect(
+    await screen.findByText("WQTEST1 — Synthetic County"),
+  ).toBeInTheDocument();
   expect(screen.getByText(/155\.000000 MHz/)).toBeInTheDocument();
   expect(
     screen.getByText(/does not authorize transmission/),
   ).toBeInTheDocument();
+  expect(
+    screen.getByRole("link", { name: "Open this structure in FCC ASR" }),
+  ).toHaveAttribute("href", tower.fcc_record_url);
+});
+
+test("renders clustered FCC structures and exposes accessible zoom control", async () => {
+  const user = userEvent.setup();
+  api.getFccMapFeatures.mockResolvedValue({
+    count: 42,
+    feature_count: 1,
+    truncated: false,
+    results: [
+      {
+        kind: "cluster",
+        key: "cluster-1",
+        latitude: 33.2,
+        longitude: -97.1,
+        count: 42,
+        tower: null,
+      },
+    ],
+  });
+  render(<MapShell incident={incident} />);
+
+  await user.click(screen.getByRole("button", { name: "Turn on FCC towers" }));
+
+  expect(
+    await screen.findByRole("button", {
+      name: "Zoom to 42 clustered structures",
+    }),
+  ).toBeInTheDocument();
+  expect(screen.getByRole("status")).toHaveTextContent(
+    "1 map symbol representing 42 FCC structures",
+  );
 });
 
 test("retains radio-site form values when the save fails", async () => {
