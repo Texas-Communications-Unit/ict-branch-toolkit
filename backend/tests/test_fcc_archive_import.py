@@ -333,6 +333,29 @@ def test_parse_uls_supports_included_radiolocation_frequency(tmp_path):
     assert parsed.emissions[0]["frequency_hz"] == 24_150_000_000
 
 
+def test_parse_uls_skips_zero_frequency_placeholders(tmp_path):
+    archive = tmp_path / "l_LMpriv.zip"
+    _uls_archive(archive)
+    with zipfile.ZipFile(archive, "r") as source:
+        members = {name: source.read(name).decode("latin-1") for name in source.namelist()}
+    frequency_rows = members["FR.dat"].splitlines()
+    included_frequency = frequency_rows[0].split("|")
+    included_frequency[10] = ".00000000"
+    frequency_rows[0] = "|".join(included_frequency)
+    members["FR.dat"] = "\n".join(frequency_rows) + "\n"
+    emission_rows = members["EM.dat"].splitlines()
+    included_emission = emission_rows[0].split("|")
+    included_emission[7] = ".00000000"
+    emission_rows[0] = "|".join(included_emission)
+    members["EM.dat"] = "\n".join(emission_rows) + "\n"
+    _write_zip(archive, members)
+
+    parsed = parse_fcc_archive(archive, dataset=FccImportBatch.Dataset.ULS_PRIVATE)
+
+    assert [record["frequency_hz"] for record in parsed.frequencies] == [451012500]
+    assert [record["frequency_hz"] for record in parsed.emissions] == [451012500]
+
+
 def test_parser_rejects_wrong_name_and_unsafe_member(tmp_path):
     wrong_name = tmp_path / "amateur.zip"
     _uls_archive(wrong_name)
