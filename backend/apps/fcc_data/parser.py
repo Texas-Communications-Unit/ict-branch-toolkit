@@ -132,7 +132,7 @@ def _integer(value: str) -> int | None:
 
 def _frequency_hz(value: str) -> int | None:
     frequency_mhz = _decimal(value)
-    if frequency_mhz is None:
+    if frequency_mhz is None or frequency_mhz == 0:
         return None
     frequency_hz = frequency_mhz * 1_000_000
     if frequency_hz != frequency_hz.to_integral_value():
