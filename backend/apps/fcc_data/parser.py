@@ -154,22 +154,28 @@ def _unique_records(records: list[dict]) -> list[dict]:
     return unique
 
 
-def _dms(degrees: str, minutes: str, seconds: str, direction: str) -> Decimal | None:
+def _dms(
+    degrees: str, minutes: str, seconds: str, direction: str, *, coordinate_type: str
+) -> Decimal | None:
     if not any((degrees, minutes, seconds)):
         return None
     if not all((degrees, minutes, seconds, direction)):
         return None
     try:
         result = Decimal(degrees) + Decimal(minutes) / 60 + Decimal(seconds) / 3600
-    except InvalidOperation as error:
-        raise FccArchiveError("FCC coordinate contains a non-decimal component.") from error
+    except InvalidOperation:
+        return None
     direction = direction.upper()
-    if direction in {"S", "W"}:
+    valid_directions, negative_direction, maximum = {
+        "latitude": ({"N", "S"}, "S", Decimal("90")),
+        "longitude": ({"E", "W"}, "W", Decimal("180")),
+    }[coordinate_type]
+    if direction not in valid_directions:
+        return None
+    if direction == negative_direction:
         result = -result
-    elif direction not in {"N", "E"}:
-        raise FccArchiveError(f"Unsupported FCC coordinate direction: {direction!r}.")
-    if not Decimal("-180") <= result <= Decimal("180"):
-        raise FccArchiveError("FCC coordinate is outside the supported range.")
+    if not -maximum <= result <= maximum:
+        return None
     return result.quantize(Decimal("0.0000001"))
 
 
@@ -261,12 +267,14 @@ def _parse_asr(archive: zipfile.ZipFile, members: dict[str, zipfile.ZipInfo], ma
                     _value(fields, 7),
                     _value(fields, 8),
                     _value(fields, 9),
+                    coordinate_type="latitude",
                 ),
                 _dms(
                     _value(fields, 11),
                     _value(fields, 12),
                     _value(fields, 13),
                     _value(fields, 14),
+                    coordinate_type="longitude",
                 ),
             )
     owners = {}
@@ -373,12 +381,14 @@ def _parse_uls(archive: zipfile.ZipFile, members: dict[str, zipfile.ZipInfo], ma
                 _value(fields, 20),
                 _value(fields, 21),
                 _value(fields, 22),
+                coordinate_type="latitude",
             ),
             _dms(
                 _value(fields, 23),
                 _value(fields, 24),
                 _value(fields, 25),
                 _value(fields, 26),
+                coordinate_type="longitude",
             ),
         )
         locations.append(
