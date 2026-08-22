@@ -6814,7 +6814,7 @@ components:
           minimum: 0
         frequency_hz:
           type: integer
-          maximum: 10000000000
+          maximum: 300000000000
           minimum: 1
           format: int64
         emission_designator:
@@ -6836,7 +6836,7 @@ components:
           maxLength: 12
         frequency_hz:
           type: integer
-          maximum: 10000000000
+          maximum: 300000000000
           minimum: 1
           format: int64
         output_power_w:
