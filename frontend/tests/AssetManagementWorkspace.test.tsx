@@ -15,6 +15,7 @@ const api = vi.hoisted(() => ({
   createInventoryAsset: vi.fn(),
   createMaintenanceRecord: vi.fn(),
   createProgrammingRecord: vi.fn(),
+  downloadInventoryPdf: vi.fn(),
   listAssetCheckouts: vi.fn(),
   listChargingRecords: vi.fn(),
   listInventoryAssets: vi.fn(),
@@ -130,4 +131,30 @@ test("shows incident-authorized license data and uses an accessible return workf
     condition: "damaged",
     hold_reason: "Synthetic cracked display report.",
   });
+});
+
+test("downloads both official ICS 219 accountability reports", async () => {
+  const user = userEvent.setup();
+  api.downloadInventoryPdf.mockResolvedValue(undefined);
+  render(
+    <AssetManagementWorkspace incident={incident} currentUser={manager} />,
+  );
+
+  await user.click(
+    await screen.findByRole("button", { name: "Download ICS 219-7 T-card" }),
+  );
+  await user.click(
+    screen.getByRole("button", { name: "Download ICS 219-9 property record" }),
+  );
+
+  expect(api.downloadInventoryPdf).toHaveBeenNthCalledWith(
+    1,
+    "checkout-1",
+    "equipment-t-card",
+  );
+  expect(api.downloadInventoryPdf).toHaveBeenNthCalledWith(
+    2,
+    "checkout-1",
+    "accountable-property",
+  );
 });
