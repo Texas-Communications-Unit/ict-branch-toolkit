@@ -1,6 +1,14 @@
 from django.contrib import admin
 
-from .models import Asset, AssetCheckout, ChargingRecord, MaintenanceRecord, ProgrammingRecord
+from .models import (
+    Asset,
+    AssetAttachment,
+    AssetCheckout,
+    AssetImportBatch,
+    ChargingRecord,
+    MaintenanceRecord,
+    ProgrammingRecord,
+)
 
 
 @admin.register(Asset)
@@ -30,3 +38,5 @@ class ProgrammingRecordAdmin(admin.ModelAdmin):
 
 admin.site.register(MaintenanceRecord)
 admin.site.register(ChargingRecord)
+admin.site.register(AssetAttachment)
+admin.site.register(AssetImportBatch)

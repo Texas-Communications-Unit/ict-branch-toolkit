@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { AssetManagementWorkspace } from "../src/AssetManagementWorkspace";
@@ -11,19 +11,25 @@ import type {
 
 const api = vi.hoisted(() => ({
   checkoutInventoryAsset: vi.fn(),
+  commitAssetImport: vi.fn(),
   createChargingRecord: vi.fn(),
   createInventoryAsset: vi.fn(),
   createMaintenanceRecord: vi.fn(),
   createProgrammingRecord: vi.fn(),
+  deleteAssetAttachment: vi.fn(),
+  downloadAssetAttachment: vi.fn(),
   downloadInventoryPdf: vi.fn(),
   listAssetCheckouts: vi.fn(),
+  listAssetAttachments: vi.fn(),
   listChargingRecords: vi.fn(),
   listInventoryAssets: vi.fn(),
   listMaintenanceRecords: vi.fn(),
   listProgrammingRecords: vi.fn(),
+  previewAssetImport: vi.fn(),
   resolveInventoryHold: vi.fn(),
   returnInventoryAsset: vi.fn(),
   updateInventoryAsset: vi.fn(),
+  uploadAssetAttachment: vi.fn(),
 }));
 
 vi.mock("../src/api", () => api);
@@ -100,6 +106,7 @@ beforeEach(() => {
   api.listProgrammingRecords.mockResolvedValue([]);
   api.listMaintenanceRecords.mockResolvedValue([]);
   api.listChargingRecords.mockResolvedValue([]);
+  api.listAssetAttachments.mockResolvedValue([]);
   api.returnInventoryAsset.mockResolvedValue({
     ...checkout,
     state: "returned",
@@ -157,4 +164,60 @@ test("downloads both official ICS 219 accountability reports", async () => {
     "checkout-1",
     "accountable-property",
   );
+});
+
+test("previews and commits a bulk asset import before loading asset files", async () => {
+  const user = userEvent.setup();
+  api.previewAssetImport.mockResolvedValue({
+    id: "batch-1",
+    source_name: "assets.csv",
+    source_sha256: "a".repeat(64),
+    rows: [
+      {
+        row_number: 2,
+        asset_id: "RADIO-NEW",
+        category: "radio",
+        parent_asset_id: "",
+        manufacturer: "Synthetic",
+        model: "Portable",
+        serial_number: "NEW-1",
+        alias: "",
+        status: "in_service",
+        acquisition_date: null,
+      },
+    ],
+    errors: [],
+    row_count: 1,
+    valid_count: 1,
+    status: "preview",
+    created_at: "2026-08-23T12:00:00Z",
+    committed_at: null,
+  });
+  api.commitAssetImport.mockResolvedValue([]);
+  render(
+    <AssetManagementWorkspace incident={incident} currentUser={manager} />,
+  );
+
+  const importInput = screen.getByLabelText("Asset import file");
+  await user.upload(
+    importInput,
+    new File(["asset_id,category\nRADIO-NEW,radio\n"], "assets.csv", {
+      type: "text/csv",
+    }),
+  );
+  fireEvent.submit(importInput.closest("form")!);
+  await waitFor(() => expect(api.previewAssetImport).toHaveBeenCalled());
+  await user.click(
+    await screen.findByRole("button", { name: "Import 1 assets" }),
+  );
+  await user.click(
+    await screen.findByRole("button", { name: "Files and photos" }),
+  );
+
+  expect(api.previewAssetImport).toHaveBeenCalled();
+  expect(api.commitAssetImport).toHaveBeenCalledWith("batch-1");
+  expect(api.listAssetAttachments).toHaveBeenCalledWith("radio-1");
+  expect(
+    await screen.findByRole("heading", { name: "Files for RADIO-12000" }),
+  ).toBeInTheDocument();
 });

@@ -97,6 +97,8 @@ SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 USE_X_FORWARDED_HOST = True
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
+MEDIA_ROOT = Path(os.getenv("DJANGO_MEDIA_ROOT", str(BASE_DIR / "media")))
+ICT_ATTACHMENT_MAX_BYTES = int(os.getenv("ICT_ATTACHMENT_MAX_BYTES", str(20 * 1024 * 1024)))
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 ICT_ROLE_POLICY_OVERRIDES = json.loads(os.getenv("ICT_ROLE_POLICY_OVERRIDES", "{}"))

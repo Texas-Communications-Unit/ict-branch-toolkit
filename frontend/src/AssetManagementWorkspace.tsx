@@ -6,18 +6,26 @@ import {
   createInventoryAsset,
   createMaintenanceRecord,
   createProgrammingRecord,
+  commitAssetImport,
+  deleteAssetAttachment,
+  downloadAssetAttachment,
   downloadInventoryPdf,
   listAssetCheckouts,
   listChargingRecords,
   listInventoryAssets,
   listMaintenanceRecords,
   listProgrammingRecords,
+  listAssetAttachments,
+  previewAssetImport,
   resolveInventoryHold,
   returnInventoryAsset,
   updateInventoryAsset,
+  uploadAssetAttachment,
 } from "./api";
 import type {
+  AssetAttachment,
   AssetCheckout,
+  AssetImportBatch,
   ChargingRecord,
   CurrentUser,
   Incident,
@@ -101,6 +109,11 @@ export function AssetManagementWorkspace({ incident, currentUser }: Props) {
   const [statusFilter, setStatusFilter] = useState("");
   const [assetOrdering, setAssetOrdering] = useState("asset_id");
   const [editingAsset, setEditingAsset] = useState<InventoryAsset | null>(null);
+  const [importBatch, setImportBatch] = useState<AssetImportBatch | null>(null);
+  const [attachmentAsset, setAttachmentAsset] = useState<InventoryAsset | null>(
+    null,
+  );
+  const [attachments, setAttachments] = useState<AssetAttachment[]>([]);
   const canManage = currentUser.permissions.includes("inventory.manage");
 
   const refresh = useCallback(async () => {
@@ -204,6 +217,139 @@ export function AssetManagementWorkspace({ incident, currentUser }: Props) {
         caught instanceof Error
           ? caught.message
           : "The report download failed.",
+      );
+    }
+  }
+
+  async function handleImportPreview(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const file = (form.elements.namedItem("file") as HTMLInputElement)
+      .files?.[0];
+    if (!file || file.size === 0) return;
+    setError("");
+    setMessage("");
+    try {
+      const batch = await previewAssetImport(file);
+      setImportBatch(batch);
+      setMessage(
+        `Previewed ${batch.row_count} rows; ${batch.valid_count} are valid.`,
+      );
+    } catch (caught) {
+      setError(
+        caught instanceof Error ? caught.message : "The import preview failed.",
+      );
+    }
+  }
+
+  async function handleImportCommit() {
+    if (!importBatch) return;
+    setError("");
+    try {
+      const imported = await commitAssetImport(importBatch.id);
+      setMessage(`Imported ${imported.length} assets.`);
+      setImportBatch(null);
+      await refresh();
+    } catch (caught) {
+      setError(
+        caught instanceof Error ? caught.message : "The asset import failed.",
+      );
+    }
+  }
+
+  function downloadImportErrors() {
+    if (!importBatch?.errors.length) return;
+    const safe = (value: string) => {
+      const protectedValue = /^[=+\-@]/.test(value) ? `'${value}` : value;
+      return `"${protectedValue.replaceAll('"', '""')}"`;
+    };
+    const rows = ["row_number,asset_id,errors"];
+    for (const issue of importBatch.errors) {
+      rows.push(
+        [String(issue.row_number), issue.asset_id, issue.errors.join("; ")]
+          .map(safe)
+          .join(","),
+      );
+    }
+    const url = URL.createObjectURL(
+      new Blob([`${rows.join("\r\n")}\r\n`], {
+        type: "text/csv;charset=utf-8",
+      }),
+    );
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = "asset-import-errors.csv";
+    anchor.click();
+    URL.revokeObjectURL(url);
+  }
+
+  async function showAttachments(asset: InventoryAsset) {
+    setAttachmentAsset(asset);
+    setError("");
+    try {
+      setAttachments(await listAssetAttachments(asset.id));
+    } catch (caught) {
+      setError(
+        caught instanceof Error
+          ? caught.message
+          : "Unable to load attachments.",
+      );
+    }
+  }
+
+  async function handleAttachmentUpload(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!attachmentAsset) return;
+    const form = event.currentTarget;
+    const data = new FormData(form);
+    const file = (form.elements.namedItem("file") as HTMLInputElement)
+      .files?.[0];
+    if (!file || file.size === 0) return;
+    const succeeded = await submit(
+      form,
+      () =>
+        uploadAssetAttachment(
+          attachmentAsset.id,
+          file,
+          String(data.get("description") ?? ""),
+        ),
+      "Attachment uploaded.",
+    );
+    if (succeeded)
+      setAttachments(await listAssetAttachments(attachmentAsset.id));
+  }
+
+  async function removeAttachment(attachment: AssetAttachment) {
+    if (!attachmentAsset) return;
+    if (
+      !window.confirm(
+        `Delete ${attachment.original_name}? This removes the stored file and cannot be undone.`,
+      )
+    )
+      return;
+    setError("");
+    try {
+      await deleteAssetAttachment(attachment.id);
+      setAttachments(await listAssetAttachments(attachmentAsset.id));
+      setMessage("Attachment deleted.");
+    } catch (caught) {
+      setError(
+        caught instanceof Error
+          ? caught.message
+          : "Unable to delete attachment.",
+      );
+    }
+  }
+
+  async function handleAttachmentDownload(attachment: AssetAttachment) {
+    setError("");
+    try {
+      await downloadAssetAttachment(attachment);
+    } catch (caught) {
+      setError(
+        caught instanceof Error
+          ? caught.message
+          : "Unable to download attachment.",
       );
     }
   }
@@ -497,6 +643,75 @@ export function AssetManagementWorkspace({ incident, currentUser }: Props) {
               <textarea name="notes" rows={2} />
             </label>
             <button type="submit">Add asset</button>
+          </form>
+          <form className="compact-form" onSubmit={handleImportPreview}>
+            <h3>Bulk import assets</h3>
+            <p>
+              Preview a UTF-8 CSV or XLSX file before importing. Required
+              columns: asset_id and category. Maximum 500 rows and 5 MiB.
+            </p>
+            <label>
+              Asset import file
+              <input name="file" type="file" accept=".csv,.xlsx" required />
+            </label>
+            <button type="submit">Preview import</button>
+            {importBatch && (
+              <div aria-live="polite">
+                <strong>{importBatch.source_name}</strong>
+                <p>
+                  {importBatch.valid_count} of {importBatch.row_count} rows
+                  valid
+                </p>
+                <div className="table-wrap">
+                  <table>
+                    <caption>First 20 rows in the import preview</caption>
+                    <thead>
+                      <tr>
+                        <th scope="col">Row</th>
+                        <th scope="col">Asset ID</th>
+                        <th scope="col">Category</th>
+                        <th scope="col">Status</th>
+                        <th scope="col">Parent asset</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {importBatch.rows.slice(0, 20).map((row) => (
+                        <tr key={`${row.row_number}-${row.asset_id}`}>
+                          <td>{row.row_number}</td>
+                          <td>{row.asset_id || "—"}</td>
+                          <td>{row.category || "—"}</td>
+                          <td>{row.status || "—"}</td>
+                          <td>{row.parent_asset_id || "—"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                {importBatch.errors.length > 0 ? (
+                  <>
+                    <ul>
+                      {importBatch.errors.slice(0, 10).map((issue) => (
+                        <li key={`${issue.row_number}-${issue.asset_id}`}>
+                          Row {issue.row_number} (
+                          {issue.asset_id || "no asset ID"}):{" "}
+                          {issue.errors.join("; ")}
+                        </li>
+                      ))}
+                    </ul>
+                    <button type="button" onClick={downloadImportErrors}>
+                      Download error CSV
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => void handleImportCommit()}
+                  >
+                    Import {importBatch.valid_count} assets
+                  </button>
+                )}
+              </div>
+            )}
           </form>
           {incident && (
             <form className="compact-form" onSubmit={handleCheckout}>
@@ -898,9 +1113,78 @@ export function AssetManagementWorkspace({ incident, currentUser }: Props) {
                 Edit asset
               </button>
             )}
+            <button
+              type="button"
+              className="secondary-button"
+              onClick={() => void showAttachments(asset)}
+            >
+              Files and photos
+            </button>
           </article>
         ))}
       </div>
+      {attachmentAsset && (
+        <section className="compact-form" aria-labelledby="asset-files-heading">
+          <h3 id="asset-files-heading">Files for {attachmentAsset.asset_id}</h3>
+          <p>
+            PDF, TXT, CSV, JPG, PNG, WEBP, DOCX, or XLSX; maximum 20 MiB per
+            file.
+          </p>
+          {canManage && (
+            <form onSubmit={handleAttachmentUpload}>
+              <label>
+                Attachment
+                <input
+                  name="file"
+                  type="file"
+                  accept=".pdf,.txt,.csv,.jpg,.jpeg,.png,.webp,.docx,.xlsx"
+                  required
+                />
+              </label>
+              <label>
+                Description
+                <input name="description" maxLength={500} />
+              </label>
+              <button type="submit">Upload attachment</button>
+            </form>
+          )}
+          {attachments.length === 0 ? (
+            <p className="empty">No files attached.</p>
+          ) : (
+            <ul>
+              {attachments.map((attachment) => (
+                <li key={attachment.id}>
+                  <button
+                    type="button"
+                    className="link-button"
+                    onClick={() => void handleAttachmentDownload(attachment)}
+                  >
+                    {attachment.original_name}
+                  </button>{" "}
+                  ({Math.ceil(attachment.size_bytes / 1024)} KiB)
+                  {attachment.description && ` — ${attachment.description}`}
+                  {canManage && (
+                    <button
+                      type="button"
+                      className="secondary-button"
+                      onClick={() => void removeAttachment(attachment)}
+                    >
+                      Delete
+                    </button>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+          <button
+            type="button"
+            className="secondary-button"
+            onClick={() => setAttachmentAsset(null)}
+          >
+            Close files
+          </button>
+        </section>
+      )}
       {incident && (
         <>
           <h3>Incident checkouts</h3>

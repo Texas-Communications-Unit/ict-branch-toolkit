@@ -1487,3 +1487,46 @@ export interface ChargingRecord {
   recorded_by_username: string;
   recorded_at: string;
 }
+
+export interface AssetAttachment {
+  id: string;
+  asset: string;
+  original_name: string;
+  content_type: string;
+  size_bytes: number;
+  description: string;
+  uploaded_by_username: string;
+  uploaded_at: string;
+}
+
+export interface AssetImportError {
+  row_number: number;
+  asset_id: string;
+  errors: string[];
+}
+
+export interface AssetImportRow {
+  row_number: number;
+  asset_id: string;
+  category: string;
+  parent_asset_id: string;
+  manufacturer: string;
+  model: string;
+  serial_number: string;
+  alias: string;
+  status: string;
+  acquisition_date: string | null;
+}
+
+export interface AssetImportBatch {
+  id: string;
+  source_name: string;
+  source_sha256: string;
+  rows: AssetImportRow[];
+  errors: AssetImportError[];
+  row_count: number;
+  valid_count: number;
+  status: "preview" | "committed";
+  created_at: string;
+  committed_at: string | null;
+}

@@ -2216,6 +2216,54 @@ paths:
               schema:
                 $ref: '#/components/schemas/Incident'
           description: ''
+  /api/inventory-asset-imports/commit/:
+    post:
+      operationId: inventory_asset_imports_commit_create
+      tags:
+      - inventory-asset-imports
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AssetImportCommit'
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssetImportCommit'
+        required: true
+      security:
+      - tokenAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Asset'
+          description: ''
+  /api/inventory-asset-imports/preview/:
+    post:
+      operationId: inventory_asset_imports_preview_create
+      tags:
+      - inventory-asset-imports
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AssetImportPreview'
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssetImportPreview'
+        required: true
+      security:
+      - tokenAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssetImportBatch'
+          description: ''
   /api/inventory-assets/:
     get:
       operationId: inventory_assets_list
@@ -2366,6 +2414,111 @@ paths:
       responses:
         '204':
           description: No response body
+  /api/inventory-attachments/:
+    get:
+      operationId: inventory_attachments_list
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - inventory-attachments
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedAssetAttachmentList'
+          description: ''
+    post:
+      operationId: inventory_attachments_create
+      tags:
+      - inventory-attachments
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AssetAttachmentUpload'
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssetAttachmentUpload'
+        required: true
+      security:
+      - tokenAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssetAttachment'
+          description: ''
+  /api/inventory-attachments/{id}/:
+    get:
+      operationId: inventory_attachments_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this asset attachment.
+        required: true
+      tags:
+      - inventory-attachments
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssetAttachment'
+          description: ''
+    delete:
+      operationId: inventory_attachments_destroy
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this asset attachment.
+        required: true
+      tags:
+      - inventory-attachments
+      security:
+      - tokenAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/inventory-attachments/{id}/download/:
+    get:
+      operationId: inventory_attachments_download_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this asset attachment.
+        required: true
+      tags:
+      - inventory-attachments
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+          description: ''
   /api/inventory-charging/:
     get:
       operationId: inventory_charging_list
@@ -5387,6 +5540,60 @@ components:
       - created_by_username
       - id
       - updated_at
+    AssetAttachment:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        asset:
+          type: string
+          format: uuid
+          readOnly: true
+        original_name:
+          type: string
+          readOnly: true
+        content_type:
+          type: string
+          readOnly: true
+        size_bytes:
+          type: integer
+          readOnly: true
+        description:
+          type: string
+          readOnly: true
+        uploaded_by_username:
+          type: string
+          readOnly: true
+        uploaded_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - asset
+      - content_type
+      - description
+      - id
+      - original_name
+      - size_bytes
+      - uploaded_at
+      - uploaded_by_username
+    AssetAttachmentUpload:
+      type: object
+      properties:
+        asset:
+          type: string
+          format: uuid
+        file:
+          type: string
+          format: uri
+        description:
+          type: string
+          maxLength: 500
+      required:
+      - asset
+      - file
     AssetCheckout:
       type: object
       properties:
@@ -5522,6 +5729,77 @@ components:
       - driver_license_jurisdiction
       - driver_license_number
       - incident
+    AssetImportBatch:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        source_name:
+          type: string
+          readOnly: true
+        source_sha256:
+          type: string
+          readOnly: true
+        rows:
+          readOnly: true
+        errors:
+          readOnly: true
+        row_count:
+          type: integer
+          readOnly: true
+        valid_count:
+          type: integer
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/AssetImportBatchStatusEnum'
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        committed_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+      required:
+      - committed_at
+      - created_at
+      - errors
+      - id
+      - row_count
+      - rows
+      - source_name
+      - source_sha256
+      - status
+      - valid_count
+    AssetImportBatchStatusEnum:
+      enum:
+      - preview
+      - committed
+      type: string
+      description: |-
+        * `preview` - Preview
+        * `committed` - Committed
+    AssetImportCommit:
+      type: object
+      properties:
+        batch_id:
+          type: string
+          format: uuid
+      required:
+      - batch_id
+    AssetImportPreview:
+      type: object
+      properties:
+        file:
+          type: string
+          format: uri
+      required:
+      - file
     AssetReturn:
       type: object
       properties:
@@ -8984,6 +9262,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/AntennaStructure'
+    PaginatedAssetAttachmentList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/AssetAttachment'
     PaginatedAssetCheckoutList:
       type: object
       required:

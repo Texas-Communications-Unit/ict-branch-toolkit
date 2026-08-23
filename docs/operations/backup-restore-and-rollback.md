@@ -20,7 +20,7 @@ objectives before permitting non-synthetic data.
 
 ## Backup controls
 
-The database is the authoritative persistent application state. The protected
+The database and asset-attachment volume are the authoritative persistent application state. The protected
 deployment environment file, reverse-proxy configuration, approved commit SHA,
 and certificate-reissuance instructions are also required for recovery, but
 must not be stored in this public repository.
@@ -46,6 +46,30 @@ Copy each approved backup and its checksum to organization-approved encrypted
 storage using a channel that encrypts data in transit. Encryption keys must be
 stored separately from the backup. Keep at least one recovery copy outside the
 application host's failure domain.
+
+## Asset attachment backup
+
+The `attachment-data` Compose volume contains uploaded asset files. Back it up whenever the database
+is backed up and label both artifacts with the same UTC recovery-set timestamp. Determine the
+actual Compose-prefixed volume name on the host before copying it:
+
+```sh
+cd "$HOME/apps/ict-branch-toolkit"
+docker compose -f compose.production.yaml --env-file "$HOME/.config/ict-branch-toolkit/deployment.env" ps
+docker volume ls --filter label=com.docker.compose.volume=attachment-data
+```
+
+Use the organization's approved volume-backup procedure to create a read-only archive while user
+changes are paused. Store the archive, its SHA-256 checksum, and the matching database dump in the
+same encrypted recovery set. Do not place uploaded files or recovery archives in Git. A recovery
+drill is complete only when the database and matching attachment archive are restored together and
+an authenticated synthetic attachment can be downloaded.
+
+Before restoring, disable external access and take an emergency backup of both current data stores.
+Restore the archive only into the empty `attachment-data` volume associated with the approved
+application commit, then restore the matching database dump. Do not merge files from different
+recovery sets, and do not delete or recreate a volume until its exact Compose project and backup
+have been verified. Re-enable access only after the post-restore checks below pass.
 
 For the synthetic shared test, retain:
 
@@ -88,7 +112,7 @@ publish environment values, host details, credentials, or database contents.
    changes between the deployed and target commits.
 3. Confirm the working tree is clean and the protected environment file is
    backed up through an approved secret-management process.
-4. Create a pre-upgrade database backup and run an isolated restore drill.
+4. Create a pre-upgrade database and attachment-volume recovery set and run an isolated restore drill.
 5. Record the deployed commit, database backup path and checksum, Compose image
    identifiers, and reverse-proxy configuration backup.
 6. Build the target images without replacing the running containers.
@@ -150,7 +174,8 @@ For a failed upgrade:
 1. disable external access and record the failed commit and image identifiers;
 2. preserve logs and create a post-failure backup if the database remains
    readable;
-3. restore the pre-upgrade database backup using the guarded procedure above;
+3. restore the pre-upgrade database and matching attachment-volume recovery set using the guarded
+   procedures above;
 4. switch the server checkout only to the previously recorded approved commit
    using a fast-forward or detached approved-commit checkout appropriate to the
    deployment process;
