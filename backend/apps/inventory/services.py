@@ -6,24 +6,37 @@ from apps.audit.services import record_event
 
 from .crypto import encrypt_value
 from .driver_license_rules import RULESET_VERSION, normalize_and_validate
-from .models import Asset, AssetCheckout, ProgrammingRecord
+from .models import Asset, AssetCheckout, ChargingRecord, MaintenanceRecord, ProgrammingRecord
 
 
 @transaction.atomic
 def checkout_asset(
-    *, asset, incident, assigned_name, assigned_organization, jurisdiction, number, actor
+    *,
+    asset,
+    incident,
+    assigned_name,
+    assigned_organization,
+    jurisdiction,
+    number,
+    actor,
+    point_of_contact="",
+    phone_number="",
+    mailing_address="",
+    assignment_notes="",
 ):
     asset = Asset.objects.select_for_update().get(pk=asset.pk)
-    if asset.category != Asset.Category.RADIO:
-        raise ValidationError({"asset": "Accountable checkout currently applies to radios."})
     if asset.status not in {Asset.Status.IN_SERVICE, Asset.Status.SPARE}:
-        raise ValidationError({"asset": "This radio is not available for checkout."})
+        raise ValidationError({"asset": "This asset is not available for checkout."})
     issuer, normalized = normalize_and_validate(jurisdiction, number)
     checkout = AssetCheckout(
         incident=incident,
         asset=asset,
         assigned_name=assigned_name,
         assigned_organization=assigned_organization,
+        point_of_contact=point_of_contact,
+        phone_number=phone_number,
+        mailing_address=mailing_address,
+        assignment_notes=assignment_notes,
         driver_license_jurisdiction=issuer,
         driver_license_last_four=normalized[-4:],
         checked_out_by=actor,
@@ -46,6 +59,13 @@ def checkout_asset(
         },
     )
     return checkout
+
+
+@transaction.atomic
+def checkout_assets(*, assets, **values):
+    if len({asset.pk for asset in assets}) != len(assets):
+        raise ValidationError({"assets": "Each asset may appear only once."})
+    return [checkout_asset(asset=asset, **values) for asset in assets]
 
 
 @transaction.atomic
@@ -129,5 +149,38 @@ def record_programming(*, actor, **values):
             "template_name": record.template_name,
             "template_version": record.template_version,
         },
+    )
+    return record
+
+
+@transaction.atomic
+def record_maintenance(*, actor, **values):
+    asset = Asset.objects.select_for_update().get(pk=values["asset"].pk)
+    record = MaintenanceRecord.objects.create(recorded_by=actor, **values)
+    if record.kind == MaintenanceRecord.Kind.CALIBRATION:
+        asset.last_calibrated_at = record.performed_at
+    update_fields = ["last_calibrated_at", "updated_at"]
+    if asset.status != Asset.Status.CHECKED_OUT:
+        asset.status = (
+            Asset.Status.IN_SERVICE if record.return_to_service else Asset.Status.MAINTENANCE
+        )
+        update_fields.append("status")
+    asset.save(update_fields=update_fields)
+    record_event(
+        actor=actor,
+        action="inventory.maintenance_recorded",
+        target=record,
+        details={"asset_id": asset.asset_id, "kind": record.kind},
+    )
+    return record
+
+
+def record_charging(*, actor, **values):
+    record = ChargingRecord.objects.create(recorded_by=actor, **values)
+    record_event(
+        actor=actor,
+        action="inventory.charging_recorded",
+        target=record,
+        details={"asset_id": record.asset.asset_id, "completed": bool(record.completed_at)},
     )
     return record

@@ -32,6 +32,12 @@ class Asset(models.Model):
     model = models.CharField(max_length=120, blank=True)
     serial_number = models.CharField(max_length=160, blank=True)
     alias = models.CharField(max_length=120, blank=True)
+    asset_subtype = models.CharField(max_length=80, blank=True)
+    flash_code = models.CharField(max_length=160, blank=True)
+    subscriber_id = models.CharField(max_length=80, blank=True)
+    system_ids = models.CharField(max_length=300, blank=True)
+    acquisition_date = models.DateField(null=True, blank=True)
+    last_calibrated_at = models.DateTimeField(null=True, blank=True)
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.IN_SERVICE)
     notes = models.TextField(blank=True)
     created_by = models.ForeignKey(
@@ -64,6 +70,10 @@ class AssetCheckout(models.Model):
     asset = models.ForeignKey(Asset, related_name="checkouts", on_delete=models.PROTECT)
     assigned_name = models.CharField(max_length=200)
     assigned_organization = models.CharField(max_length=200)
+    point_of_contact = models.CharField(max_length=200, blank=True)
+    phone_number = models.CharField(max_length=40, blank=True)
+    mailing_address = models.TextField(blank=True)
+    assignment_notes = models.TextField(blank=True)
     driver_license_jurisdiction = models.CharField(max_length=8)
     driver_license_ciphertext = models.TextField()
     driver_license_last_four = models.CharField(max_length=4)
@@ -128,3 +138,47 @@ class ProgrammingRecord(models.Model):
 
     def __str__(self):
         return f"{self.asset.asset_id}: {self.template_name}"
+
+
+class MaintenanceRecord(models.Model):
+    class Kind(models.TextChoices):
+        INSPECTION = "inspection", "Inspection"
+        CALIBRATION = "calibration", "Calibration"
+        REPAIR = "repair", "Repair"
+        PREVENTIVE = "preventive", "Preventive maintenance"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    asset = models.ForeignKey(Asset, related_name="maintenance_records", on_delete=models.PROTECT)
+    kind = models.CharField(max_length=20, choices=Kind.choices)
+    performed_at = models.DateTimeField()
+    technician = models.CharField(max_length=200)
+    notes = models.TextField()
+    return_to_service = models.BooleanField(default=False)
+    recorded_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, related_name="maintenance_records", on_delete=models.PROTECT
+    )
+    recorded_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-performed_at"]
+
+    def __str__(self):
+        return f"{self.asset.asset_id}: {self.get_kind_display()}"
+
+
+class ChargingRecord(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    asset = models.ForeignKey(Asset, related_name="charging_records", on_delete=models.PROTECT)
+    started_at = models.DateTimeField()
+    completed_at = models.DateTimeField(null=True, blank=True)
+    notes = models.CharField(max_length=500, blank=True)
+    recorded_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, related_name="charging_records", on_delete=models.PROTECT
+    )
+    recorded_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-started_at"]
+
+    def __str__(self):
+        return f"{self.asset.asset_id}: {self.started_at}"

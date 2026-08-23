@@ -11,6 +11,23 @@ role. They intentionally exclude driver-license and radio-system information. A 
 as a keyboard wedge can enter an asset ID through the same labeled controls used for manual entry;
 no pointer-only scanning path is required.
 
+## Operational inventory records
+
+The workspace supports multi-asset checkout to one individual, including the assigned agency,
+24-hour point of contact, phone number, mailing address, and assignment notes. The same accountable
+return and driver-license retention rules apply independently to each selected asset.
+
+Inventory operators can search by asset ID, serial number, alias, manufacturer, or model; filter by
+category and status; and sort the displayed inventory. Radio metadata includes subtype, flash code,
+subscriber ID, system IDs, acquisition date, and the last calibration timestamp. Flash codes and
+system identifiers are operational data and must not be copied into public labels or unapproved
+exports.
+
+Maintenance records capture the work type, technician, time, notes, and whether the asset was
+returned to service. Calibration entries update the asset's last-calibrated timestamp. Charging
+records capture start and completion times with an optional note. Creating either record produces
+an audit event. A maintenance entry cannot silently make an actively checked-out asset available.
+
 ## Driver-license handling
 
 - An issuing state and number are required before a radio can be checked out.

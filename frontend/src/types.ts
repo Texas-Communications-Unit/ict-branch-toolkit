@@ -1415,6 +1415,12 @@ export interface InventoryAsset {
   model: string;
   serial_number: string;
   alias: string;
+  asset_subtype: string;
+  flash_code: string;
+  subscriber_id: string;
+  system_ids: string;
+  acquisition_date: string | null;
+  last_calibrated_at: string | null;
   status: AssetStatus;
   notes: string;
   created_by_username: string;
@@ -1429,6 +1435,10 @@ export interface AssetCheckout {
   asset_detail: InventoryAsset;
   assigned_name: string;
   assigned_organization: string;
+  point_of_contact: string;
+  phone_number: string;
+  mailing_address: string;
+  assignment_notes: string;
   driver_license_jurisdiction: string;
   driver_license_number: string | null;
   driver_license_last_four: string;
@@ -1454,4 +1464,26 @@ export interface ProgrammingRecord {
   backup_note: string;
   confirmed_by_username: string;
   confirmed_at: string;
+}
+
+export interface MaintenanceRecord {
+  id: string;
+  asset: string;
+  kind: "inspection" | "calibration" | "repair" | "preventive";
+  performed_at: string;
+  technician: string;
+  notes: string;
+  return_to_service: boolean;
+  recorded_by_username: string;
+  recorded_at: string;
+}
+
+export interface ChargingRecord {
+  id: string;
+  asset: string;
+  started_at: string;
+  completed_at: string | null;
+  notes: string;
+  recorded_by_username: string;
+  recorded_at: string;
 }

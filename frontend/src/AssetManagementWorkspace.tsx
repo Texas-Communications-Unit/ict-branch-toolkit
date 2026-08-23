@@ -2,19 +2,26 @@ import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 
 import {
   checkoutInventoryAsset,
+  createChargingRecord,
   createInventoryAsset,
+  createMaintenanceRecord,
   createProgrammingRecord,
   listAssetCheckouts,
+  listChargingRecords,
   listInventoryAssets,
+  listMaintenanceRecords,
   listProgrammingRecords,
   resolveInventoryHold,
   returnInventoryAsset,
+  updateInventoryAsset,
 } from "./api";
 import type {
   AssetCheckout,
+  ChargingRecord,
   CurrentUser,
   Incident,
   InventoryAsset,
+  MaintenanceRecord,
   ProgrammingRecord,
 } from "./types";
 
@@ -81,23 +88,40 @@ export function AssetManagementWorkspace({ incident, currentUser }: Props) {
   const [assets, setAssets] = useState<InventoryAsset[]>([]);
   const [checkouts, setCheckouts] = useState<AssetCheckout[]>([]);
   const [programming, setProgramming] = useState<ProgrammingRecord[]>([]);
+  const [maintenance, setMaintenance] = useState<MaintenanceRecord[]>([]);
+  const [charging, setCharging] = useState<ChargingRecord[]>([]);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [returningCheckout, setReturningCheckout] =
     useState<AssetCheckout | null>(null);
   const [returnCondition, setReturnCondition] = useState("normal");
+  const [assetSearch, setAssetSearch] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [assetOrdering, setAssetOrdering] = useState("asset_id");
+  const [editingAsset, setEditingAsset] = useState<InventoryAsset | null>(null);
   const canManage = currentUser.permissions.includes("inventory.manage");
 
   const refresh = useCallback(async () => {
     setError("");
     try {
-      const [assetItems, programmingItems, checkoutItems] = await Promise.all([
+      const [
+        assetItems,
+        programmingItems,
+        maintenanceItems,
+        chargingItems,
+        checkoutItems,
+      ] = await Promise.all([
         listInventoryAssets(),
         listProgrammingRecords(),
+        listMaintenanceRecords(),
+        listChargingRecords(),
         incident ? listAssetCheckouts(incident.id) : Promise.resolve([]),
       ]);
       setAssets(assetItems);
       setProgramming(programmingItems);
+      setMaintenance(maintenanceItems);
+      setCharging(chargingItems);
       setCheckouts(checkoutItems);
     } catch (caught) {
       setError(
@@ -110,15 +134,33 @@ export function AssetManagementWorkspace({ incident, currentUser }: Props) {
 
   useEffect(() => void refresh(), [refresh]);
 
-  const availableRadios = useMemo(
+  const availableAssets = useMemo(
     () =>
-      assets.filter(
-        (asset) =>
-          asset.category === "radio" &&
-          ["in_service", "spare"].includes(asset.status),
-      ),
+      assets.filter((asset) => ["in_service", "spare"].includes(asset.status)),
     [assets],
   );
+  const visibleAssets = useMemo(() => {
+    const needle = assetSearch.trim().toLowerCase();
+    return [...assets]
+      .filter((asset) => !categoryFilter || asset.category === categoryFilter)
+      .filter((asset) => !statusFilter || asset.status === statusFilter)
+      .filter(
+        (asset) =>
+          !needle ||
+          [
+            asset.asset_id,
+            asset.serial_number,
+            asset.alias,
+            asset.manufacturer,
+            asset.model,
+          ].some((value) => value.toLowerCase().includes(needle)),
+      )
+      .sort((left, right) =>
+        String(left[assetOrdering as keyof InventoryAsset] ?? "").localeCompare(
+          String(right[assetOrdering as keyof InventoryAsset] ?? ""),
+        ),
+      );
+  }, [assetOrdering, assetSearch, assets, categoryFilter, statusFilter]);
 
   async function submit(
     form: HTMLFormElement,
@@ -158,10 +200,43 @@ export function AssetManagementWorkspace({ incident, currentUser }: Props) {
           model: data.get("model"),
           serial_number: data.get("serial_number"),
           alias: data.get("alias"),
+          asset_subtype: data.get("asset_subtype"),
+          flash_code: data.get("flash_code"),
+          subscriber_id: data.get("subscriber_id"),
+          system_ids: data.get("system_ids"),
+          acquisition_date: data.get("acquisition_date") || null,
           notes: data.get("notes"),
         }),
       "Asset added.",
     );
+  }
+
+  function handleAssetUpdate(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!editingAsset) return;
+    const form = event.currentTarget;
+    const data = new FormData(form);
+    void submit(
+      form,
+      () =>
+        updateInventoryAsset(editingAsset.id, {
+          parent: data.get("parent") || null,
+          manufacturer: data.get("manufacturer"),
+          model: data.get("model"),
+          serial_number: data.get("serial_number"),
+          alias: data.get("alias"),
+          asset_subtype: data.get("asset_subtype"),
+          flash_code: data.get("flash_code"),
+          subscriber_id: data.get("subscriber_id"),
+          system_ids: data.get("system_ids"),
+          acquisition_date: data.get("acquisition_date") || null,
+          status: data.get("status"),
+          notes: data.get("notes"),
+        }),
+      "Asset updated.",
+    ).then((succeeded) => {
+      if (succeeded) setEditingAsset(null);
+    });
   }
 
   function handleCheckout(event: FormEvent<HTMLFormElement>) {
@@ -174,13 +249,53 @@ export function AssetManagementWorkspace({ incident, currentUser }: Props) {
       () =>
         checkoutInventoryAsset({
           incident: incident.id,
-          asset: data.get("asset"),
+          assets: data.getAll("assets"),
           assigned_name: data.get("assigned_name"),
           assigned_organization: data.get("assigned_organization"),
+          point_of_contact: data.get("point_of_contact"),
+          phone_number: data.get("phone_number"),
+          mailing_address: data.get("mailing_address"),
+          assignment_notes: data.get("assignment_notes"),
           driver_license_jurisdiction: data.get("jurisdiction"),
           driver_license_number: data.get("driver_license_number"),
         }),
-      "Radio checked out.",
+      "Assets checked out.",
+    );
+  }
+
+  function handleMaintenance(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const data = new FormData(form);
+    void submit(
+      form,
+      () =>
+        createMaintenanceRecord({
+          asset: data.get("asset"),
+          kind: data.get("kind"),
+          performed_at: data.get("performed_at"),
+          technician: data.get("technician"),
+          notes: data.get("notes"),
+          return_to_service: data.get("return_to_service") === "on",
+        }),
+      "Maintenance record saved.",
+    );
+  }
+
+  function handleCharging(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const data = new FormData(form);
+    void submit(
+      form,
+      () =>
+        createChargingRecord({
+          asset: data.get("asset"),
+          started_at: data.get("started_at"),
+          completed_at: data.get("completed_at") || null,
+          notes: data.get("notes"),
+        }),
+      "Charging record saved.",
     );
   }
 
@@ -217,7 +332,7 @@ export function AssetManagementWorkspace({ incident, currentUser }: Props) {
           hold_reason: String(data.get("hold_reason") ?? ""),
         }),
       condition === "normal"
-        ? "Radio returned; driver's-license number deleted."
+        ? "Asset returned; driver's-license number deleted."
         : "Accountability hold recorded; driver's-license number retained.",
     ).then((succeeded) => {
       if (succeeded) setReturningCheckout(null);
@@ -282,7 +397,7 @@ export function AssetManagementWorkspace({ incident, currentUser }: Props) {
       )}
       {!incident && (
         <p className="empty">
-          Select an incident to view or perform accountable radio checkout.
+          Select an incident to view or perform accountable asset checkout.
         </p>
       )}
       {canManage && (
@@ -332,6 +447,29 @@ export function AssetManagementWorkspace({ incident, currentUser }: Props) {
               <input name="alias" />
             </label>
             <label>
+              Subtype
+              <input
+                name="asset_subtype"
+                placeholder="Handheld, mobile, base, battery type"
+              />
+            </label>
+            <label>
+              Flash code
+              <input name="flash_code" />
+            </label>
+            <label>
+              Subscriber ID
+              <input name="subscriber_id" />
+            </label>
+            <label>
+              System IDs
+              <input name="system_ids" />
+            </label>
+            <label>
+              Acquisition date
+              <input name="acquisition_date" type="date" />
+            </label>
+            <label>
               Notes
               <textarea name="notes" rows={2} />
             </label>
@@ -339,14 +477,19 @@ export function AssetManagementWorkspace({ incident, currentUser }: Props) {
           </form>
           {incident && (
             <form className="compact-form" onSubmit={handleCheckout}>
-              <h3>Check out radio</h3>
+              <h3>Check out assets</h3>
               <label>
-                Radio
-                <select name="asset" required>
-                  <option value="">Select radio</option>
-                  {availableRadios.map((asset) => (
+                Assets (select one or more)
+                <select
+                  name="assets"
+                  required
+                  multiple
+                  size={Math.min(8, Math.max(3, availableAssets.length))}
+                >
+                  {availableAssets.map((asset) => (
                     <option key={asset.id} value={asset.id}>
-                      {asset.asset_id} {asset.alias && `— ${asset.alias}`}
+                      {asset.asset_id} · {asset.category}{" "}
+                      {asset.alias && `— ${asset.alias}`}
                     </option>
                   ))}
                 </select>
@@ -358,6 +501,22 @@ export function AssetManagementWorkspace({ incident, currentUser }: Props) {
               <label>
                 Agency or organization
                 <input name="assigned_organization" required />
+              </label>
+              <label>
+                24-hour point of contact
+                <input name="point_of_contact" />
+              </label>
+              <label>
+                Cell phone number
+                <input name="phone_number" type="tel" />
+              </label>
+              <label>
+                Mailing address
+                <textarea name="mailing_address" rows={2} />
+              </label>
+              <label>
+                Assignment notes
+                <textarea name="assignment_notes" rows={2} />
               </label>
               <label>
                 Driver's-license issuing state
@@ -378,7 +537,7 @@ export function AssetManagementWorkspace({ incident, currentUser }: Props) {
                   maxLength={32}
                 />
               </label>
-              <button type="submit">Check out radio</button>
+              <button type="submit">Check out selected assets</button>
             </form>
           )}
           <form className="compact-form" onSubmit={handleProgramming}>
@@ -417,6 +576,77 @@ export function AssetManagementWorkspace({ incident, currentUser }: Props) {
               <input name="backup_note" maxLength={300} />
             </label>
             <button type="submit">Save programming record</button>
+          </form>
+          <form className="compact-form" onSubmit={handleMaintenance}>
+            <h3>Record maintenance</h3>
+            <label>
+              Asset
+              <select name="asset" required>
+                <option value="">Select asset</option>
+                {assets.map((asset) => (
+                  <option key={asset.id} value={asset.id}>
+                    {asset.asset_id}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Type
+              <select name="kind" required>
+                <option value="inspection">Inspection</option>
+                <option value="calibration">Calibration</option>
+                <option value="repair">Repair</option>
+                <option value="preventive">Preventive maintenance</option>
+              </select>
+            </label>
+            <label>
+              Performed at
+              <input name="performed_at" type="datetime-local" required />
+            </label>
+            <label>
+              Technician
+              <input name="technician" required />
+            </label>
+            <label>
+              Work performed
+              <textarea name="notes" rows={3} required />
+            </label>
+            <label className="checkbox-label">
+              <input name="return_to_service" type="checkbox" /> Return asset to
+              service
+            </label>
+            <button type="submit">Save maintenance record</button>
+          </form>
+          <form className="compact-form" onSubmit={handleCharging}>
+            <h3>Record charging</h3>
+            <label>
+              Battery or asset
+              <select name="asset" required>
+                <option value="">Select asset</option>
+                {assets
+                  .filter((asset) =>
+                    ["battery", "radio"].includes(asset.category),
+                  )
+                  .map((asset) => (
+                    <option key={asset.id} value={asset.id}>
+                      {asset.asset_id}
+                    </option>
+                  ))}
+              </select>
+            </label>
+            <label>
+              Charging started
+              <input name="started_at" type="datetime-local" required />
+            </label>
+            <label>
+              Charging completed
+              <input name="completed_at" type="datetime-local" />
+            </label>
+            <label>
+              Notes
+              <input name="notes" maxLength={500} />
+            </label>
+            <button type="submit">Save charging record</button>
           </form>
         </div>
       )}
@@ -466,8 +696,161 @@ export function AssetManagementWorkspace({ incident, currentUser }: Props) {
         </form>
       )}
       <h3>Assets</h3>
+      {canManage && editingAsset && (
+        <form className="compact-form" onSubmit={handleAssetUpdate}>
+          <h4>Edit {editingAsset.asset_id}</h4>
+          <label>
+            Parent asset
+            <select name="parent" defaultValue={editingAsset.parent ?? ""}>
+              <option value="">None</option>
+              {assets
+                .filter((asset) => asset.id !== editingAsset.id)
+                .map((asset) => (
+                  <option key={asset.id} value={asset.id}>
+                    {asset.asset_id}
+                  </option>
+                ))}
+            </select>
+          </label>
+          <label>
+            Manufacturer
+            <input
+              name="manufacturer"
+              defaultValue={editingAsset.manufacturer}
+            />
+          </label>
+          <label>
+            Model
+            <input name="model" defaultValue={editingAsset.model} />
+          </label>
+          <label>
+            Serial number
+            <input
+              name="serial_number"
+              defaultValue={editingAsset.serial_number}
+            />
+          </label>
+          <label>
+            Alias
+            <input name="alias" defaultValue={editingAsset.alias} />
+          </label>
+          <label>
+            Subtype
+            <input
+              name="asset_subtype"
+              defaultValue={editingAsset.asset_subtype}
+            />
+          </label>
+          <label>
+            Flash code
+            <input name="flash_code" defaultValue={editingAsset.flash_code} />
+          </label>
+          <label>
+            Subscriber ID
+            <input
+              name="subscriber_id"
+              defaultValue={editingAsset.subscriber_id}
+            />
+          </label>
+          <label>
+            System IDs
+            <input name="system_ids" defaultValue={editingAsset.system_ids} />
+          </label>
+          <label>
+            Acquisition date
+            <input
+              name="acquisition_date"
+              type="date"
+              defaultValue={editingAsset.acquisition_date ?? ""}
+            />
+          </label>
+          <label>
+            Status
+            <select
+              name="status"
+              defaultValue={editingAsset.status}
+              disabled={editingAsset.status === "checked_out"}
+            >
+              <option value="in_service">In service</option>
+              <option value="spare">Spare</option>
+              <option value="checked_out">Checked out</option>
+              <option value="maintenance">Maintenance</option>
+              <option value="retired">Retired</option>
+            </select>
+          </label>
+          {editingAsset.status === "checked_out" && (
+            <input name="status" type="hidden" value="checked_out" />
+          )}
+          <label>
+            Notes
+            <textarea name="notes" rows={3} defaultValue={editingAsset.notes} />
+          </label>
+          <div className="button-row">
+            <button type="submit">Save asset</button>
+            <button
+              type="button"
+              className="secondary-button"
+              onClick={() => setEditingAsset(null)}
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      )}
+      <div className="filter-row" aria-label="Filter and sort assets">
+        <label>
+          Search assets
+          <input
+            value={assetSearch}
+            onChange={(event) => setAssetSearch(event.target.value)}
+            placeholder="Asset ID, serial, alias, make, or model"
+          />
+        </label>
+        <label>
+          Category
+          <select
+            value={categoryFilter}
+            onChange={(event) => setCategoryFilter(event.target.value)}
+          >
+            <option value="">All categories</option>
+            <option value="radio">Radio</option>
+            <option value="battery">Battery</option>
+            <option value="antenna">Antenna</option>
+            <option value="cable">Programming cable</option>
+            <option value="microphone">Microphone</option>
+            <option value="accessory">Other accessory</option>
+          </select>
+        </label>
+        <label>
+          Status
+          <select
+            value={statusFilter}
+            onChange={(event) => setStatusFilter(event.target.value)}
+          >
+            <option value="">All statuses</option>
+            <option value="in_service">In service</option>
+            <option value="spare">Spare</option>
+            <option value="checked_out">Checked out</option>
+            <option value="maintenance">Maintenance</option>
+            <option value="retired">Retired</option>
+          </select>
+        </label>
+        <label>
+          Sort by
+          <select
+            value={assetOrdering}
+            onChange={(event) => setAssetOrdering(event.target.value)}
+          >
+            <option value="asset_id">Asset ID</option>
+            <option value="category">Category</option>
+            <option value="status">Status</option>
+            <option value="manufacturer">Manufacturer</option>
+            <option value="model">Model</option>
+          </select>
+        </label>
+      </div>
       <div className="resource-grid">
-        {assets.map((asset) => (
+        {visibleAssets.map((asset) => (
           <article className="resource-card" key={asset.id}>
             <strong>{asset.asset_id}</strong>
             <span>
@@ -483,6 +866,15 @@ export function AssetManagementWorkspace({ incident, currentUser }: Props) {
               Serial: {asset.serial_number || "Not recorded"}
               {asset.parent ? " · Child asset" : ""}
             </small>
+            {canManage && (
+              <button
+                type="button"
+                className="secondary-button"
+                onClick={() => setEditingAsset(asset)}
+              >
+                Edit asset
+              </button>
+            )}
           </article>
         ))}
       </div>
@@ -574,6 +966,48 @@ export function AssetManagementWorkspace({ incident, currentUser }: Props) {
             <small>
               Confirmed by {record.confirmed_by_username} at{" "}
               {new Date(record.confirmed_at).toLocaleString()}
+            </small>
+          </article>
+        ))}
+      </div>
+      <h3>Maintenance history</h3>
+      <div className="resource-grid">
+        {maintenance.map((record) => (
+          <article className="resource-card" key={record.id}>
+            <strong>
+              {assets.find((asset) => asset.id === record.asset)?.asset_id ??
+                "Asset"}{" "}
+              — {record.kind}
+            </strong>
+            <span>
+              {new Date(record.performed_at).toLocaleString()} ·{" "}
+              {record.technician}
+            </span>
+            <p>{record.notes}</p>
+            <small>
+              Recorded by {record.recorded_by_username}
+              {record.return_to_service ? " · Returned to service" : ""}
+            </small>
+          </article>
+        ))}
+      </div>
+      <h3>Charging history</h3>
+      <div className="resource-grid">
+        {charging.map((record) => (
+          <article className="resource-card" key={record.id}>
+            <strong>
+              {assets.find((asset) => asset.id === record.asset)?.asset_id ??
+                "Asset"}
+            </strong>
+            <span>
+              {new Date(record.started_at).toLocaleString()} —{" "}
+              {record.completed_at
+                ? new Date(record.completed_at).toLocaleString()
+                : "In progress"}
+            </span>
+            <small>
+              {record.notes || "No notes"} · Recorded by{" "}
+              {record.recorded_by_username}
             </small>
           </article>
         ))}
