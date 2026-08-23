@@ -531,7 +531,7 @@ def test_asset_import_errors_block_commit():
     assert committed.status_code == 400
 
 
-@pytest.mark.django_db
+@pytest.mark.django_db(transaction=True)
 def test_asset_attachment_upload_download_and_delete_are_governed():
     manager = _user("attachment-manager", Role.COML)
     reader = _user("attachment-reader", Role.READ_ONLY)
