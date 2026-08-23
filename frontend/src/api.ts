@@ -133,6 +133,25 @@ export function resolveInventoryHold(
   );
 }
 
+export async function downloadInventoryPdf(
+  checkoutId: string,
+  report: "equipment-t-card" | "accountable-property",
+): Promise<void> {
+  const token = tokenForRequest();
+  const response = await fetch(
+    `${API_BASE}/api/inventory-checkouts/${encodeURIComponent(checkoutId)}/${report}-pdf/`,
+    { headers: token ? { Authorization: `Token ${token}` } : {} },
+  );
+  if (!response.ok) throw new Error(await response.text());
+  const url = URL.createObjectURL(await response.blob());
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download =
+    report === "equipment-t-card" ? "ics-219-7.pdf" : "ics-219-9-wf.pdf";
+  anchor.click();
+  URL.revokeObjectURL(url);
+}
+
 export async function listProgrammingRecords(): Promise<ProgrammingRecord[]> {
   const page = await request<Paginated<ProgrammingRecord>>(
     "/api/inventory-programming/?page_size=500",

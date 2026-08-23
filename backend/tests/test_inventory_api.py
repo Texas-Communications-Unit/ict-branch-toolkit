@@ -1,9 +1,12 @@
 import base64
+import hashlib
 from datetime import UTC, datetime
+from io import BytesIO
 
 import pytest
 from django.contrib.auth import get_user_model
 from django.test import override_settings
+from pypdf import PdfReader
 from rest_framework.test import APIClient
 
 from apps.accounts.models import Role, UserRoleAssignment
@@ -15,6 +18,12 @@ from apps.inventory.models import (
     ChargingRecord,
     MaintenanceRecord,
     ProgrammingRecord,
+)
+from apps.inventory.reports import (
+    ACCOUNTABLE_PROPERTY_SHA256,
+    ACCOUNTABLE_PROPERTY_TEMPLATE,
+    T_CARD_SHA256,
+    T_CARD_TEMPLATE,
 )
 
 TEST_KEY = base64.urlsafe_b64encode(b"0" * 32).decode("ascii")
@@ -335,3 +344,72 @@ def test_multi_asset_checkout_and_operational_records_are_audited():
     assert ChargingRecord.objects.get().recorded_by == manager
     assert AuditEvent.objects.filter(action="inventory.maintenance_recorded").exists()
     assert AuditEvent.objects.filter(action="inventory.charging_recorded").exists()
+
+
+@pytest.mark.django_db
+@override_settings(ICT_INVENTORY_ENCRYPTION_KEY=TEST_KEY)
+def test_official_ics219_reports_are_flattened_scoped_and_audited():
+    manager = _user("report-manager", Role.COML)
+    outsider = _user("report-outsider", Role.READ_ONLY)
+    incident = _incident(manager)
+    asset = Asset.objects.create(
+        asset_id='RADIO/REPORT "1"',
+        category=Asset.Category.RADIO,
+        manufacturer="Synthetic",
+        model="Portable",
+        serial_number="SERIAL-REPORT-1",
+        created_by=manager,
+    )
+    client = APIClient()
+    client.force_authenticate(manager)
+    created = client.post(
+        "/api/inventory-checkouts/",
+        {
+            "incident": str(incident.id),
+            "assets": [str(asset.id)],
+            "assigned_name": "Report Assignee",
+            "assigned_organization": "Synthetic Agency",
+            "driver_license_jurisdiction": "TX",
+            "driver_license_number": "12345678",
+        },
+        format="json",
+    )
+    checkout_id = created.json()[0]["id"]
+
+    t_card = client.get(f"/api/inventory-checkouts/{checkout_id}/equipment-t-card-pdf/")
+    property_record = client.get(
+        f"/api/inventory-checkouts/{checkout_id}/accountable-property-pdf/"
+    )
+
+    assert t_card.status_code == 200
+    assert property_record.status_code == 200
+    assert t_card["Content-Type"] == "application/pdf"
+    assert 'filename="ics-219-7-RADIO-REPORT--1-.pdf"' in t_card["Content-Disposition"]
+    for response in (t_card, property_record):
+        reader = PdfReader(BytesIO(response.content))
+        assert not reader.get_fields()
+        assert reader.root_object.get("/StructTreeRoot")
+        assert reader.root_object.get("/Lang") == "en"
+        assert all(
+            annotation.get_object().get("/Subtype") != "/Widget"
+            for page in reader.pages
+            for annotation in page.get("/Annots", [])
+        )
+        extracted = "\n".join(page.extract_text() or "" for page in reader.pages)
+        assert "12345678" not in extracted
+        assert "RADIO/REPORT" in extracted
+
+    assert AuditEvent.objects.filter(action="inventory.equipment_t_card_pdf_exported").exists()
+    assert AuditEvent.objects.filter(action="inventory.accountable_property_pdf_exported").exists()
+
+    client.force_authenticate(outsider)
+    denied = client.get(f"/api/inventory-checkouts/{checkout_id}/equipment-t-card-pdf/")
+    assert denied.status_code == 404
+
+
+def test_official_ics219_templates_match_pinned_checksums():
+    assert hashlib.sha256(T_CARD_TEMPLATE.read_bytes()).hexdigest() == T_CARD_SHA256
+    assert (
+        hashlib.sha256(ACCOUNTABLE_PROPERTY_TEMPLATE.read_bytes()).hexdigest()
+        == ACCOUNTABLE_PROPERTY_SHA256
+    )

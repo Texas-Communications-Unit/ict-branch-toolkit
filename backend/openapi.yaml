@@ -2509,6 +2509,52 @@ paths:
               schema:
                 $ref: '#/components/schemas/AssetCheckout'
           description: ''
+  /api/inventory-checkouts/{id}/accountable-property-pdf/:
+    get:
+      operationId: inventory_checkouts_accountable_property_pdf_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this asset checkout.
+        required: true
+      tags:
+      - inventory-checkouts
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+          description: ''
+  /api/inventory-checkouts/{id}/equipment-t-card-pdf/:
+    get:
+      operationId: inventory_checkouts_equipment_t_card_pdf_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this asset checkout.
+        required: true
+      tags:
+      - inventory-checkouts
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+          description: ''
   /api/inventory-checkouts/{id}/resolve-hold/:
     post:
       operationId: inventory_checkouts_resolve_hold_create

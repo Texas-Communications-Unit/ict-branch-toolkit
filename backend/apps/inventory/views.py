@@ -1,5 +1,7 @@
 from django.db.models import Q
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
+from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
@@ -18,6 +20,11 @@ from apps.audit.services import record_event
 from apps.incidents.models import Incident
 
 from .models import Asset, AssetCheckout, ChargingRecord, MaintenanceRecord, ProgrammingRecord
+from .reports import (
+    render_accountable_property_record,
+    render_equipment_t_card,
+    report_digest,
+)
 from .serializers import (
     AccountabilityHoldResolutionSerializer,
     AssetCheckoutCreateSerializer,
@@ -40,6 +47,12 @@ from .services import (
 
 def _can_access_incident(user, incident):
     return user_has_permission(user, INVENTORY_VIEW, incident)
+
+
+def _safe_filename_component(value):
+    return "".join(
+        character if character.isalnum() or character in "-_" else "-" for character in value
+    )
 
 
 class AssetViewSet(viewsets.ModelViewSet):
@@ -239,6 +252,51 @@ class AssetCheckoutViewSet(viewsets.ReadOnlyModelViewSet):
             actor=request.user,
         )
         return Response(AssetCheckoutSerializer(checkout).data)
+
+    def _report_response(self, request, checkout, *, kind, renderer, filename):
+        if not _can_access_incident(request.user, checkout.incident):
+            raise PermissionDenied("You do not have access to this incident report.")
+        content = renderer()
+        record_event(
+            actor=request.user,
+            action=f"inventory.{kind}_exported",
+            target=checkout,
+            details={
+                "incident_id": str(checkout.incident_id),
+                "asset_id": checkout.asset.asset_id,
+                "format": "pdf",
+                "sha256": report_digest(content),
+                "byte_count": len(content),
+            },
+        )
+        response = HttpResponse(content, content_type="application/pdf")
+        response["Content-Disposition"] = f'attachment; filename="{filename}"'
+        return response
+
+    @extend_schema(responses={(200, "application/pdf"): OpenApiTypes.BINARY})
+    @action(detail=True, methods=["get"], url_path="equipment-t-card-pdf")
+    def equipment_t_card_pdf(self, request, pk=None):
+        checkout = self.get_object()
+        return self._report_response(
+            request,
+            checkout,
+            kind="equipment_t_card_pdf",
+            renderer=lambda: render_equipment_t_card(checkout),
+            filename=f"ics-219-7-{_safe_filename_component(checkout.asset.asset_id)}.pdf",
+        )
+
+    @extend_schema(responses={(200, "application/pdf"): OpenApiTypes.BINARY})
+    @action(detail=True, methods=["get"], url_path="accountable-property-pdf")
+    def accountable_property_pdf(self, request, pk=None):
+        checkout = self.get_object()
+        maintenance_records = list(checkout.asset.maintenance_records.all())
+        return self._report_response(
+            request,
+            checkout,
+            kind="accountable_property_pdf",
+            renderer=lambda: render_accountable_property_record(checkout, maintenance_records),
+            filename=(f"ics-219-9-wf-{_safe_filename_component(checkout.asset.asset_id)}.pdf"),
+        )
 
 
 class ProgrammingRecordViewSet(viewsets.ModelViewSet):

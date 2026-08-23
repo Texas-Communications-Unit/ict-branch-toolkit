@@ -6,6 +6,7 @@ import {
   createInventoryAsset,
   createMaintenanceRecord,
   createProgrammingRecord,
+  downloadInventoryPdf,
   listAssetCheckouts,
   listChargingRecords,
   listInventoryAssets,
@@ -182,6 +183,28 @@ export function AssetManagementWorkspace({ incident, currentUser }: Props) {
           : "The inventory action failed.",
       );
       return false;
+    }
+  }
+
+  async function downloadReport(
+    checkout: AssetCheckout,
+    report: "equipment-t-card" | "accountable-property",
+  ) {
+    setError("");
+    setMessage("");
+    try {
+      await downloadInventoryPdf(checkout.id, report);
+      setMessage(
+        report === "equipment-t-card"
+          ? "ICS 219-7 equipment T-card downloaded."
+          : "ICS 219-9 WF accountable property record downloaded.",
+      );
+    } catch (caught) {
+      setError(
+        caught instanceof Error
+          ? caught.message
+          : "The report download failed.",
+      );
     }
   }
 
@@ -904,6 +927,26 @@ export function AssetManagementWorkspace({ incident, currentUser }: Props) {
                     <strong>Resolution:</strong> {checkout.hold_resolution_note}
                   </p>
                 )}
+                <div className="button-row">
+                  <button
+                    type="button"
+                    className="secondary-button"
+                    onClick={() =>
+                      void downloadReport(checkout, "equipment-t-card")
+                    }
+                  >
+                    Download ICS 219-7 T-card
+                  </button>
+                  <button
+                    type="button"
+                    className="secondary-button"
+                    onClick={() =>
+                      void downloadReport(checkout, "accountable-property")
+                    }
+                  >
+                    Download ICS 219-9 property record
+                  </button>
+                </div>
                 {canManage && checkout.state === "active" && (
                   <button
                     type="button"
