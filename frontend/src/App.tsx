@@ -18,6 +18,7 @@ import {
   requestPasswordReset,
 } from "./api";
 import { AccountAdministration } from "./AccountAdministration";
+import { AssetManagementWorkspace } from "./AssetManagementWorkspace";
 import { BrandMark } from "./BrandMark";
 import { HAATWorkspace } from "./HAATWorkspace";
 import { CoverageEstimateWorkspace } from "./CoverageEstimateWorkspace";
@@ -891,6 +892,21 @@ export default function App() {
               layout: "single",
               content: <FccReferenceWorkspace />,
             },
+            ...(currentUser?.permissions.includes("inventory.view")
+              ? [
+                  {
+                    id: "asset-management",
+                    label: "Asset Management",
+                    layout: "single" as const,
+                    content: (
+                      <AssetManagementWorkspace
+                        incident={selected ?? null}
+                        currentUser={currentUser}
+                      />
+                    ),
+                  },
+                ]
+              : []),
             ...(currentUser?.permissions.includes("account.manage") ||
             currentUser?.permissions.includes("extension.view")
               ? [

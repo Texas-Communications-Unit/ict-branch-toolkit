@@ -1399,3 +1399,59 @@ export interface FccTowerDetail {
   truncated: boolean;
   disclaimer: string;
 }
+
+export type AssetCategory =
+  "radio" | "battery" | "antenna" | "cable" | "microphone" | "accessory";
+
+export type AssetStatus =
+  "in_service" | "spare" | "checked_out" | "maintenance" | "retired";
+
+export interface InventoryAsset {
+  id: string;
+  asset_id: string;
+  category: AssetCategory;
+  parent: string | null;
+  manufacturer: string;
+  model: string;
+  serial_number: string;
+  alias: string;
+  status: AssetStatus;
+  notes: string;
+  created_by_username: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AssetCheckout {
+  id: string;
+  incident: string;
+  asset: string;
+  asset_detail: InventoryAsset;
+  assigned_name: string;
+  assigned_organization: string;
+  driver_license_jurisdiction: string;
+  driver_license_number: string | null;
+  driver_license_last_four: string;
+  state: "active" | "returned" | "hold";
+  checked_out_by_username: string;
+  checked_out_at: string;
+  returned_by_username: string | null;
+  returned_at: string | null;
+  return_condition: "" | "normal" | "damaged" | "lost" | "disputed";
+  hold_reason: string;
+  hold_resolved_by_username: string | null;
+  hold_resolved_at: string | null;
+  hold_resolution_note: string;
+}
+
+export interface ProgrammingRecord {
+  id: string;
+  asset: string;
+  template_name: string;
+  template_version: string;
+  programmed_at: string;
+  codeplug_backup_saved: boolean;
+  backup_note: string;
+  confirmed_by_username: string;
+  confirmed_at: string;
+}

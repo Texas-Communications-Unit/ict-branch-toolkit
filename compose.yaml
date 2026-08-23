@@ -21,6 +21,7 @@ services:
       target: development
     environment:
       DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:-unsafe-compose-development-key}
+      ICT_INVENTORY_ENCRYPTION_KEY: ${ICT_INVENTORY_ENCRYPTION_KEY:-}
       DJANGO_DEBUG: ${DJANGO_DEBUG:-true}
       DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-localhost,127.0.0.1,backend}
       DJANGO_CORS_ALLOWED_ORIGINS: ${DJANGO_CORS_ALLOWED_ORIGINS:-http://localhost:5173}

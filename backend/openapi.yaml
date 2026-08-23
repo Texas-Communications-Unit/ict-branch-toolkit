@@ -2216,6 +2216,360 @@ paths:
               schema:
                 $ref: '#/components/schemas/Incident'
           description: ''
+  /api/inventory-assets/:
+    get:
+      operationId: inventory_assets_list
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - inventory-assets
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedAssetList'
+          description: ''
+    post:
+      operationId: inventory_assets_create
+      tags:
+      - inventory-assets
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Asset'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Asset'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Asset'
+        required: true
+      security:
+      - tokenAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Asset'
+          description: ''
+  /api/inventory-assets/{id}/:
+    get:
+      operationId: inventory_assets_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this asset.
+        required: true
+      tags:
+      - inventory-assets
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Asset'
+          description: ''
+    put:
+      operationId: inventory_assets_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this asset.
+        required: true
+      tags:
+      - inventory-assets
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Asset'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Asset'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Asset'
+        required: true
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Asset'
+          description: ''
+    patch:
+      operationId: inventory_assets_partial_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this asset.
+        required: true
+      tags:
+      - inventory-assets
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedAsset'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedAsset'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedAsset'
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Asset'
+          description: ''
+    delete:
+      operationId: inventory_assets_destroy
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this asset.
+        required: true
+      tags:
+      - inventory-assets
+      security:
+      - tokenAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/inventory-checkouts/:
+    get:
+      operationId: inventory_checkouts_list
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - inventory-checkouts
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedAssetCheckoutList'
+          description: ''
+    post:
+      operationId: inventory_checkouts_create
+      tags:
+      - inventory-checkouts
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssetCheckoutCreate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/AssetCheckoutCreate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AssetCheckoutCreate'
+        required: true
+      security:
+      - tokenAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssetCheckout'
+          description: ''
+  /api/inventory-checkouts/{id}/:
+    get:
+      operationId: inventory_checkouts_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this asset checkout.
+        required: true
+      tags:
+      - inventory-checkouts
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssetCheckout'
+          description: ''
+  /api/inventory-checkouts/{id}/resolve-hold/:
+    post:
+      operationId: inventory_checkouts_resolve_hold_create
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this asset checkout.
+        required: true
+      tags:
+      - inventory-checkouts
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AccountabilityHoldResolution'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/AccountabilityHoldResolution'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AccountabilityHoldResolution'
+        required: true
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssetCheckout'
+          description: ''
+  /api/inventory-checkouts/{id}/return/:
+    post:
+      operationId: inventory_checkouts_return_create
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this asset checkout.
+        required: true
+      tags:
+      - inventory-checkouts
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssetReturn'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/AssetReturn'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AssetReturn'
+        required: true
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssetCheckout'
+          description: ''
+  /api/inventory-programming/:
+    get:
+      operationId: inventory_programming_list
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - inventory-programming
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedProgrammingRecordList'
+          description: ''
+    post:
+      operationId: inventory_programming_create
+      tags:
+      - inventory-programming
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProgrammingRecord'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ProgrammingRecord'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ProgrammingRecord'
+        required: true
+      security:
+      - tokenAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProgrammingRecord'
+          description: ''
+  /api/inventory-programming/{id}/:
+    get:
+      operationId: inventory_programming_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this programming record.
+        required: true
+      tags:
+      - inventory-programming
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProgrammingRecord'
+          description: ''
   /api/local-contingency-accounts/:
     get:
       operationId: local_contingency_accounts_list
@@ -4645,6 +4999,17 @@ paths:
           description: ''
 components:
   schemas:
+    AccountabilityHoldResolution:
+      type: object
+      properties:
+        asset_status:
+          $ref: '#/components/schemas/AssetStatusEnum'
+        resolution_note:
+          type: string
+          maxLength: 2000
+      required:
+      - asset_status
+      - resolution_note
     AcquisitionStateEnum:
       enum:
       - complete
@@ -4763,6 +5128,188 @@ components:
       description: |-
         * `complete` - Complete reconciliation
         * `daily` - Daily transaction
+    Asset:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        asset_id:
+          type: string
+          maxLength: 80
+        category:
+          $ref: '#/components/schemas/CategoryEnum'
+        parent:
+          type: string
+          format: uuid
+          nullable: true
+        manufacturer:
+          type: string
+          maxLength: 120
+        model:
+          type: string
+          maxLength: 120
+        serial_number:
+          type: string
+          maxLength: 160
+        alias:
+          type: string
+          maxLength: 120
+        status:
+          allOf:
+          - $ref: '#/components/schemas/AssetStatusEnum'
+          readOnly: true
+        notes:
+          type: string
+        created_by_username:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - asset_id
+      - category
+      - created_at
+      - created_by_username
+      - id
+      - status
+      - updated_at
+    AssetCheckout:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        incident:
+          type: string
+          format: uuid
+        asset:
+          type: string
+          format: uuid
+        asset_detail:
+          allOf:
+          - $ref: '#/components/schemas/Asset'
+          readOnly: true
+        assigned_name:
+          type: string
+          maxLength: 200
+        assigned_organization:
+          type: string
+          maxLength: 200
+        driver_license_jurisdiction:
+          type: string
+          maxLength: 8
+        driver_license_number:
+          type: string
+          nullable: true
+          readOnly: true
+        driver_license_last_four:
+          type: string
+          maxLength: 4
+        state:
+          $ref: '#/components/schemas/StateEnum'
+        checked_out_by_username:
+          type: string
+          readOnly: true
+        checked_out_at:
+          type: string
+          format: date-time
+          readOnly: true
+        returned_by_username:
+          type: string
+          readOnly: true
+        returned_at:
+          type: string
+          format: date-time
+          nullable: true
+        return_condition:
+          oneOf:
+          - $ref: '#/components/schemas/InventoryReturnConditionEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+        hold_reason:
+          type: string
+        hold_resolved_by_username:
+          type: string
+          readOnly: true
+        hold_resolved_at:
+          type: string
+          format: date-time
+          nullable: true
+        hold_resolution_note:
+          type: string
+      required:
+      - asset
+      - asset_detail
+      - assigned_name
+      - assigned_organization
+      - checked_out_at
+      - checked_out_by_username
+      - driver_license_jurisdiction
+      - driver_license_last_four
+      - driver_license_number
+      - hold_resolved_by_username
+      - id
+      - incident
+      - returned_by_username
+    AssetCheckoutCreate:
+      type: object
+      properties:
+        incident:
+          type: string
+          format: uuid
+        asset:
+          type: string
+          format: uuid
+        assigned_name:
+          type: string
+          maxLength: 200
+        assigned_organization:
+          type: string
+          maxLength: 200
+        driver_license_jurisdiction:
+          type: string
+          maxLength: 8
+          minLength: 2
+        driver_license_number:
+          type: string
+          writeOnly: true
+          maxLength: 32
+          minLength: 4
+      required:
+      - asset
+      - assigned_name
+      - assigned_organization
+      - driver_license_jurisdiction
+      - driver_license_number
+      - incident
+    AssetReturn:
+      type: object
+      properties:
+        condition:
+          $ref: '#/components/schemas/InventoryReturnConditionEnum'
+        hold_reason:
+          type: string
+          maxLength: 2000
+      required:
+      - condition
+    AssetStatusEnum:
+      enum:
+      - in_service
+      - maintenance
+      - retired
+      type: string
+      description: |-
+        * `in_service` - in_service
+        * `maintenance` - maintenance
+        * `retired` - retired
     Assignment:
       type: object
       properties:
@@ -5030,6 +5577,22 @@ components:
       description: |-
         * `complete` - Complete
         * `insufficient_data` - Insufficient data
+    CategoryEnum:
+      enum:
+      - radio
+      - battery
+      - antenna
+      - cable
+      - microphone
+      - accessory
+      type: string
+      description: |-
+        * `radio` - Radio
+        * `battery` - Battery
+        * `antenna` - Antenna
+        * `cable` - Programming cable
+        * `microphone` - Microphone
+        * `accessory` - Other accessory
     ChannelImport:
       type: object
       properties:
@@ -7831,6 +8394,18 @@ components:
         * `recorded_fact` - Recorded fact
         * `modeled_assumption` - Modeled assumption
         * `mixed` - Mixed
+    InventoryReturnConditionEnum:
+      enum:
+      - normal
+      - damaged
+      - lost
+      - disputed
+      type: string
+      description: |-
+        * `normal` - Returned without damage
+        * `damaged` - Damaged
+        * `lost` - Lost or not returned
+        * `disputed` - Disputed
     JobStateEnum:
       enum:
       - queued
@@ -8094,6 +8669,52 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/AntennaStructure'
+    PaginatedAssetCheckoutList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/AssetCheckout'
+    PaginatedAssetList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Asset'
     PaginatedAssignmentList:
       type: object
       required:
@@ -8485,6 +9106,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/PlanRevision'
+    PaginatedProgrammingRecordList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProgrammingRecord'
     PaginatedRFAnalysisInputSnapshotList:
       type: object
       required:
@@ -8766,6 +9410,51 @@ components:
           maxLength: 254
       required:
       - email
+    PatchedAsset:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        asset_id:
+          type: string
+          maxLength: 80
+        category:
+          $ref: '#/components/schemas/CategoryEnum'
+        parent:
+          type: string
+          format: uuid
+          nullable: true
+        manufacturer:
+          type: string
+          maxLength: 120
+        model:
+          type: string
+          maxLength: 120
+        serial_number:
+          type: string
+          maxLength: 160
+        alias:
+          type: string
+          maxLength: 120
+        status:
+          allOf:
+          - $ref: '#/components/schemas/AssetStatusEnum'
+          readOnly: true
+        notes:
+          type: string
+        created_by_username:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
     PatchedAssignment:
       type: object
       properties:
@@ -9829,6 +10518,45 @@ components:
         * `cache` - Cache
         * `gateway` - Gateway
         * `configurable` - Configurable
+    ProgrammingRecord:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        asset:
+          type: string
+          format: uuid
+        template_name:
+          type: string
+          maxLength: 200
+        template_version:
+          type: string
+          maxLength: 80
+        programmed_at:
+          type: string
+          format: date-time
+        codeplug_backup_saved:
+          type: boolean
+        backup_note:
+          type: string
+          maxLength: 300
+        confirmed_by_username:
+          type: string
+          readOnly: true
+        confirmed_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - asset
+      - codeplug_backup_saved
+      - confirmed_at
+      - confirmed_by_username
+      - id
+      - programmed_at
+      - template_name
     RFAnalysisInputSnapshot:
       type: object
       properties:
@@ -10311,6 +11039,16 @@ components:
         * `local` - Local controlled source
         * `incident` - Incident-created source
         * `other` - Other approved source
+    StateEnum:
+      enum:
+      - active
+      - returned
+      - hold
+      type: string
+      description: |-
+        * `active` - Active
+        * `returned` - Returned
+        * `hold` - Accountability hold
     StructuredImportError:
       type: object
       properties:

@@ -22,6 +22,7 @@ POSTGRES_DB=ict_toolkit
 POSTGRES_USER=ict_toolkit
 POSTGRES_PASSWORD=<URL-safe random database password>
 DJANGO_SECRET_KEY=<random Django secret key>
+ICT_INVENTORY_ENCRYPTION_KEY=<URL-safe base64 encoding of 32 random bytes>
 DJANGO_ALLOWED_HOSTS=<public hostname>,backend
 DJANGO_CORS_ALLOWED_ORIGINS=https://<public hostname>
 DJANGO_FORCE_HTTPS=true
@@ -59,6 +60,17 @@ VITE_MAP_PRIVACY_URL=
 VITE_MAP_REPORT_ISSUE_URL=
 VITE_MAP_CONTACT_URL=
 ```
+
+Generate the inventory key on a trusted administrator workstation or the application host and
+copy only the resulting value into the protected deployment environment file:
+
+```bash
+python -c "import base64,secrets; print(base64.urlsafe_b64encode(secrets.token_bytes(32)).decode())"
+```
+
+Do not commit, email, or paste the key into an issue or pull request. Preserve it with the protected
+database backup material. The application intentionally fails closed when accountable checkout is
+used without a valid key.
 
 `ICT_TOKEN_TTL_SECONDS` sets the maximum local login lifetime. The 12-hour default is the
 non-production baseline. A shorter value is allowed after operator review; zero and negative values
