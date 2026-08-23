@@ -32,6 +32,8 @@ RF_APPROVE = "rf.approve"
 EXTENSION_VIEW = "extension.view"
 EXTENSION_RUN = "extension.run"
 EXTENSION_ADMIN = "extension.admin"
+INVENTORY_VIEW = "inventory.view"
+INVENTORY_MANAGE = "inventory.manage"
 
 DEFAULT_ROLE_POLICY = {
     Role.ADMINISTRATOR: {
@@ -60,6 +62,8 @@ DEFAULT_ROLE_POLICY = {
         EXTENSION_VIEW,
         EXTENSION_RUN,
         EXTENSION_ADMIN,
+        INVENTORY_VIEW,
+        INVENTORY_MANAGE,
     },
     Role.COML: {
         INCIDENT_VIEW,
@@ -83,6 +87,8 @@ DEFAULT_ROLE_POLICY = {
         RF_APPROVE,
         EXTENSION_VIEW,
         EXTENSION_RUN,
+        INVENTORY_VIEW,
+        INVENTORY_MANAGE,
     },
     Role.COMC: {
         INCIDENT_VIEW,
@@ -106,6 +112,8 @@ DEFAULT_ROLE_POLICY = {
         RF_APPROVE,
         EXTENSION_VIEW,
         EXTENSION_RUN,
+        INVENTORY_VIEW,
+        INVENTORY_MANAGE,
     },
     Role.COMT: {
         INCIDENT_VIEW,
@@ -122,6 +130,8 @@ DEFAULT_ROLE_POLICY = {
         RF_EDIT,
         EXTENSION_VIEW,
         EXTENSION_RUN,
+        INVENTORY_VIEW,
+        INVENTORY_MANAGE,
     },
     Role.CONTRIBUTOR: {
         INCIDENT_VIEW,
@@ -135,6 +145,7 @@ DEFAULT_ROLE_POLICY = {
         SITE_EDIT,
         RF_VIEW,
         EXTENSION_VIEW,
+        INVENTORY_VIEW,
     },
     Role.READ_ONLY: {
         INCIDENT_VIEW,
@@ -143,6 +154,7 @@ DEFAULT_ROLE_POLICY = {
         SITE_VIEW,
         RF_VIEW,
         EXTENSION_VIEW,
+        INVENTORY_VIEW,
     },
 }
 
@@ -189,7 +201,15 @@ def permissions_for_user(user, incident=None) -> set[str]:
             permission
             for permission in permissions
             if not permission.startswith(
-                ("incident.", "period.", "plan.", "site.", "rf.", "extension.")
+                (
+                    "incident.",
+                    "period.",
+                    "plan.",
+                    "site.",
+                    "rf.",
+                    "extension.",
+                    "inventory.",
+                )
             )
         }
     return permissions

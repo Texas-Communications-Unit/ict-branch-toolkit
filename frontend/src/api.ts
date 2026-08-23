@@ -33,6 +33,9 @@ import type {
   FccLicenseSearchResult,
   FccMapFeatureCollection,
   FccTowerDetail,
+  InventoryAsset,
+  AssetCheckout,
+  ProgrammingRecord,
   GeocoderSearchResult,
   HAATCalculation,
   ImportResult,
@@ -61,6 +64,78 @@ import type {
   ToolkitRole,
   UpdateSubscriberProfilePayload,
 } from "./types";
+
+export async function listInventoryAssets(
+  search = "",
+): Promise<InventoryAsset[]> {
+  const page = await request<Paginated<InventoryAsset>>(
+    `/api/inventory-assets/?page_size=500&search=${encodeURIComponent(search)}`,
+  );
+  return page.results;
+}
+
+export function createInventoryAsset(
+  payload: Record<string, unknown>,
+): Promise<InventoryAsset> {
+  return request<InventoryAsset>("/api/inventory-assets/", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function listAssetCheckouts(
+  incident: string,
+): Promise<AssetCheckout[]> {
+  const page = await request<Paginated<AssetCheckout>>(
+    `/api/inventory-checkouts/?incident=${encodeURIComponent(incident)}`,
+  );
+  return page.results;
+}
+
+export function checkoutInventoryAsset(
+  payload: Record<string, unknown>,
+): Promise<AssetCheckout> {
+  return request<AssetCheckout>("/api/inventory-checkouts/", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function returnInventoryAsset(
+  checkoutId: string,
+  payload: { condition: string; hold_reason: string },
+): Promise<AssetCheckout> {
+  return request<AssetCheckout>(
+    `/api/inventory-checkouts/${encodeURIComponent(checkoutId)}/return/`,
+    { method: "POST", body: JSON.stringify(payload) },
+  );
+}
+
+export function resolveInventoryHold(
+  checkoutId: string,
+  payload: { asset_status: string; resolution_note: string },
+): Promise<AssetCheckout> {
+  return request<AssetCheckout>(
+    `/api/inventory-checkouts/${encodeURIComponent(checkoutId)}/resolve-hold/`,
+    { method: "POST", body: JSON.stringify(payload) },
+  );
+}
+
+export async function listProgrammingRecords(): Promise<ProgrammingRecord[]> {
+  const page = await request<Paginated<ProgrammingRecord>>(
+    "/api/inventory-programming/?page_size=500",
+  );
+  return page.results;
+}
+
+export function createProgrammingRecord(
+  payload: Record<string, unknown>,
+): Promise<ProgrammingRecord> {
+  return request<ProgrammingRecord>("/api/inventory-programming/", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
 const TOKEN_KEY = "ict-toolkit-token";

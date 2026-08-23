@@ -19,6 +19,8 @@ dependencies = [
   "reportlab==4.4.9",
   "pillow==12.3.0",
   "pypdf==6.15.0",
+  "cryptography==50.0.0",
+  "sqlparse==0.6.0",
   "mgrs==1.5.4",
 ]
 

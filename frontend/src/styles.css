@@ -1484,6 +1484,50 @@ footer a {
   }
 }
 
+.asset-label-sheet {
+  display: none;
+}
+
+@media print {
+  body.asset-label-print * {
+    visibility: hidden !important;
+  }
+
+  body.asset-label-print .asset-label-sheet,
+  body.asset-label-print .asset-label-sheet * {
+    visibility: visible !important;
+  }
+
+  body.asset-label-print .asset-label-sheet {
+    display: grid !important;
+    gap: 0.15in;
+    grid-template-columns: repeat(2, 3.5in);
+    left: 0;
+    position: absolute;
+    top: 0;
+  }
+
+  body.asset-label-print .asset-print-label {
+    border: 2px solid #000;
+    box-sizing: border-box;
+    display: grid;
+    gap: 0.08in;
+    min-height: 1.5in;
+    padding: 0.16in;
+    page-break-inside: avoid;
+  }
+
+  body.asset-label-print .asset-print-label strong {
+    font-size: 18pt;
+  }
+
+  body.asset-label-print .asset-print-label span {
+    font-size: 11pt;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

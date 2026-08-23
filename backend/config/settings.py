@@ -39,7 +39,10 @@ INSTALLED_APPS = [
     "apps.deconfliction",
     "apps.collaboration",
     "apps.extensions",
+    "apps.inventory",
 ]
+
+ICT_INVENTORY_ENCRYPTION_KEY = os.getenv("ICT_INVENTORY_ENCRYPTION_KEY", "")
 if ENABLE_GIS:
     INSTALLED_APPS.append("django.contrib.gis")
 
@@ -397,5 +400,6 @@ SPECTACULAR_SETTINGS = {
         "ExtensionOutputClassificationEnum": (
             "apps.extensions.models.ExtensionExecution.OutputClassification"
         ),
+        "InventoryReturnConditionEnum": ("apps.inventory.models.AssetCheckout.ReturnCondition"),
     },
 }
