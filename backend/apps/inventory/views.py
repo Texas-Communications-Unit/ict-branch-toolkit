@@ -1,11 +1,13 @@
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db.models import Q
-from django.http import HttpResponse
+from django.http import FileResponse, HttpResponse
 from django.shortcuts import get_object_or_404
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
-from rest_framework.exceptions import PermissionDenied
+from rest_framework.exceptions import PermissionDenied, ValidationError
+from rest_framework.parsers import JSONParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
@@ -19,7 +21,17 @@ from apps.accounts.policy import (
 from apps.audit.services import record_event
 from apps.incidents.models import Incident
 
-from .models import Asset, AssetCheckout, ChargingRecord, MaintenanceRecord, ProgrammingRecord
+from .attachments import create_attachment, delete_attachment
+from .imports import commit_asset_import, preview_asset_import
+from .models import (
+    Asset,
+    AssetAttachment,
+    AssetCheckout,
+    AssetImportBatch,
+    ChargingRecord,
+    MaintenanceRecord,
+    ProgrammingRecord,
+)
 from .reports import (
     render_accountable_property_record,
     render_equipment_t_card,
@@ -27,8 +39,13 @@ from .reports import (
 )
 from .serializers import (
     AccountabilityHoldResolutionSerializer,
+    AssetAttachmentSerializer,
+    AssetAttachmentUploadSerializer,
     AssetCheckoutCreateSerializer,
     AssetCheckoutSerializer,
+    AssetImportBatchSerializer,
+    AssetImportCommitSerializer,
+    AssetImportPreviewSerializer,
     AssetReturnSerializer,
     AssetSerializer,
     ChargingRecordSerializer,
@@ -368,3 +385,129 @@ class ChargingRecordViewSet(InventoryRecordViewSet):
 
     def perform_create(self, serializer):
         serializer.instance = record_charging(actor=self.request.user, **serializer.validated_data)
+
+
+class AssetAttachmentViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = AssetAttachment.objects.filter(deleted_at__isnull=True).select_related(
+        "asset", "uploaded_by"
+    )
+    serializer_class = AssetAttachmentSerializer
+    permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser, JSONParser]
+
+    def _require(self, permission):
+        if not user_has_permission(self.request.user, permission):
+            raise PermissionDenied("Your role cannot perform this attachment action.")
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        asset = self.request.query_params.get("asset")
+        if self.action == "list":
+            return queryset.filter(asset_id=asset) if asset else queryset.none()
+        return queryset
+
+    def list(self, request, *args, **kwargs):
+        self._require(INVENTORY_VIEW)
+        if not request.query_params.get("asset"):
+            raise ValidationError({"asset": "Select an asset before listing attachments."})
+        return super().list(request, *args, **kwargs)
+
+    def retrieve(self, request, *args, **kwargs):
+        self._require(INVENTORY_VIEW)
+        return super().retrieve(request, *args, **kwargs)
+
+    @extend_schema(
+        request=AssetAttachmentUploadSerializer,
+        responses={201: AssetAttachmentSerializer},
+    )
+    def create(self, request, *args, **kwargs):
+        self._require(INVENTORY_MANAGE)
+        serializer = AssetAttachmentUploadSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        asset = get_object_or_404(Asset, pk=serializer.validated_data["asset"])
+        try:
+            attachment = create_attachment(
+                asset=asset,
+                uploaded_file=serializer.validated_data["file"],
+                description=serializer.validated_data.get("description", ""),
+                actor=request.user,
+            )
+        except DjangoValidationError as exc:
+            raise ValidationError({"file": exc.messages}) from exc
+        return Response(AssetAttachmentSerializer(attachment).data, status=status.HTTP_201_CREATED)
+
+    @extend_schema(responses={(200, "application/octet-stream"): OpenApiTypes.BINARY})
+    @action(detail=True, methods=["get"])
+    def download(self, request, pk=None):
+        self._require(INVENTORY_VIEW)
+        attachment = self.get_object()
+        response = FileResponse(
+            attachment.file.open("rb"),
+            as_attachment=True,
+            filename=attachment.original_name,
+            content_type=attachment.content_type,
+        )
+        response["X-Content-Type-Options"] = "nosniff"
+        response["Cache-Control"] = "private, no-store"
+        record_event(
+            actor=request.user,
+            action="inventory.asset_attachment_downloaded",
+            target=attachment,
+            details={
+                "asset_id": attachment.asset.asset_id,
+                "attachment_id": str(attachment.id),
+                "size_bytes": attachment.size_bytes,
+            },
+        )
+        return response
+
+    def destroy(self, request, *args, **kwargs):
+        self._require(INVENTORY_MANAGE)
+        attachment = self.get_object()
+        delete_attachment(attachment=attachment, actor=request.user)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class AssetImportViewSet(viewsets.ViewSet):
+    permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser, JSONParser]
+
+    def _require_manage(self):
+        if not user_has_permission(self.request.user, INVENTORY_MANAGE):
+            raise PermissionDenied("Your role cannot import inventory assets.")
+
+    @extend_schema(
+        request=AssetImportPreviewSerializer,
+        responses={201: AssetImportBatchSerializer},
+    )
+    @action(detail=False, methods=["post"], url_path="preview")
+    def preview(self, request):
+        self._require_manage()
+        serializer = AssetImportPreviewSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            batch = preview_asset_import(
+                uploaded_file=serializer.validated_data["file"], actor=request.user
+            )
+        except DjangoValidationError as exc:
+            raise ValidationError({"file": exc.messages}) from exc
+        return Response(AssetImportBatchSerializer(batch).data, status=status.HTTP_201_CREATED)
+
+    @extend_schema(
+        request=AssetImportCommitSerializer,
+        responses={201: AssetSerializer(many=True)},
+    )
+    @action(detail=False, methods=["post"], url_path="commit")
+    def commit(self, request):
+        self._require_manage()
+        serializer = AssetImportCommitSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        batches = AssetImportBatch.objects.all()
+        if role_for_user(request.user) != Role.ADMINISTRATOR:
+            batches = batches.filter(created_by=request.user)
+        batch = get_object_or_404(batches, pk=serializer.validated_data["batch_id"])
+        try:
+            assets = commit_asset_import(batch=batch, actor=request.user)
+        except DjangoValidationError as exc:
+            raise ValidationError({"batch_id": exc.messages}) from exc
+        return Response(AssetSerializer(assets, many=True).data, status=status.HTTP_201_CREATED)

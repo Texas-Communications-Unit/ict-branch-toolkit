@@ -34,6 +34,8 @@ import type {
   FccMapFeatureCollection,
   FccTowerDetail,
   InventoryAsset,
+  AssetAttachment,
+  AssetImportBatch,
   AssetCheckout,
   ChargingRecord,
   MaintenanceRecord,
@@ -130,6 +132,78 @@ export function resolveInventoryHold(
   return request<AssetCheckout>(
     `/api/inventory-checkouts/${encodeURIComponent(checkoutId)}/resolve-hold/`,
     { method: "POST", body: JSON.stringify(payload) },
+  );
+}
+
+async function multipartRequest<T>(path: string, form: FormData): Promise<T> {
+  const token = tokenForRequest();
+  const response = await fetch(`${API_BASE}${path}`, {
+    method: "POST",
+    headers: token ? { Authorization: `Token ${token}` } : {},
+    body: form,
+  });
+  if (!response.ok) throw new Error(await response.text());
+  return (await response.json()) as T;
+}
+
+export function previewAssetImport(file: File): Promise<AssetImportBatch> {
+  const form = new FormData();
+  form.append("file", file);
+  return multipartRequest<AssetImportBatch>(
+    "/api/inventory-asset-imports/preview/",
+    form,
+  );
+}
+
+export function commitAssetImport(batchId: string): Promise<InventoryAsset[]> {
+  return request<InventoryAsset[]>("/api/inventory-asset-imports/commit/", {
+    method: "POST",
+    body: JSON.stringify({ batch_id: batchId }),
+  });
+}
+
+export async function listAssetAttachments(
+  assetId: string,
+): Promise<AssetAttachment[]> {
+  const page = await request<Paginated<AssetAttachment>>(
+    `/api/inventory-attachments/?asset=${encodeURIComponent(assetId)}`,
+  );
+  return page.results;
+}
+
+export function uploadAssetAttachment(
+  assetId: string,
+  file: File,
+  description: string,
+): Promise<AssetAttachment> {
+  const form = new FormData();
+  form.append("asset", assetId);
+  form.append("file", file);
+  form.append("description", description);
+  return multipartRequest<AssetAttachment>("/api/inventory-attachments/", form);
+}
+
+export async function downloadAssetAttachment(
+  attachment: AssetAttachment,
+): Promise<void> {
+  const token = tokenForRequest();
+  const response = await fetch(
+    `${API_BASE}/api/inventory-attachments/${encodeURIComponent(attachment.id)}/download/`,
+    { headers: token ? { Authorization: `Token ${token}` } : {} },
+  );
+  if (!response.ok) throw new Error(await response.text());
+  const url = URL.createObjectURL(await response.blob());
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = attachment.original_name;
+  anchor.click();
+  URL.revokeObjectURL(url);
+}
+
+export function deleteAssetAttachment(attachmentId: string): Promise<void> {
+  return request<void>(
+    `/api/inventory-attachments/${encodeURIComponent(attachmentId)}/`,
+    { method: "DELETE" },
   );
 }
 

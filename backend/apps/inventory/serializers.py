@@ -1,7 +1,15 @@
 from rest_framework import serializers
 
 from .crypto import decrypt_value
-from .models import Asset, AssetCheckout, ChargingRecord, MaintenanceRecord, ProgrammingRecord
+from .models import (
+    Asset,
+    AssetAttachment,
+    AssetCheckout,
+    AssetImportBatch,
+    ChargingRecord,
+    MaintenanceRecord,
+    ProgrammingRecord,
+)
 
 
 class AssetSerializer(serializers.ModelSerializer):
@@ -212,3 +220,53 @@ class ChargingRecordSerializer(serializers.ModelSerializer):
                 {"completed_at": "Completion cannot be before charging started."}
             )
         return attrs
+
+
+class AssetAttachmentSerializer(serializers.ModelSerializer):
+    uploaded_by_username = serializers.CharField(source="uploaded_by.username", read_only=True)
+
+    class Meta:
+        model = AssetAttachment
+        fields = [
+            "id",
+            "asset",
+            "original_name",
+            "content_type",
+            "size_bytes",
+            "description",
+            "uploaded_by_username",
+            "uploaded_at",
+        ]
+        read_only_fields = fields
+
+
+class AssetAttachmentUploadSerializer(serializers.Serializer):
+    asset = serializers.UUIDField()
+    file = serializers.FileField()
+    description = serializers.CharField(max_length=500, allow_blank=True, required=False)
+
+
+class AssetImportPreviewSerializer(serializers.Serializer):
+    file = serializers.FileField()
+
+
+class AssetImportCommitSerializer(serializers.Serializer):
+    batch_id = serializers.UUIDField()
+
+
+class AssetImportBatchSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AssetImportBatch
+        fields = [
+            "id",
+            "source_name",
+            "source_sha256",
+            "rows",
+            "errors",
+            "row_count",
+            "valid_count",
+            "status",
+            "created_at",
+            "committed_at",
+        ]
+        read_only_fields = fields

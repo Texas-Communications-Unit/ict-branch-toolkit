@@ -6,6 +6,11 @@ from django.db import models
 from apps.incidents.models import Incident
 
 
+def asset_attachment_upload_path(instance, filename):
+    extension = filename.rsplit(".", 1)[-1].lower() if "." in filename else "bin"
+    return f"inventory-attachments/{instance.asset_id}/{instance.id}.{extension}"
+
+
 class Asset(models.Model):
     class Category(models.TextChoices):
         RADIO = "radio", "Radio"
@@ -182,3 +187,59 @@ class ChargingRecord(models.Model):
 
     def __str__(self):
         return f"{self.asset.asset_id}: {self.started_at}"
+
+
+class AssetAttachment(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    asset = models.ForeignKey(Asset, related_name="attachments", on_delete=models.PROTECT)
+    file = models.FileField(upload_to=asset_attachment_upload_path, max_length=300)
+    original_name = models.CharField(max_length=255)
+    content_type = models.CharField(max_length=120)
+    size_bytes = models.PositiveIntegerField()
+    description = models.CharField(max_length=500, blank=True)
+    uploaded_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        related_name="asset_attachments_uploaded",
+        on_delete=models.PROTECT,
+    )
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+    deleted_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        related_name="asset_attachments_deleted",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+    )
+    deleted_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-uploaded_at"]
+
+    def __str__(self):
+        return f"{self.asset.asset_id}: {self.original_name}"
+
+
+class AssetImportBatch(models.Model):
+    class Status(models.TextChoices):
+        PREVIEW = "preview", "Preview"
+        COMMITTED = "committed", "Committed"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    source_name = models.CharField(max_length=255)
+    source_sha256 = models.CharField(max_length=64)
+    rows = models.JSONField(default=list)
+    errors = models.JSONField(default=list)
+    row_count = models.PositiveIntegerField(default=0)
+    valid_count = models.PositiveIntegerField(default=0)
+    status = models.CharField(max_length=16, choices=Status.choices, default=Status.PREVIEW)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, related_name="asset_import_batches", on_delete=models.PROTECT
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    committed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.source_name}: {self.status}"

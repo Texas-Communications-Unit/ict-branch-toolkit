@@ -28,6 +28,42 @@ returned to service. Calibration entries update the asset's last-calibrated time
 records capture start and completion times with an optional note. Creating either record produces
 an audit event. A maintenance entry cannot silently make an actively checked-out asset available.
 
+## Bulk asset import
+
+Inventory managers can preview and then commit a CSV or XLSX file from **Bulk import assets**.
+Previewing does not create assets. The system displays the first 20 normalized rows, validates the
+entire file, and provides a CSV of row-level errors. Commit is unavailable until every row passes.
+An import is limited to 500 asset rows and a 5 MiB source file.
+
+The first worksheet is used for XLSX files. CSV files must be UTF-8. Heading capitalization and
+spaces are normalized. Required headings are `asset_id` and `category`; supported optional
+headings are `parent_asset_id`, `manufacturer`, `model`, `serial_number`, `alias`, `asset_subtype`,
+`flash_code`, `subscriber_id`, `system_ids`, `acquisition_date`, `status`, and `notes`. Dates use
+`YYYY-MM-DD`. Categories are `radio`, `battery`, `antenna`, `cable`, `microphone`, or `accessory`.
+Statuses are `in_service`, `spare`, `maintenance`, or `retired`. A parent may already exist or may
+appear elsewhere in the same file. Duplicate IDs, missing parents, and parent cycles are rejected.
+
+The server stores the source name, SHA-256 digest, normalized preview, validation result, operator,
+and commit time for accountability. It does not retain the uploaded workbook itself.
+
+## Asset files and photos
+
+**Files and photos** stores records such as receipts, manuals, damage photographs, programming
+worksheets, and service documents against an asset. Inventory viewers may list and download files;
+inventory managers may upload and delete them. Upload and download events are audited. A deletion
+soft-deletes the database record and removes the stored file.
+
+Allowed formats are PDF, UTF-8 TXT/CSV, JPG/JPEG, PNG, WEBP, DOCX, and XLSX. The default limit is
+20 MiB per file and can be changed with `ICT_ATTACHMENT_MAX_BYTES`. The server verifies the file
+structure instead of trusting the browser's content-type label. Downloads are authenticated,
+forced as attachments, marked `nosniff`, and not cached. Do not use asset attachments for passwords,
+encryption keys, or other credentials.
+
+Production Compose stores these files in the persistent `attachment-data` volume mounted at
+`/app/media`; they are not stored in Git. A database backup alone cannot recover them. Back up the
+database and attachment volume as one recovery set by following the
+[backup and restore runbook](backup-restore-and-rollback.md#asset-attachment-backup).
+
 ## ICS 219 accountability reports
 
 Each incident checkout provides two PDF downloads populated from checksum-pinned official forms:
@@ -83,3 +119,7 @@ or protected system detail. The Toolkit does not upload or verify the backup in 
 7. Download both ICS 219 reports for a synthetic checkout. Confirm the equipment T-card is yellow,
    the accountability record reflects the assignment, and neither PDF contains the test license
    number or mailing address.
+8. Preview a synthetic CSV import, verify its displayed rows, correct any reported errors, commit
+   it once, and confirm that replaying the same batch is refused.
+9. Upload, download, and delete a synthetic attachment. Confirm a read-only inventory user cannot
+   upload or delete it and that each completed action appears in the audit log.

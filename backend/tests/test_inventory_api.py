@@ -1,10 +1,14 @@
 import base64
 import hashlib
+import tempfile
+import zipfile
 from datetime import UTC, datetime
 from io import BytesIO
+from pathlib import Path
 
 import pytest
 from django.contrib.auth import get_user_model
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import override_settings
 from pypdf import PdfReader
 from rest_framework.test import APIClient
@@ -14,7 +18,9 @@ from apps.audit.models import AuditEvent
 from apps.incidents.models import Incident, IncidentMembership
 from apps.inventory.models import (
     Asset,
+    AssetAttachment,
     AssetCheckout,
+    AssetImportBatch,
     ChargingRecord,
     MaintenanceRecord,
     ProgrammingRecord,
@@ -413,3 +419,171 @@ def test_official_ics219_templates_match_pinned_checksums():
         hashlib.sha256(ACCOUNTABLE_PROPERTY_TEMPLATE.read_bytes()).hexdigest()
         == ACCOUNTABLE_PROPERTY_SHA256
     )
+
+
+def _minimal_xlsx(rows):
+    def cell(reference, value):
+        escaped = str(value).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+        return f'<c r="{reference}" t="inlineStr"><is><t>{escaped}</t></is></c>'
+
+    sheet_rows = []
+    for row_number, values in enumerate(rows, start=1):
+        cells = "".join(
+            cell(f"{chr(ord('A') + column)}{row_number}", value)
+            for column, value in enumerate(values)
+        )
+        sheet_rows.append(f'<row r="{row_number}">{cells}</row>')
+    sheet = (
+        '<?xml version="1.0" encoding="UTF-8"?>'
+        '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
+        f"<sheetData>{''.join(sheet_rows)}</sheetData></worksheet>"
+    )
+    content_types = (
+        '<?xml version="1.0" encoding="UTF-8"?>'
+        '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
+        '<Default Extension="xml" ContentType="application/xml"/>'
+        '<Override PartName="/xl/worksheets/sheet1.xml" '
+        'ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>'
+        "</Types>"
+    )
+    output = BytesIO()
+    with zipfile.ZipFile(output, "w", zipfile.ZIP_DEFLATED) as archive:
+        archive.writestr("[Content_Types].xml", content_types)
+        archive.writestr("xl/worksheets/sheet1.xml", sheet)
+    return output.getvalue()
+
+
+@pytest.mark.django_db
+def test_asset_import_preview_commit_and_xlsx_parsing():
+    manager = _user("import-manager", Role.COML)
+    client = APIClient()
+    client.force_authenticate(manager)
+    csv_content = (
+        b"asset_id,category,parent_asset_id,manufacturer,status,acquisition_date\n"
+        b"RADIO-IMPORT,radio,,Synthetic,in_service,2026-08-23\n"
+        b"BATTERY-IMPORT,battery,RADIO-IMPORT,Synthetic,spare,2026-08-23\n"
+    )
+
+    preview = client.post(
+        "/api/inventory-asset-imports/preview/",
+        {"file": SimpleUploadedFile("assets.csv", csv_content, content_type="text/csv")},
+        format="multipart",
+    )
+    committed = client.post(
+        "/api/inventory-asset-imports/commit/",
+        {"batch_id": preview.json()["id"]},
+        format="json",
+    )
+    xlsx = _minimal_xlsx(
+        [["asset_id", "category", "status"], ["CABLE-XLSX", "cable", "in_service"]]
+    )
+    xlsx_preview = client.post(
+        "/api/inventory-asset-imports/preview/",
+        {
+            "file": SimpleUploadedFile(
+                "assets.xlsx",
+                xlsx,
+                content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            )
+        },
+        format="multipart",
+    )
+
+    assert preview.status_code == 201
+    assert preview.json()["valid_count"] == 2
+    assert preview.json()["errors"] == []
+    assert committed.status_code == 201
+    assert Asset.objects.get(asset_id="BATTERY-IMPORT").parent.asset_id == "RADIO-IMPORT"
+    assert AssetImportBatch.objects.get(pk=preview.json()["id"]).status == "committed"
+    assert xlsx_preview.status_code == 201
+    assert xlsx_preview.json()["rows"][0]["asset_id"] == "CABLE-XLSX"
+    assert AuditEvent.objects.filter(action="inventory.asset_import_committed").exists()
+
+
+@pytest.mark.django_db
+def test_asset_import_errors_block_commit():
+    manager = _user("import-error-manager", Role.COML)
+    Asset.objects.create(asset_id="DUPLICATE", category=Asset.Category.RADIO, created_by=manager)
+    client = APIClient()
+    client.force_authenticate(manager)
+    content = (
+        b"asset_id,category,parent_asset_id,acquisition_date\n"
+        b"DUPLICATE,radio,,08/23/2026\n"
+        b"CYCLE-A,radio,CYCLE-B,\n"
+        b"CYCLE-B,radio,CYCLE-A,\n"
+    )
+    preview = client.post(
+        "/api/inventory-asset-imports/preview/",
+        {"file": SimpleUploadedFile("assets.csv", content)},
+        format="multipart",
+    )
+    committed = client.post(
+        "/api/inventory-asset-imports/commit/",
+        {"batch_id": preview.json()["id"]},
+        format="json",
+    )
+
+    assert preview.status_code == 201
+    assert preview.json()["valid_count"] == 0
+    assert "asset_id already exists" in str(preview.json()["errors"])
+    assert "YYYY-MM-DD" in str(preview.json()["errors"])
+    assert "parent cycle" in str(preview.json()["errors"])
+    assert committed.status_code == 400
+
+
+@pytest.mark.django_db(transaction=True)
+def test_asset_attachment_upload_download_and_delete_are_governed():
+    manager = _user("attachment-manager", Role.COML)
+    reader = _user("attachment-reader", Role.READ_ONLY)
+    asset = Asset.objects.create(
+        asset_id="RADIO-ATTACHMENT", category=Asset.Category.RADIO, created_by=manager
+    )
+    client = APIClient()
+    with tempfile.TemporaryDirectory() as directory, override_settings(MEDIA_ROOT=Path(directory)):
+        client.force_authenticate(manager)
+        uploaded = client.post(
+            "/api/inventory-attachments/",
+            {
+                "asset": str(asset.id),
+                "description": "Synthetic manual",
+                "file": SimpleUploadedFile(
+                    "manual.pdf", b"%PDF-1.4\nSynthetic manual\n%%EOF", content_type="text/plain"
+                ),
+            },
+            format="multipart",
+        )
+        attachment_id = uploaded.json()["id"]
+        attachment = AssetAttachment.objects.get(pk=attachment_id)
+        stored_path = Path(attachment.file.path)
+        disguised = client.post(
+            "/api/inventory-attachments/",
+            {
+                "asset": str(asset.id),
+                "file": SimpleUploadedFile("not-an-image.jpg", b"not an image"),
+            },
+            format="multipart",
+        )
+
+        client.force_authenticate(reader)
+        listing = client.get(f"/api/inventory-attachments/?asset={asset.id}")
+        downloaded = client.get(f"/api/inventory-attachments/{attachment_id}/download/")
+        downloaded_content = b"".join(downloaded.streaming_content)
+        downloaded.close()
+        denied_delete = client.delete(f"/api/inventory-attachments/{attachment_id}/")
+
+        client.force_authenticate(manager)
+        deleted = client.delete(f"/api/inventory-attachments/{attachment_id}/")
+
+        assert uploaded.status_code == 201
+        assert uploaded.json()["content_type"] == "application/pdf"
+        assert disguised.status_code == 400
+        assert listing.status_code == 200
+        assert downloaded.status_code == 200
+        assert downloaded_content.startswith(b"%PDF-1.4")
+        assert downloaded["X-Content-Type-Options"] == "nosniff"
+        assert denied_delete.status_code == 403
+        assert deleted.status_code == 204
+        attachment.refresh_from_db()
+        assert attachment.deleted_at is not None
+        assert not stored_path.exists()
+        assert AuditEvent.objects.filter(action="inventory.asset_attachment_downloaded").exists()
