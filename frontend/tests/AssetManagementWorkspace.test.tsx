@@ -11,13 +11,18 @@ import type {
 
 const api = vi.hoisted(() => ({
   checkoutInventoryAsset: vi.fn(),
+  createChargingRecord: vi.fn(),
   createInventoryAsset: vi.fn(),
+  createMaintenanceRecord: vi.fn(),
   createProgrammingRecord: vi.fn(),
   listAssetCheckouts: vi.fn(),
+  listChargingRecords: vi.fn(),
   listInventoryAssets: vi.fn(),
+  listMaintenanceRecords: vi.fn(),
   listProgrammingRecords: vi.fn(),
   resolveInventoryHold: vi.fn(),
   returnInventoryAsset: vi.fn(),
+  updateInventoryAsset: vi.fn(),
 }));
 
 vi.mock("../src/api", () => api);
@@ -48,6 +53,12 @@ const radio: InventoryAsset = {
   model: "Portable",
   serial_number: "TEST-1",
   alias: "Exercise radio",
+  asset_subtype: "handheld",
+  flash_code: "",
+  subscriber_id: "",
+  system_ids: "",
+  acquisition_date: null,
+  last_calibrated_at: null,
   status: "checked_out",
   notes: "",
   created_by_username: manager.username,
@@ -62,6 +73,10 @@ const checkout: AssetCheckout = {
   asset_detail: radio,
   assigned_name: "Synthetic Assignee",
   assigned_organization: "Synthetic County",
+  point_of_contact: "",
+  phone_number: "",
+  mailing_address: "",
+  assignment_notes: "",
   driver_license_jurisdiction: "TX",
   driver_license_number: "12345678",
   driver_license_last_four: "5678",
@@ -82,6 +97,8 @@ beforeEach(() => {
   api.listInventoryAssets.mockResolvedValue([radio]);
   api.listAssetCheckouts.mockResolvedValue([checkout]);
   api.listProgrammingRecords.mockResolvedValue([]);
+  api.listMaintenanceRecords.mockResolvedValue([]);
+  api.listChargingRecords.mockResolvedValue([]);
   api.returnInventoryAsset.mockResolvedValue({
     ...checkout,
     state: "returned",

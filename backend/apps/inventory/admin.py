@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Asset, AssetCheckout, ProgrammingRecord
+from .models import Asset, AssetCheckout, ChargingRecord, MaintenanceRecord, ProgrammingRecord
 
 
 @admin.register(Asset)
@@ -26,3 +26,7 @@ class ProgrammingRecordAdmin(admin.ModelAdmin):
         "programmed_at",
         "codeplug_backup_saved",
     )
+
+
+admin.site.register(MaintenanceRecord)
+admin.site.register(ChargingRecord)

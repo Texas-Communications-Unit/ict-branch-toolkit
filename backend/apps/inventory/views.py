@@ -17,17 +17,21 @@ from apps.accounts.policy import (
 from apps.audit.services import record_event
 from apps.incidents.models import Incident
 
-from .models import Asset, AssetCheckout, ProgrammingRecord
+from .models import Asset, AssetCheckout, ChargingRecord, MaintenanceRecord, ProgrammingRecord
 from .serializers import (
     AccountabilityHoldResolutionSerializer,
     AssetCheckoutCreateSerializer,
     AssetCheckoutSerializer,
     AssetReturnSerializer,
     AssetSerializer,
+    ChargingRecordSerializer,
+    MaintenanceRecordSerializer,
     ProgrammingRecordSerializer,
 )
 from .services import (
-    checkout_asset,
+    checkout_assets,
+    record_charging,
+    record_maintenance,
     record_programming,
     resolve_accountability_hold,
     return_asset,
@@ -55,6 +59,15 @@ class AssetViewSet(viewsets.ModelViewSet):
                 | Q(manufacturer__icontains=search)
                 | Q(model__icontains=search)
             )
+        category = self.request.query_params.get("category", "").strip()
+        asset_status = self.request.query_params.get("status", "").strip()
+        if category:
+            queryset = queryset.filter(category=category)
+        if asset_status:
+            queryset = queryset.filter(status=asset_status)
+        ordering = self.request.query_params.get("ordering", "asset_id")
+        if ordering.lstrip("-") in {"asset_id", "category", "status", "manufacturer", "model"}:
+            queryset = queryset.order_by(ordering)
         return queryset
 
     def _require(self, permission):
@@ -163,7 +176,7 @@ class AssetCheckoutViewSet(viewsets.ReadOnlyModelViewSet):
 
     @extend_schema(
         request=AssetCheckoutCreateSerializer,
-        responses={201: AssetCheckoutSerializer},
+        responses={201: AssetCheckoutSerializer(many=True)},
     )
     def create(self, request, *args, **kwargs):
         serializer = AssetCheckoutCreateSerializer(data=request.data)
@@ -171,17 +184,26 @@ class AssetCheckoutViewSet(viewsets.ReadOnlyModelViewSet):
         incident = get_object_or_404(Incident, pk=serializer.validated_data["incident"])
         if not user_has_permission(request.user, INVENTORY_MANAGE, incident):
             raise PermissionDenied("Your incident role cannot check out radios.")
-        asset = get_object_or_404(Asset, pk=serializer.validated_data["asset"])
-        checkout = checkout_asset(
-            asset=asset,
+        assets = list(Asset.objects.filter(pk__in=serializer.validated_data["assets"]))
+        if len(assets) != len(serializer.validated_data["assets"]):
+            return Response({"assets": ["One or more assets do not exist."]}, status=400)
+        checkouts = checkout_assets(
+            assets=assets,
             incident=incident,
             assigned_name=serializer.validated_data["assigned_name"],
             assigned_organization=serializer.validated_data["assigned_organization"],
             jurisdiction=serializer.validated_data["driver_license_jurisdiction"],
             number=serializer.validated_data["driver_license_number"],
             actor=request.user,
+            point_of_contact=serializer.validated_data.get("point_of_contact", ""),
+            phone_number=serializer.validated_data.get("phone_number", ""),
+            mailing_address=serializer.validated_data.get("mailing_address", ""),
+            assignment_notes=serializer.validated_data.get("assignment_notes", ""),
         )
-        return Response(AssetCheckoutSerializer(checkout).data, status=status.HTTP_201_CREATED)
+        return Response(
+            AssetCheckoutSerializer(checkouts, many=True).data,
+            status=status.HTTP_201_CREATED,
+        )
 
     @extend_schema(request=AssetReturnSerializer, responses=AssetCheckoutSerializer)
     @action(detail=True, methods=["post"], url_path="return")
@@ -239,3 +261,52 @@ class ProgrammingRecordViewSet(viewsets.ModelViewSet):
         serializer.instance = record_programming(
             actor=self.request.user, **serializer.validated_data
         )
+
+
+class InventoryRecordViewSet(viewsets.ModelViewSet):
+    permission_classes = [IsAuthenticated]
+    http_method_names = ["get", "post", "head", "options"]
+
+    def _require(self, permission):
+        if not user_has_permission(self.request.user, permission):
+            raise PermissionDenied("Your role cannot perform this inventory action.")
+
+    def list(self, request, *args, **kwargs):
+        self._require(INVENTORY_VIEW)
+        return super().list(request, *args, **kwargs)
+
+    def retrieve(self, request, *args, **kwargs):
+        self._require(INVENTORY_VIEW)
+        return super().retrieve(request, *args, **kwargs)
+
+    def create(self, request, *args, **kwargs):
+        self._require(INVENTORY_MANAGE)
+        return super().create(request, *args, **kwargs)
+
+
+class MaintenanceRecordViewSet(InventoryRecordViewSet):
+    queryset = MaintenanceRecord.objects.select_related("asset", "recorded_by")
+    serializer_class = MaintenanceRecordSerializer
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        asset = self.request.query_params.get("asset")
+        return queryset.filter(asset_id=asset) if asset else queryset
+
+    def perform_create(self, serializer):
+        serializer.instance = record_maintenance(
+            actor=self.request.user, **serializer.validated_data
+        )
+
+
+class ChargingRecordViewSet(InventoryRecordViewSet):
+    queryset = ChargingRecord.objects.select_related("asset", "recorded_by")
+    serializer_class = ChargingRecordSerializer
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        asset = self.request.query_params.get("asset")
+        return queryset.filter(asset_id=asset) if asset else queryset
+
+    def perform_create(self, serializer):
+        serializer.instance = record_charging(actor=self.request.user, **serializer.validated_data)

@@ -2366,6 +2366,74 @@ paths:
       responses:
         '204':
           description: No response body
+  /api/inventory-charging/:
+    get:
+      operationId: inventory_charging_list
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - inventory-charging
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedChargingRecordList'
+          description: ''
+    post:
+      operationId: inventory_charging_create
+      tags:
+      - inventory-charging
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChargingRecord'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ChargingRecord'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ChargingRecord'
+        required: true
+      security:
+      - tokenAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChargingRecord'
+          description: ''
+  /api/inventory-charging/{id}/:
+    get:
+      operationId: inventory_charging_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this charging record.
+        required: true
+      tags:
+      - inventory-charging
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChargingRecord'
+          description: ''
   /api/inventory-checkouts/:
     get:
       operationId: inventory_checkouts_list
@@ -2389,6 +2457,13 @@ paths:
           description: ''
     post:
       operationId: inventory_checkouts_create
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
       tags:
       - inventory-checkouts
       requestBody:
@@ -2410,7 +2485,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AssetCheckout'
+                $ref: '#/components/schemas/PaginatedAssetCheckoutList'
           description: ''
   /api/inventory-checkouts/{id}/:
     get:
@@ -2501,6 +2576,74 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AssetCheckout'
+          description: ''
+  /api/inventory-maintenance/:
+    get:
+      operationId: inventory_maintenance_list
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - inventory-maintenance
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedMaintenanceRecordList'
+          description: ''
+    post:
+      operationId: inventory_maintenance_create
+      tags:
+      - inventory-maintenance
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MaintenanceRecord'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/MaintenanceRecord'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/MaintenanceRecord'
+        required: true
+      security:
+      - tokenAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MaintenanceRecord'
+          description: ''
+  /api/inventory-maintenance/{id}/:
+    get:
+      operationId: inventory_maintenance_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this maintenance record.
+        required: true
+      tags:
+      - inventory-maintenance
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MaintenanceRecord'
           description: ''
   /api/inventory-programming/:
     get:
@@ -5156,10 +5299,28 @@ components:
         alias:
           type: string
           maxLength: 120
+        asset_subtype:
+          type: string
+          maxLength: 80
+        flash_code:
+          type: string
+          maxLength: 160
+        subscriber_id:
+          type: string
+          maxLength: 80
+        system_ids:
+          type: string
+          maxLength: 300
+        acquisition_date:
+          type: string
+          format: date
+          nullable: true
+        last_calibrated_at:
+          type: string
+          format: date-time
+          nullable: true
         status:
-          allOf:
-          - $ref: '#/components/schemas/AssetStatusEnum'
-          readOnly: true
+          $ref: '#/components/schemas/AssetStatusEnum'
         notes:
           type: string
         created_by_username:
@@ -5179,7 +5340,6 @@ components:
       - created_at
       - created_by_username
       - id
-      - status
       - updated_at
     AssetCheckout:
       type: object
@@ -5204,6 +5364,16 @@ components:
         assigned_organization:
           type: string
           maxLength: 200
+        point_of_contact:
+          type: string
+          maxLength: 200
+        phone_number:
+          type: string
+          maxLength: 40
+        mailing_address:
+          type: string
+        assignment_notes:
+          type: string
         driver_license_jurisdiction:
           type: string
           maxLength: 8
@@ -5265,15 +5435,31 @@ components:
         incident:
           type: string
           format: uuid
-        asset:
-          type: string
-          format: uuid
+        assets:
+          type: array
+          items:
+            type: string
+            format: uuid
+          maxItems: 25
+          minItems: 1
         assigned_name:
           type: string
           maxLength: 200
         assigned_organization:
           type: string
           maxLength: 200
+        point_of_contact:
+          type: string
+          maxLength: 200
+        phone_number:
+          type: string
+          maxLength: 40
+        mailing_address:
+          type: string
+          maxLength: 1000
+        assignment_notes:
+          type: string
+          maxLength: 2000
         driver_license_jurisdiction:
           type: string
           maxLength: 8
@@ -5284,7 +5470,7 @@ components:
           maxLength: 32
           minLength: 4
       required:
-      - asset
+      - assets
       - assigned_name
       - assigned_organization
       - driver_license_jurisdiction
@@ -5645,6 +5831,39 @@ components:
       - dry_run
       - errors
       - valid
+    ChargingRecord:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        asset:
+          type: string
+          format: uuid
+        started_at:
+          type: string
+          format: date-time
+        completed_at:
+          type: string
+          format: date-time
+          nullable: true
+        notes:
+          type: string
+          maxLength: 500
+        recorded_by_username:
+          type: string
+          readOnly: true
+        recorded_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - asset
+      - id
+      - recorded_at
+      - recorded_by_username
+      - started_at
     ClassificationEnum:
       enum:
       - good
@@ -7412,7 +7631,7 @@ components:
       type: object
       properties:
         kind:
-          $ref: '#/components/schemas/KindEnum'
+          $ref: '#/components/schemas/FccMapFeatureKindEnum'
         key:
           type: string
         latitude:
@@ -7454,6 +7673,14 @@ components:
       - feature_count
       - results
       - truncated
+    FccMapFeatureKindEnum:
+      enum:
+      - cluster
+      - tower
+      type: string
+      description: |-
+        * `cluster` - cluster
+        * `tower` - tower
     FccTowerDetail:
       type: object
       properties:
@@ -8420,14 +8647,6 @@ components:
         * `complete` - Complete
         * `failed` - Failed
         * `cancelled` - Cancelled
-    KindEnum:
-      enum:
-      - cluster
-      - tower
-      type: string
-      description: |-
-        * `cluster` - cluster
-        * `tower` - tower
     LimitingPathEnum:
       enum:
       - talk_out
@@ -8520,6 +8739,56 @@ components:
         * `exact` - Exact
         * `generalized` - Generalized
         * `redacted` - Redacted
+    MaintenanceRecord:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        asset:
+          type: string
+          format: uuid
+        kind:
+          $ref: '#/components/schemas/MaintenanceRecordKindEnum'
+        performed_at:
+          type: string
+          format: date-time
+        technician:
+          type: string
+          maxLength: 200
+        notes:
+          type: string
+        return_to_service:
+          type: boolean
+        recorded_by_username:
+          type: string
+          readOnly: true
+        recorded_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - asset
+      - id
+      - kind
+      - notes
+      - performed_at
+      - recorded_at
+      - recorded_by_username
+      - technician
+    MaintenanceRecordKindEnum:
+      enum:
+      - inspection
+      - calibration
+      - repair
+      - preventive
+      type: string
+      description: |-
+        * `inspection` - Inspection
+        * `calibration` - Calibration
+        * `repair` - Repair
+        * `preventive` - Preventive maintenance
     ManualRing:
       type: object
       properties:
@@ -8761,6 +9030,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/CalibrationSet'
+    PaginatedChargingRecordList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/ChargingRecord'
     PaginatedConventionalChannelList:
       type: object
       required:
@@ -8991,6 +9283,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/LocalContingencyAccount'
+    PaginatedMaintenanceRecordList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/MaintenanceRecord'
     PaginatedManualRingList:
       type: object
       required:
@@ -9438,10 +9753,28 @@ components:
         alias:
           type: string
           maxLength: 120
+        asset_subtype:
+          type: string
+          maxLength: 80
+        flash_code:
+          type: string
+          maxLength: 160
+        subscriber_id:
+          type: string
+          maxLength: 80
+        system_ids:
+          type: string
+          maxLength: 300
+        acquisition_date:
+          type: string
+          format: date
+          nullable: true
+        last_calibrated_at:
+          type: string
+          format: date-time
+          nullable: true
         status:
-          allOf:
-          - $ref: '#/components/schemas/AssetStatusEnum'
-          readOnly: true
+          $ref: '#/components/schemas/AssetStatusEnum'
         notes:
           type: string
         created_by_username:

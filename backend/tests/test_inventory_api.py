@@ -9,7 +9,13 @@ from rest_framework.test import APIClient
 from apps.accounts.models import Role, UserRoleAssignment
 from apps.audit.models import AuditEvent
 from apps.incidents.models import Incident, IncidentMembership
-from apps.inventory.models import Asset, AssetCheckout, ProgrammingRecord
+from apps.inventory.models import (
+    Asset,
+    AssetCheckout,
+    ChargingRecord,
+    MaintenanceRecord,
+    ProgrammingRecord,
+)
 
 TEST_KEY = base64.urlsafe_b64encode(b"0" * 32).decode("ascii")
 
@@ -59,7 +65,7 @@ def test_incident_members_can_view_driver_license_and_normal_return_deletes_it()
         "/api/inventory-checkouts/",
         {
             "incident": str(incident.id),
-            "asset": str(asset.id),
+            "assets": [str(asset.id)],
             "assigned_name": "Test Assignee",
             "assigned_organization": "Synthetic County",
             "driver_license_jurisdiction": "TX",
@@ -109,7 +115,7 @@ def test_damaged_radio_retains_license_under_accountability_hold():
         "/api/inventory-checkouts/",
         {
             "incident": str(incident.id),
-            "asset": str(asset.id),
+            "assets": [str(asset.id)],
             "assigned_name": "Damage Test",
             "assigned_organization": "Synthetic Agency",
             "driver_license_jurisdiction": "OK",
@@ -117,7 +123,7 @@ def test_damaged_radio_retains_license_under_accountability_hold():
         },
         format="json",
     )
-    checkout_id = created.json()["id"]
+    checkout_id = created.json()[0]["id"]
 
     returned = client.post(
         f"/api/inventory-checkouts/{checkout_id}/return/",
@@ -171,7 +177,7 @@ def test_user_outside_incident_cannot_view_checkout_or_license():
         "/api/inventory-checkouts/",
         {
             "incident": str(incident.id),
-            "asset": str(asset.id),
+            "assets": [str(asset.id)],
             "assigned_name": "Scope Test",
             "assigned_organization": "Synthetic Agency",
             "driver_license_jurisdiction": "TX",
@@ -179,7 +185,7 @@ def test_user_outside_incident_cannot_view_checkout_or_license():
         },
         format="json",
     )
-    checkout_id = created.json()["id"]
+    checkout_id = created.json()[0]["id"]
 
     client.force_authenticate(outsider)
     listing = client.get(f"/api/inventory-checkouts/?incident={incident.id}")
@@ -233,7 +239,7 @@ def test_checkout_applies_versioned_issuer_input_limits():
     client.force_authenticate(manager)
     payload = {
         "incident": str(incident.id),
-        "asset": str(asset.id),
+        "assets": [str(asset.id)],
         "assigned_name": "License Rule Test",
         "assigned_organization": "Synthetic Agency",
         "driver_license_jurisdiction": "TX",
@@ -248,3 +254,84 @@ def test_checkout_applies_versioned_issuer_input_limits():
     assert too_long.status_code == 400
     assert "us-state-license-input-v1" in str(too_long.json())
     assert unknown_issuer.status_code == 400
+
+
+@pytest.mark.django_db
+@override_settings(ICT_INVENTORY_ENCRYPTION_KEY=TEST_KEY)
+def test_multi_asset_checkout_and_operational_records_are_audited():
+    manager = _user("operations-manager", Role.COML)
+    incident = _incident(manager)
+    radio = Asset.objects.create(
+        asset_id="RADIO-MULTI", category=Asset.Category.RADIO, created_by=manager
+    )
+    battery = Asset.objects.create(
+        asset_id="BATTERY-MULTI",
+        category=Asset.Category.BATTERY,
+        parent=radio,
+        created_by=manager,
+    )
+    client = APIClient()
+    client.force_authenticate(manager)
+
+    duplicate_selection = client.post(
+        "/api/inventory-checkouts/",
+        {
+            "incident": str(incident.id),
+            "assets": [str(radio.id), str(radio.id)],
+            "assigned_name": "Duplicate Asset Assignee",
+            "assigned_organization": "Synthetic Agency",
+            "driver_license_jurisdiction": "TX",
+            "driver_license_number": "12345678",
+        },
+        format="json",
+    )
+    checked_out = client.post(
+        "/api/inventory-checkouts/",
+        {
+            "incident": str(incident.id),
+            "assets": [str(radio.id), str(battery.id)],
+            "assigned_name": "Multi Asset Assignee",
+            "assigned_organization": "Synthetic Agency",
+            "point_of_contact": "Synthetic Supervisor",
+            "phone_number": "555-0100",
+            "mailing_address": "100 Test Street",
+            "assignment_notes": "Synthetic assignment",
+            "driver_license_jurisdiction": "TX",
+            "driver_license_number": "12345678",
+        },
+        format="json",
+    )
+    maintenance = client.post(
+        "/api/inventory-maintenance/",
+        {
+            "asset": str(radio.id),
+            "kind": "calibration",
+            "performed_at": "2026-08-23T01:00:00Z",
+            "technician": "Synthetic Technician",
+            "notes": "Bench calibration completed.",
+            "return_to_service": True,
+        },
+        format="json",
+    )
+    charging = client.post(
+        "/api/inventory-charging/",
+        {
+            "asset": str(battery.id),
+            "started_at": "2026-08-23T01:00:00Z",
+            "completed_at": "2026-08-23T03:00:00Z",
+            "notes": "Synthetic charge cycle.",
+        },
+        format="json",
+    )
+
+    assert duplicate_selection.status_code == 400
+    assert duplicate_selection.json()["assets"] == ["Each asset may be selected only once."]
+    assert checked_out.status_code == 201
+    assert len(checked_out.json()) == 2
+    assert AssetCheckout.objects.filter(state=AssetCheckout.State.ACTIVE).count() == 2
+    assert maintenance.status_code == 201
+    assert charging.status_code == 201
+    assert MaintenanceRecord.objects.get().recorded_by == manager
+    assert ChargingRecord.objects.get().recorded_by == manager
+    assert AuditEvent.objects.filter(action="inventory.maintenance_recorded").exists()
+    assert AuditEvent.objects.filter(action="inventory.charging_recorded").exists()

@@ -35,6 +35,8 @@ import type {
   FccTowerDetail,
   InventoryAsset,
   AssetCheckout,
+  ChargingRecord,
+  MaintenanceRecord,
   ProgrammingRecord,
   GeocoderSearchResult,
   HAATCalculation,
@@ -83,6 +85,16 @@ export function createInventoryAsset(
   });
 }
 
+export function updateInventoryAsset(
+  assetId: string,
+  payload: Record<string, unknown>,
+): Promise<InventoryAsset> {
+  return request<InventoryAsset>(
+    `/api/inventory-assets/${encodeURIComponent(assetId)}/`,
+    { method: "PATCH", body: JSON.stringify(payload) },
+  );
+}
+
 export async function listAssetCheckouts(
   incident: string,
 ): Promise<AssetCheckout[]> {
@@ -94,8 +106,8 @@ export async function listAssetCheckouts(
 
 export function checkoutInventoryAsset(
   payload: Record<string, unknown>,
-): Promise<AssetCheckout> {
-  return request<AssetCheckout>("/api/inventory-checkouts/", {
+): Promise<AssetCheckout[]> {
+  return request<AssetCheckout[]>("/api/inventory-checkouts/", {
     method: "POST",
     body: JSON.stringify(payload),
   });
@@ -132,6 +144,38 @@ export function createProgrammingRecord(
   payload: Record<string, unknown>,
 ): Promise<ProgrammingRecord> {
   return request<ProgrammingRecord>("/api/inventory-programming/", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function listMaintenanceRecords(): Promise<MaintenanceRecord[]> {
+  const page = await request<Paginated<MaintenanceRecord>>(
+    "/api/inventory-maintenance/?page_size=500",
+  );
+  return page.results;
+}
+
+export function createMaintenanceRecord(
+  payload: Record<string, unknown>,
+): Promise<MaintenanceRecord> {
+  return request<MaintenanceRecord>("/api/inventory-maintenance/", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function listChargingRecords(): Promise<ChargingRecord[]> {
+  const page = await request<Paginated<ChargingRecord>>(
+    "/api/inventory-charging/?page_size=500",
+  );
+  return page.results;
+}
+
+export function createChargingRecord(
+  payload: Record<string, unknown>,
+): Promise<ChargingRecord> {
+  return request<ChargingRecord>("/api/inventory-charging/", {
     method: "POST",
     body: JSON.stringify(payload),
   });
