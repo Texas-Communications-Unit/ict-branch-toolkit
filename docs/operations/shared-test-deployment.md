@@ -61,6 +61,14 @@ VITE_MAP_REPORT_ISSUE_URL=
 VITE_MAP_CONTACT_URL=
 ```
 
+The controlled deployment also selects and exactly allowlists the bundled `flat`
+synthetic elevation fixture. This makes the Elevation and HAAT workflow available
+for interface, provenance, caching, retry, and calculation testing. It deliberately
+produces a zero-terrain-difference result and is not real elevation data, a
+propagation study, or operational decision support. The deployment script applies
+this non-secret configuration as a temporary overlay; it does not alter the
+protected environment file. See [Elevation providers and HAAT operations](elevation-and-haat.md#offline-synthetic-fixture).
+
 Generate the inventory key on a trusted administrator workstation or the application host and
 copy only the resulting value into the protected deployment environment file:
 
@@ -156,9 +164,9 @@ It must be started manually from the Actions tab ("Run workflow") and then
 approved once at the `shared-test` environment gate; there is no separate
 typed confirmation step. For this
 synthetic-data-only shared test, the deployment script overlays the approved
-public OSM configuration shown above into a restricted temporary environment
-file. It does not rewrite the protected server environment file or expose its
-secrets.
+public OSM configuration shown above and the exactly allowlisted synthetic
+elevation fixture into a restricted temporary environment file. It does not
+rewrite the protected server environment file or expose its secrets.
 
 Before approving an upgrade, follow the
 [backup, restore, upgrade, and rollback runbook](backup-restore-and-rollback.md)
