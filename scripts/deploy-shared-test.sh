@@ -29,11 +29,22 @@ cleanup() {
 trap cleanup EXIT
 chmod 600 "$resolved_env"
 
-# Preserve protected server settings while applying the approved public basemap
-# and checksum-pinned NIFOG 2.02 reference configuration.
-grep -v -e '^VITE_MAP_' -e '^ICT_APPROVED_REFERENCE_IMPORTS=' "$env_file" > "$resolved_env"
+# Preserve protected server settings while applying the approved public basemap,
+# checksum-pinned NIFOG 2.02 reference configuration, and deterministic elevation
+# fixture used by this synthetic-only deployment. Remove every overridden key so
+# an older value in the protected file cannot take precedence.
+grep -v \
+  -e '^VITE_MAP_' \
+  -e '^ICT_APPROVED_REFERENCE_IMPORTS=' \
+  -e '^ICT_ELEVATION_PROVIDER=' \
+  -e '^ICT_APPROVED_ELEVATION_SOURCES=' \
+  -e '^ICT_SYNTHETIC_ELEVATION_MODE=' \
+  "$env_file" > "$resolved_env"
 cat >> "$resolved_env" <<'EOF'
 ICT_APPROVED_REFERENCE_IMPORTS=[{"source_type":"cisa_nifog","version":"2.02","authoritative_url":"https://www.cisa.gov/sites/default/files/2024-12/NIFOG%202.02_508%20FINAL%20VERSION%2012%2003%202024.pdf","content_sha256":"45c2f5d94861b3ed1b80f7ce5962a160fdd56092211586bdee711b68ca3d3142"}]
+ICT_ELEVATION_PROVIDER=apps.rf_analysis.elevation.SyntheticElevationProvider
+ICT_SYNTHETIC_ELEVATION_MODE=flat
+ICT_APPROVED_ELEVATION_SOURCES=[{"provider":"synthetic-offline","dataset_product":"ICT Toolkit deterministic terrain fixture (flat)","horizontal_crs":"EPSG:4326","vertical_crs":"SYNTHETIC:LOCAL","target_vertical_crs":"SYNTHETIC:LOCAL","resolution_m":"30.000","source_version":"synthetic-terrain-v1","license_terms_url":"https://github.com/Texas-Communications-Unit/ict-branch-toolkit/blob/main/docs/operations/elevation-and-haat.md#offline-synthetic-fixture","permitted_use":"Synthetic fixture data only; not terrain, not for operational decision support.","coverage":{"type":"synthetic","extent":"global"},"source_content_sha256":"708c6ea14b7522f3b892d34cac2892e7fa399499ccf1e871a1b69b18e5070f90","offline":true}]
 VITE_MAP_STYLE_URL=
 VITE_MAP_TILE_URL=https://tile.openstreetmap.org/{z}/{x}/{y}.png
 VITE_MAP_PROVIDER_ID=osm-standard
