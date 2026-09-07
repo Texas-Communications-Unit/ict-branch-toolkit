@@ -42,7 +42,9 @@ describe("getPointElevation", () => {
 
     expect(result.elevation_ft).toBe("328.1");
     expect(fetchMock).toHaveBeenCalledWith(
-      expect.stringContaining("/api/elevation-point/?latitude=33&longitude=-97"),
+      expect.stringContaining(
+        "/api/elevation-point/?latitude=33&longitude=-97",
+      ),
       { headers: { Authorization: "Token test-token" } },
     );
   });
