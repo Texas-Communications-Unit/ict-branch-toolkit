@@ -350,8 +350,9 @@ export function ExtensionWorkspace({
             <form className="extension-run-form" onSubmit={runExtension}>
               <h3>Run the ICS-205 readiness check</h3>
               <p>
-                This check reads approved ICS-205 assignment metadata and produces
-                decision-support evidence. It does not approve the plan.
+                This check reads approved ICS-205 assignment metadata and
+                produces decision-support evidence. It does not approve the
+                plan.
               </p>
               <label>
                 Capability

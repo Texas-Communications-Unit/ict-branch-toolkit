@@ -1171,6 +1171,7 @@ test("administrator signs in and sees the incident planning workspace", async ({
   await expect(
     page.getByRole("heading", { name: "Channel library" }),
   ).toBeVisible();
+  await page.getByLabel("Import JSON").fill("{}");
   await page.getByRole("button", { name: "Validate dry run" }).click();
   await expect(
     page.getByRole("status").filter({ hasText: "Validation passed" }),

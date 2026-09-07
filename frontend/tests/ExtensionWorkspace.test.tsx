@@ -236,9 +236,7 @@ test("runs an enabled report, presents structured output, and downloads determin
   );
   await user.clear(screen.getByLabelText("Minimum assignment count"));
   await user.type(screen.getByLabelText("Minimum assignment count"), "2");
-  await user.click(
-    screen.getByRole("button", { name: "Run readiness check" }),
-  );
+  await user.click(screen.getByRole("button", { name: "Run readiness check" }));
 
   expect(api.createExtensionExecution).toHaveBeenCalledWith({
     extension_key: catalogEntry.manifest.key,

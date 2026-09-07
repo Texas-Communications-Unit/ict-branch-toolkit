@@ -14,9 +14,7 @@ SYNTHETIC_EXTENSION_VERSION = "1.0.0"
 SYNTHETIC_MANIFEST: dict[str, Any] = {
     "key": SYNTHETIC_EXTENSION_KEY,
     "name": "ICS-205 readiness summary",
-    "description": (
-        "Checks assignment completeness in an approved ICS-205 revision."
-    ),
+    "description": ("Checks assignment completeness in an approved ICS-205 revision."),
     "version": SYNTHETIC_EXTENSION_VERSION,
     "contract_version": "1.0",
     "provider": "ICT Branch Toolkit built-in planning extension",

@@ -1,4 +1,10 @@
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import App from "../src/App";
@@ -225,10 +231,9 @@ test("signs in and lists incidents from the API", async () => {
       name: "MapLibre and third-party notices",
     }),
   ).toHaveAttribute("href", "/third-party/maplibre-gl-LICENSE.txt");
-  fireEvent.change(
-    screen.getByRole("textbox", { name: "Import JSON" }),
-    { target: { value: JSON.stringify({ source: {} }) } },
-  );
+  fireEvent.change(screen.getByRole("textbox", { name: "Import JSON" }), {
+    target: { value: JSON.stringify({ source: {} }) },
+  });
   await userEvent.click(
     screen.getByRole("button", { name: "Validate dry run" }),
   );

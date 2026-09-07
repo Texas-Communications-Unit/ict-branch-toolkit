@@ -106,6 +106,8 @@ class Command(BaseCommand):
             if fcc_after != fcc_before:
                 raise CommandError("FCC table counts changed; the incident reset was rolled back.")
 
-        self.stdout.write(self.style.SUCCESS(
-            f"Deleted {incident_count} incidents and dependent records; FCC data is unchanged."
-        ))
+        self.stdout.write(
+            self.style.SUCCESS(
+                f"Deleted {incident_count} incidents and dependent records; FCC data is unchanged."
+            )
+        )

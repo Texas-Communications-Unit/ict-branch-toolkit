@@ -35,11 +35,19 @@ def test_usgs_point_response_retains_provenance():
 
 
 def test_usgs_elevation_provider_maps_real_samples():
-    returned = [{
-        "role": "site", "latitude": "33", "longitude": "-97", "distance_m": 0,
-        "azimuth_deg": None, "elevation_m": "200.000", "resolution_degrees": "0.0001",
-        "raster_id": 1, "acquisition_date": "1/1/2025",
-    }]
+    returned = [
+        {
+            "role": "site",
+            "latitude": "33",
+            "longitude": "-97",
+            "distance_m": 0,
+            "azimuth_deg": None,
+            "elevation_m": "200.000",
+            "resolution_degrees": "0.0001",
+            "raster_id": 1,
+            "acquisition_date": "1/1/2025",
+        }
+    ]
     with patch("apps.rf_analysis.elevation.fetch_points", return_value=returned):
         batch = USGS3DEPElevationProvider().fetch([{"role": "site"}])
     assert batch.acquisition_state == "complete"
@@ -48,10 +56,17 @@ def test_usgs_elevation_provider_maps_real_samples():
 
 
 def test_usgs_terrain_provider_maps_real_samples():
-    returned = [{
-        "distance_m": 0, "latitude": "33", "longitude": "-97", "elevation_m": "200.000",
-        "resolution_degrees": "0.0001", "raster_id": 1, "acquisition_date": "1/1/2025",
-    }]
+    returned = [
+        {
+            "distance_m": 0,
+            "latitude": "33",
+            "longitude": "-97",
+            "elevation_m": "200.000",
+            "resolution_degrees": "0.0001",
+            "raster_id": 1,
+            "acquisition_date": "1/1/2025",
+        }
+    ]
     with patch("apps.rf_analysis.terrain.fetch_points", return_value=returned):
         batch = USGS3DEPTerrainProfileProvider().fetch([{"distance_m": 0}])
     assert batch.acquisition_state == "complete"
@@ -59,10 +74,16 @@ def test_usgs_terrain_provider_maps_real_samples():
 
 
 def test_census_geocoder_maps_address_matches():
-    payload = {"result": {"addressMatches": [{
-        "matchedAddress": "1 MAIN ST, DENTON, TX, 76201",
-        "coordinates": {"x": -97.1331, "y": 33.2145},
-    }]}}
+    payload = {
+        "result": {
+            "addressMatches": [
+                {
+                    "matchedAddress": "1 MAIN ST, DENTON, TX, 76201",
+                    "coordinates": {"x": -97.1331, "y": 33.2145},
+                }
+            ]
+        }
+    }
     with patch("apps.sites.geocoders.urlopen", return_value=json_response(payload)):
         result = CensusGeocoder().search("1 Main St, Denton, TX 76201")
     assert result[0].provider == "us-census-maf-tiger"
