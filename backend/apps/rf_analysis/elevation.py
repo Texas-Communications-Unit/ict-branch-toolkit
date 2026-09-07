@@ -13,6 +13,8 @@ from django.conf import settings
 from django.utils import timezone
 from django.utils.module_loading import import_string
 
+from .usgs_3dep import EPQS_URL, USGS3DEPError, fetch_points
+
 
 def canonical_digest(value: Any) -> str:
     encoded = json.dumps(
@@ -229,6 +231,75 @@ class SyntheticElevationProvider(ElevationProvider):
             "state": "complete",
             "reason": "",
         }
+
+
+class USGS3DEPElevationProvider(ElevationProvider):
+    """Keyless public USGS 3DEP Elevation Point Query Service adapter."""
+
+    _descriptor = {
+        "provider": "usgs-3dep-epqs",
+        "dataset_product": "USGS 3D Elevation Program dynamic elevation service",
+        "source_version": "EPQS API v1; dynamic 3DEP current at retrieval",
+        "endpoint": EPQS_URL,
+    }
+
+    @property
+    def source(self) -> ElevationSource:
+        return ElevationSource(
+            provider=self._descriptor["provider"],
+            dataset_product=self._descriptor["dataset_product"],
+            horizontal_crs="NAD83 geographic coordinates requested as WKID 4326",
+            vertical_crs="NAVD 88 over CONUS; source-dependent outside CONUS",
+            target_vertical_crs="source vertical reference retained without transformation",
+            resolution_m="10.000",
+            source_version=self._descriptor["source_version"],
+            license_terms_url=(
+                "https://www.usgs.gov/faqs/are-there-any-costs-or-restrictions-usage-data-"
+                "downloaded-national-map"
+            ),
+            permitted_use=(
+                "Public-domain USGS National Map data; planning decision support with source "
+                "accuracy and vertical-reference limitations retained."
+            ),
+            coverage={"service": "USGS 3DEP", "primary_region": "United States and territories"},
+            source_content_sha256=canonical_digest(self._descriptor),
+            offline=False,
+        )
+
+    def fetch(self, points: list[dict[str, Any]]) -> ElevationBatch:
+        try:
+            returned = fetch_points(points)
+        except USGS3DEPError as exc:
+            raise ElevationProviderError(str(exc)) from exc
+        samples = [
+            {
+                **point,
+                "elevation_m": point["elevation_m"],
+                "transformed_elevation_m": point["elevation_m"],
+                "state": "complete",
+                "reason": "",
+                "source_resolution_degrees": point["resolution_degrees"],
+                "source_raster_id": point["raster_id"],
+                "source_acquisition_date": point["acquisition_date"],
+            }
+            for point in returned
+        ]
+        return ElevationBatch(
+            source=self.source,
+            acquisition_state="complete",
+            samples=samples,
+            transformation={
+                "method": "identity; source value retained",
+                "source_vertical_crs": self.source.vertical_crs,
+                "target_vertical_crs": self.source.target_vertical_crs,
+                "service_endpoint": EPQS_URL,
+            },
+            warnings=[
+                "USGS EPQS elevations are interpolated planning data, not surveyed control "
+                "elevations. Review each sample's acquisition date and resolution."
+            ],
+            retrieved_at=timezone.now(),
+        )
 
 
 def configured_elevation_provider() -> ElevationProvider:

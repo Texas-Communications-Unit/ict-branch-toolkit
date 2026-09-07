@@ -1,7 +1,13 @@
-name: Deploy shared test
+name: Deploy live system
 
 on:
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      go_live_reset:
+        description: Permanently remove all incident-owned data after the verified backup
+        required: true
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -10,12 +16,12 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
 concurrency:
-  group: shared-test-deployment
+  group: live-system-deployment
   cancel-in-progress: false
 
 jobs:
   deploy:
-    name: Deploy approved main commit
+    name: Deploy approved live commit
     runs-on: ubuntu-latest
     timeout-minutes: 20
     environment: shared-test
@@ -94,8 +100,13 @@ jobs:
           # remote script refuses anything other than the current origin/main,
           # so deploying a stale dispatch-time sha would otherwise always fail.
           MAIN_SHA: ${{ steps.resolve_main.outputs.sha }}
+          GO_LIVE_RESET: ${{ inputs.go_live_reset }}
         run: |
           remote_script=".cache/ict-branch-toolkit/deploy-${GITHUB_RUN_ID}/deploy-shared-test.sh"
+          reset_argument=""
+          if [[ "$GO_LIVE_RESET" == "true" ]]; then
+            reset_argument="--go-live-reset"
+          fi
           ssh \
             -i "$HOME/.ssh/deploy_key" \
             -p "$DEPLOY_PORT" \
@@ -104,7 +115,7 @@ jobs:
             -o IdentitiesOnly=yes \
             -o StrictHostKeyChecking=yes \
             "$DEPLOY_USER@$DEPLOY_HOST" \
-            "bash '$remote_script' '$MAIN_SHA'"
+            "bash '$remote_script' '$MAIN_SHA' $reset_argument"
 
       - name: Remove remote deployment scripts
         if: always()

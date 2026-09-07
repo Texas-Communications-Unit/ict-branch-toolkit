@@ -16,7 +16,11 @@ Latitude is limited to -90 through 90 and longitude to -180 through 180. Minutes
 
 ## Address-provider boundary
 
-`ICT_GEOCODER_PROVIDER` defaults to `apps.sites.geocoders.DisabledGeocoder`. Coordinate entry, map placement, rings, and exports remain fully usable when no address provider or network connection exists. A deterministic synthetic provider exists only for automated tests.
+The live deployment selects `apps.sites.geocoders.CensusGeocoder`, which sends the
+entered address to the U.S. Census Bureau's public MAF/TIGER geocoding service and
+returns U.S., Puerto Rico, and Island Area address-range matches. Coordinate entry,
+map placement, rings, and exports remain usable during provider outages. The
+deterministic provider remains isolated to automated tests.
 
 Before configuring a live provider, review its permitted use, privacy behavior, retention, attribution, availability, rate limits, and failure handling. Record provider identity and retrieval time for any selected result.
 
@@ -33,7 +37,8 @@ FCCInfo requires acceptance of its terms and links to its own disclaimer and pri
 
 ## Current limitations
 
-- No live geocoder, FCC, FCCInfo, or Google Earth integration is enabled.
+- Census geocoding and FCC public-data ingestion are enabled; FCCInfo and Google
+  Earth integrations are not implemented.
 - No real operational site selections are included in fixtures or tests.
 - The SVG map has no street, parcel, imagery, or terrain basemap.
 - Manual rings are not RF coverage calculations, interference contours, coordination approvals, or guarantees.

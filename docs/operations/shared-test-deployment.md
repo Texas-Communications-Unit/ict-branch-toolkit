@@ -1,8 +1,12 @@
-# Shared test deployment
+# Live deployment
 
-This procedure deploys the synthetic-data-only P1.0 prototype as an isolated container stack behind an existing reverse proxy. It does not require or permit sharing another application's document root, database, or application process.
+This procedure deploys the continuously improved ICT Branch Toolkit at
+`toolkit.tx-comu.org` as an isolated container stack behind the existing reverse proxy.
+It does not share another application's document root, database, or process.
 
-The deployment remains a test system. Do not enter operational, protected, sensitive, or personally identifiable information.
+The application provides planning decision support. It is not frequency coordination,
+spectrum authorization, a propagation study, or a coverage guarantee. Protect incident,
+personal, credential, and restricted channel information according to applicable policy.
 
 ## Preconditions
 
@@ -61,13 +65,11 @@ VITE_MAP_REPORT_ISSUE_URL=
 VITE_MAP_CONTACT_URL=
 ```
 
-The controlled deployment also selects and exactly allowlists the bundled `flat`
-synthetic elevation fixture. This makes the Elevation and HAAT workflow available
-for interface, provenance, caching, retry, and calculation testing. It deliberately
-produces a zero-terrain-difference result and is not real elevation data, a
-propagation study, or operational decision support. The deployment script applies
-this non-secret configuration as a temporary overlay; it does not alter the
-protected environment file. See [Elevation providers and HAAT operations](elevation-and-haat.md#offline-synthetic-fixture).
+The controlled deployment selects the U.S. Census MAF/TIGER address geocoder and
+exactly allowlists USGS 3DEP EPQS for elevation and sampled terrain profiles. Both
+are fixed, keyless federal public-service endpoints. Requests send the entered
+address or coordinates to the named agency; review privacy and source limitations
+before use.
 
 Generate the inventory key on a trusted administrator workstation or the application host and
 copy only the resulting value into the protected deployment environment file:
@@ -144,8 +146,8 @@ listener that trusts this header to an untrusted network.
 
 ## Controlled GitHub deployment
 
-The `Deploy shared test` GitHub Actions workflow provides a manually dispatched
-deployment path for the shared synthetic-data test host. Configure a protected
+The `Deploy live system` GitHub Actions workflow provides the manually dispatched
+deployment path for the live host. Configure a protected
 `shared-test` environment and require human review before the job can access its
 repository secrets.
 
@@ -163,9 +165,9 @@ images before replacing containers, and waits for all production health checks.
 It must be started manually from the Actions tab ("Run workflow") and then
 approved once at the `shared-test` environment gate; there is no separate
 typed confirmation step. For this
-synthetic-data-only shared test, the deployment script overlays the approved
-public OSM configuration shown above and the exactly allowlisted synthetic
-elevation fixture into a restricted temporary environment file. It does not
+live system, the deployment script overlays the approved public OSM, Census,
+USGS 3DEP, CISA NIFOG, and FCC-supporting configuration into a restricted temporary
+environment file. It does not
 rewrite the protected server environment file or expose its secrets.
 
 Before approving an upgrade, follow the

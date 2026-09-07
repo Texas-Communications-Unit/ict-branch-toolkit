@@ -1,12 +1,17 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-if [[ $# -ne 1 || ! "$1" =~ ^[0-9a-f]{40}$ ]]; then
-  echo "Usage: deploy-shared-test.sh <40-character-main-commit>" >&2
+if [[ $# -lt 1 || $# -gt 2 || ! "$1" =~ ^[0-9a-f]{40}$ ]]; then
+  echo "Usage: deploy-shared-test.sh <40-character-main-commit> [--go-live-reset]" >&2
+  exit 2
+fi
+if [[ ${2:-} != "" && ${2:-} != "--go-live-reset" ]]; then
+  echo "The optional second argument must be --go-live-reset." >&2
   exit 2
 fi
 
 expected_sha="$1"
+go_live_reset=${2:-}
 app_dir="$HOME/apps/ict-branch-toolkit"
 env_file="$HOME/.config/ict-branch-toolkit/deployment.env"
 backup_dir="$HOME/backups/ict-branch-toolkit"
@@ -29,22 +34,24 @@ cleanup() {
 trap cleanup EXIT
 chmod 600 "$resolved_env"
 
-# Preserve protected server settings while applying the approved public basemap,
-# checksum-pinned NIFOG 2.02 reference configuration, and deterministic elevation
-# fixture used by this synthetic-only deployment. Remove every overridden key so
-# an older value in the protected file cannot take precedence.
+# Preserve protected server settings while applying approved public data sources.
+# Remove every overridden key so an older value cannot take precedence.
 grep -v \
   -e '^VITE_MAP_' \
   -e '^ICT_APPROVED_REFERENCE_IMPORTS=' \
   -e '^ICT_ELEVATION_PROVIDER=' \
   -e '^ICT_APPROVED_ELEVATION_SOURCES=' \
-  -e '^ICT_SYNTHETIC_ELEVATION_MODE=' \
+  -e '^ICT_GEOCODER_PROVIDER=' \
+  -e '^ICT_TERRAIN_PROVIDER=' \
+  -e '^ICT_APPROVED_TERRAIN_CONFIGURATIONS=' \
   "$env_file" > "$resolved_env"
 cat >> "$resolved_env" <<'EOF'
 ICT_APPROVED_REFERENCE_IMPORTS=[{"source_type":"cisa_nifog","version":"2.02","authoritative_url":"https://www.cisa.gov/sites/default/files/2024-12/NIFOG%202.02_508%20FINAL%20VERSION%2012%2003%202024.pdf","content_sha256":"45c2f5d94861b3ed1b80f7ce5962a160fdd56092211586bdee711b68ca3d3142"}]
-ICT_ELEVATION_PROVIDER=apps.rf_analysis.elevation.SyntheticElevationProvider
-ICT_SYNTHETIC_ELEVATION_MODE=flat
-ICT_APPROVED_ELEVATION_SOURCES=[{"provider":"synthetic-offline","dataset_product":"ICT Toolkit deterministic terrain fixture (flat)","horizontal_crs":"EPSG:4326","vertical_crs":"SYNTHETIC:LOCAL","target_vertical_crs":"SYNTHETIC:LOCAL","resolution_m":"30.000","source_version":"synthetic-terrain-v1","license_terms_url":"https://github.com/Texas-Communications-Unit/ict-branch-toolkit/blob/main/docs/operations/elevation-and-haat.md#offline-synthetic-fixture","permitted_use":"Synthetic fixture data only; not terrain, not for operational decision support.","coverage":{"type":"synthetic","extent":"global"},"source_content_sha256":"708c6ea14b7522f3b892d34cac2892e7fa399499ccf1e871a1b69b18e5070f90","offline":true}]
+ICT_GEOCODER_PROVIDER=apps.sites.geocoders.CensusGeocoder
+ICT_ELEVATION_PROVIDER=apps.rf_analysis.elevation.USGS3DEPElevationProvider
+ICT_APPROVED_ELEVATION_SOURCES=[{"provider":"usgs-3dep-epqs","dataset_product":"USGS 3D Elevation Program dynamic elevation service","horizontal_crs":"NAD83 geographic coordinates requested as WKID 4326","vertical_crs":"NAVD 88 over CONUS; source-dependent outside CONUS","target_vertical_crs":"source vertical reference retained without transformation","resolution_m":"10.000","source_version":"EPQS API v1; dynamic 3DEP current at retrieval","license_terms_url":"https://www.usgs.gov/faqs/are-there-any-costs-or-restrictions-usage-data-downloaded-national-map","permitted_use":"Public-domain USGS National Map data; planning decision support with source accuracy and vertical-reference limitations retained.","coverage":{"service":"USGS 3DEP","primary_region":"United States and territories"},"source_content_sha256":"f15a6bcf89f3e2cba37b4b59e223ef13f2f07336ad1fb7661e502016ed133d17","offline":false}]
+ICT_TERRAIN_PROVIDER=apps.rf_analysis.terrain.USGS3DEPTerrainProfileProvider
+ICT_APPROVED_TERRAIN_CONFIGURATIONS=[{"provider":"usgs-3dep-epqs","provider_version":"terrain-profile-provider-v1","dataset_product":"USGS 3D Elevation Program dynamic elevation service","dataset_version":"EPQS API v1; dynamic 3DEP current at retrieval","source_content_sha256":"4c49a378bace4d22a4409ffa8c36de285edc330b5453856b5cff2bbdc24d03f0","engine":"provisional_sampled_line_of_sight","engine_version":"sampled-line-of-sight-v1-provisional"}]
 VITE_MAP_STYLE_URL=
 VITE_MAP_TILE_URL=https://tile.openstreetmap.org/{z}/{x}/{y}.png
 VITE_MAP_PROVIDER_ID=osm-standard
@@ -125,6 +132,13 @@ else
   printf 'Recent backend logs follow. Protected environment values are not displayed.\n' >&2
   "${compose[@]}" logs --no-color --timestamps --tail 200 backend >&2 || true
   exit "$compose_status"
+fi
+
+if [[ "$go_live_reset" == "--go-live-reset" ]]; then
+  verified_backup_sha256="$(awk '{print $1}' "$backup_file.sha256")"
+  "${compose[@]}" exec -T backend python manage.py purge_incident_data \
+    --confirm DELETE-ALL-INCIDENT-DATA \
+    --verified-backup-sha256 "$verified_backup_sha256"
 fi
 
 printf 'Deployed commit %s with backup %s and checksum %s\n' \

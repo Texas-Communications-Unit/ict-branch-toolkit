@@ -1,8 +1,8 @@
 # Operation and monitoring
 
-> **NON-PRODUCTION PROTOTYPE:** These controls govern synthetic-data-only
-> evaluation. They are not a production service-level objective, security
-> authorization, or approval to enter operational data.
+> **LIVE PLANNING DECISION SUPPORT:** These operational controls do not make
+> toolkit output frequency coordination, spectrum authorization, a propagation
+> study, or a coverage guarantee.
 
 The installation administrator owns routine checks. A maintainer owns change
 approval, and the organization's security contact owns suspected compromise.
@@ -11,7 +11,7 @@ policy](../../SECURITY.md), and adopted local policy remain controlling.
 
 ## Start-of-use checks
 
-Before each evaluation session, and at least daily while a shared test remains
+Before each operational session, and at least daily while the live service is
 available:
 
 1. Confirm the approved commit and a clean application checkout.
@@ -109,8 +109,9 @@ Do not edit, delete, resequence, or regenerate audit rows to make the check pass
   [reference import procedure](reference-library-imports.md).
 - Treat coverage and deconfliction results as planning decision support, never
   authorization, coordination approval, or a coverage guarantee.
-- Use only synthetic data in the prototype. A release candidate does not change
-  that boundary.
+- Enter operational data only under the organization's approved data-handling
+  policy. Do not place credentials, protected values, or unrelated personal
+  information in incident records.
 
 ## Changes, upgrades, and recovery
 
@@ -119,7 +120,7 @@ diff, backup, rollback decision, maintenance window, and post-change
 verification. Use these existing procedures rather than improvising:
 
 - [Installation and configuration](installation-and-configuration.md)
-- [Shared test deployment](shared-test-deployment.md)
+- [Live deployment](shared-test-deployment.md)
 - [Backup, restore, upgrade, and rollback](backup-restore-and-rollback.md)
 - [Map-provider deployment checklist](map-provider-deployment-checklist.md)
 - [Export verification](export-verification.md)

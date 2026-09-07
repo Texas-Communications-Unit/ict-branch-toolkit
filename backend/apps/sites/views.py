@@ -26,7 +26,7 @@ from apps.plans.models import PlanRevision
 
 from .coordinates import CoordinateError, coordinate_formats, parse_coordinate
 from .exports import EXPORTERS
-from .geocoders import configured_geocoder
+from .geocoders import GeocoderError, configured_geocoder
 from .models import ManualRing, RadioSite, SiteAssignment
 from .serializers import (
     CoordinateParseSerializer,
@@ -228,7 +228,10 @@ class GeocoderSearchView(APIView):
         serializer = GeocoderQuerySerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         provider = configured_geocoder()
-        results = provider.search(serializer.validated_data["address"])
+        try:
+            results = provider.search(serializer.validated_data["address"])
+        except GeocoderError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
         return Response(
             {
                 "provider": provider.name,

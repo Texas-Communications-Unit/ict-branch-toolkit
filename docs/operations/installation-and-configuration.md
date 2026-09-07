@@ -1,14 +1,13 @@
 # Installation and configuration
 
-> **NON-PRODUCTION PROTOTYPE:** This procedure is for synthetic-data-only
-> evaluation. It is not production deployment guidance and does not authorize
-> real incident, protected channel, personal, credential, or private
-> infrastructure data.
+> **LIVE PLANNING DECISION SUPPORT:** This procedure governs the continuously
+> improved deployment. It does not turn planning output into frequency coordination,
+> spectrum authorization, a propagation study, or a coverage guarantee.
 
-The documented evaluation target is the repository's containerized
+The documented deployment target is the repository's containerized
 PostgreSQL/PostGIS, Django, and React stack. Local contributor setup remains in
 the [README](../../README.md#p10-quick-start). A network-accessible evaluation
-must also follow the [shared test deployment runbook](shared-test-deployment.md).
+must also follow the [live deployment runbook](shared-test-deployment.md).
 
 ## Human gates before installation
 

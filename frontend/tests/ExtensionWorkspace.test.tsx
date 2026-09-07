@@ -224,7 +224,7 @@ test("runs an enabled report, presents structured output, and downloads determin
   );
 
   await screen.findByRole("heading", {
-    name: "Run the synthetic contract example",
+    name: "Run the ICS-205 readiness check",
   });
   await user.selectOptions(
     screen.getByLabelText("Capability"),
@@ -237,7 +237,7 @@ test("runs an enabled report, presents structured output, and downloads determin
   await user.clear(screen.getByLabelText("Minimum assignment count"));
   await user.type(screen.getByLabelText("Minimum assignment count"), "2");
   await user.click(
-    screen.getByRole("button", { name: "Run synthetic extension" }),
+    screen.getByRole("button", { name: "Run readiness check" }),
   );
 
   expect(api.createExtensionExecution).toHaveBeenCalledWith({
@@ -250,7 +250,7 @@ test("runs an enabled report, presents structured output, and downloads determin
   });
   expect(
     await screen.findByRole("table", {
-      name: "Synthetic assignment counts by function",
+      name: "ICS-205 assignment counts by function",
     }),
   ).toBeInTheDocument();
   expect(screen.getByText("attention")).toBeInTheDocument();
