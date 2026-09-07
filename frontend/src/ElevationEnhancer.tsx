@@ -47,9 +47,12 @@ async function populateReadout(
   element.dataset.elevationState = "loading";
 
   const value = element.querySelector<HTMLElement>("[data-elevation-value]");
-  const metadata = element.querySelector<HTMLElement>("[data-elevation-metadata]");
+  const metadata = element.querySelector<HTMLElement>(
+    "[data-elevation-metadata]",
+  );
   if (value) value.textContent = "Loading ground elevation…";
-  if (metadata) metadata.textContent = "Using the approved public elevation source.";
+  if (metadata)
+    metadata.textContent = "Using the approved public elevation source.";
 
   try {
     const result = await getPointElevation(latitude, longitude);
@@ -85,7 +88,9 @@ function ensurePreviewReadout(preview: HTMLElement) {
     .find(Boolean);
   if (!decimal) return;
 
-  let wrapper = preview.querySelector<HTMLElement>("[data-ground-elevation-preview]");
+  let wrapper = preview.querySelector<HTMLElement>(
+    "[data-ground-elevation-preview]",
+  );
   if (!wrapper) {
     wrapper = document.createElement("div");
     wrapper.dataset.groundElevationPreview = "true";
@@ -108,7 +113,9 @@ function ensureSiteReadout(card: HTMLElement) {
   const coordinate = coordinateFromText(card.querySelector("span")?.textContent);
   if (!coordinate) return;
 
-  let wrapper = card.querySelector<HTMLElement>("[data-ground-elevation-site]");
+  let wrapper = card.querySelector<HTMLElement>(
+    "[data-ground-elevation-site]",
+  );
   if (!wrapper) {
     wrapper = document.createElement("div");
     wrapper.dataset.groundElevationSite = "true";
@@ -139,7 +146,7 @@ export function ElevationEnhancer() {
     const queueScan = () => {
       if (scanQueued) return;
       scanQueued = true;
-      window.requestAnimationFrame(() => {
+      queueMicrotask(() => {
         scanQueued = false;
         scanForElevationTargets();
       });
