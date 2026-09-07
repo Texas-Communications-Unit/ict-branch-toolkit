@@ -13,9 +13,7 @@ function activeSession() {
 
 async function flushEnhancer() {
   await act(async () => {
-    await new Promise<void>((resolve) =>
-      window.requestAnimationFrame(() => resolve()),
-    );
+    await Promise.resolve();
     await Promise.resolve();
   });
 }
