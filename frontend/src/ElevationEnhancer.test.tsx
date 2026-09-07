@@ -31,7 +31,8 @@ describe("ElevationEnhancer", () => {
           elevation_m: "391.4",
           elevation_ft: "1284.1",
           provider: "usgs-3dep-epqs",
-          dataset_product: "USGS 3D Elevation Program dynamic elevation service",
+          dataset_product:
+            "USGS 3D Elevation Program dynamic elevation service",
           source_version: "EPQS API v1",
           vertical_crs: "NAVD 88",
           resolution_m: "10.000",
