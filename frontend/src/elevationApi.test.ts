@@ -52,7 +52,9 @@ describe("getPointElevation", () => {
       "fetch",
       vi.fn().mockResolvedValue({
         ok: false,
-        json: async () => ({ detail: "The elevation service is temporarily unavailable." }),
+        json: async () => ({
+          detail: "The elevation service is temporarily unavailable.",
+        }),
       }),
     );
 
