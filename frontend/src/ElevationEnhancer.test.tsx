@@ -13,7 +13,9 @@ function activeSession() {
 
 async function flushEnhancer() {
   await act(async () => {
-    await new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()));
+    await new Promise<void>((resolve) =>
+      window.requestAnimationFrame(() => resolve()),
+    );
     await Promise.resolve();
   });
 }
@@ -74,7 +76,9 @@ describe("ElevationEnhancer", () => {
   it("adds elevation to saved site cards without blocking on failure", async () => {
     vi.mocked(fetch).mockResolvedValueOnce({
       ok: false,
-      json: async () => ({ detail: "The elevation service is temporarily unavailable." }),
+      json: async () => ({
+        detail: "The elevation service is temporarily unavailable.",
+      }),
     } as Response);
     document.body.innerHTML = `
       <div id="root">
