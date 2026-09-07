@@ -110,12 +110,12 @@ function ensurePreviewReadout(preview: HTMLElement) {
 }
 
 function ensureSiteReadout(card: HTMLElement) {
-  const coordinate = coordinateFromText(card.querySelector("span")?.textContent);
+  const coordinate = coordinateFromText(
+    card.querySelector("span")?.textContent,
+  );
   if (!coordinate) return;
 
-  let wrapper = card.querySelector<HTMLElement>(
-    "[data-ground-elevation-site]",
-  );
+  let wrapper = card.querySelector<HTMLElement>("[data-ground-elevation-site]");
   if (!wrapper) {
     wrapper = document.createElement("div");
     wrapper.dataset.groundElevationSite = "true";
