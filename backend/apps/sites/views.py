@@ -1,3 +1,4 @@
+import logging
 from decimal import Decimal, InvalidOperation
 
 from django.conf import settings
@@ -36,6 +37,8 @@ from .serializers import (
     SiteAssignmentSerializer,
 )
 
+
+logger = logging.getLogger(__name__)
 
 def scoped_sites(queryset: QuerySet, user, incident_path="incident"):
     if role_for_user(user) == Role.ADMINISTRATOR:
@@ -230,8 +233,12 @@ class GeocoderSearchView(APIView):
         provider = configured_geocoder()
         try:
             results = provider.search(serializer.validated_data["address"])
-        except GeocoderError as exc:
-            return Response({"detail": str(exc)}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+        except GeocoderError:
+            logger.warning("Geocoder provider search failed.", exc_info=True)
+            return Response(
+                {"detail": "Geocoding service is currently unavailable."},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
         return Response(
             {
                 "provider": provider.name,
