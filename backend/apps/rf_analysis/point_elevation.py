@@ -2,8 +2,7 @@ from __future__ import annotations
 
 from decimal import Decimal, InvalidOperation
 
-from drf_spectacular.types import OpenApiTypes
-from drf_spectacular.utils import OpenApiParameter, extend_schema
+from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -19,25 +18,7 @@ from .elevation import (
 class PointElevationView(APIView):
     permission_classes = [IsAuthenticated]
 
-    @extend_schema(
-        parameters=[
-            OpenApiParameter(
-                name="latitude",
-                type=OpenApiTypes.NUMBER,
-                location=OpenApiParameter.QUERY,
-                required=True,
-                description="WGS 84 latitude in decimal degrees.",
-            ),
-            OpenApiParameter(
-                name="longitude",
-                type=OpenApiTypes.NUMBER,
-                location=OpenApiParameter.QUERY,
-                required=True,
-                description="WGS 84 longitude in decimal degrees.",
-            ),
-        ],
-        responses={200: OpenApiTypes.OBJECT, 400: OpenApiTypes.OBJECT, 503: OpenApiTypes.OBJECT},
-    )
+    @extend_schema(exclude=True)
     def get(self, request):
         try:
             latitude = Decimal(str(request.query_params["latitude"]))
