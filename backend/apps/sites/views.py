@@ -37,8 +37,8 @@ from .serializers import (
     SiteAssignmentSerializer,
 )
 
-
 logger = logging.getLogger(__name__)
+
 
 def scoped_sites(queryset: QuerySet, user, incident_path="incident"):
     if role_for_user(user) == Role.ADMINISTRATOR:
