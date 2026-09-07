@@ -938,7 +938,7 @@ test("administrator signs in and sees the incident planning workspace", async ({
   const planningMap = page.getByRole("region", {
     name: "Radio site planning map",
   });
-  await expect(page.getByText(/P3.1 Terrain Prototype/)).toBeVisible();
+  await expect(page.getByText(/Live ·/)).toBeVisible();
   await expect(page.getByRole("heading", { name: "ICS-205" })).toBeVisible();
   await expect(
     page.getByText("SYN CALL", { exact: true }).first(),
@@ -1171,6 +1171,7 @@ test("administrator signs in and sees the incident planning workspace", async ({
   await expect(
     page.getByRole("heading", { name: "Channel library" }),
   ).toBeVisible();
+  await page.getByLabel("Import JSON").fill("{}");
   await page.getByRole("button", { name: "Validate dry run" }).click();
   await expect(
     page.getByRole("status").filter({ hasText: "Validation passed" }),
@@ -1199,7 +1200,7 @@ test("administrator signs in and sees the incident planning workspace", async ({
   await expect(
     page.getByRole("heading", { name: "ICT Branch Toolkit" }),
   ).toBeVisible();
-  await expect(page.getByText(/P3.1 Terrain Prototype/)).toBeVisible();
+  await expect(page.getByText(/Live ·/)).toBeVisible();
   await expectDocumentReflow(page);
   await expectNoAccessibilityViolations(
     page,

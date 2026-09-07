@@ -993,7 +993,7 @@ export function RFProfileWorkspace({ incident }: { incident?: Incident }) {
                     Snapshot label
                     <input
                       name="label"
-                      placeholder="Synthetic exercise baseline"
+                      placeholder="Approved incident baseline"
                       required
                       maxLength={160}
                     />

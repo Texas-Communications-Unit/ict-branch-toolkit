@@ -8,22 +8,20 @@ from django.core.exceptions import ImproperlyConfigured
 
 SUPPORTED_CONTRACT_VERSIONS = ("1.0",)
 
-SYNTHETIC_EXTENSION_KEY = "synthetic-readiness-summary"
+SYNTHETIC_EXTENSION_KEY = "ics205-readiness-summary"
 SYNTHETIC_EXTENSION_VERSION = "1.0.0"
 
 SYNTHETIC_MANIFEST: dict[str, Any] = {
     "key": SYNTHETIC_EXTENSION_KEY,
-    "name": "Synthetic readiness summary",
-    "description": (
-        "A non-operational example that validates the governed tool and report contract."
-    ),
+    "name": "ICS-205 readiness summary",
+    "description": ("Checks assignment completeness in an approved ICS-205 revision."),
     "version": SYNTHETIC_EXTENSION_VERSION,
     "contract_version": "1.0",
-    "provider": "ICT Branch Toolkit built-in synthetic example",
+    "provider": "ICT Branch Toolkit built-in planning extension",
     "capabilities": [
         {
             "id": "readiness-check",
-            "name": "Synthetic readiness check",
+            "name": "ICS-205 readiness check",
             "kind": "tool",
             "required_permission": "extension.run",
             "scope": "incident_revision",
@@ -32,7 +30,7 @@ SYNTHETIC_MANIFEST: dict[str, Any] = {
                 "minimum_assignment_count": {"type": "integer", "minimum": 1, "maximum": 1000},
             },
             "outputs": {
-                "schema": "synthetic-readiness-tool-v1",
+                "schema": "ics205-readiness-tool-v1",
                 "classification": "decision_support",
             },
             "validation": "Exact contract and an approved same-incident ICS-205 revision required.",
@@ -41,7 +39,7 @@ SYNTHETIC_MANIFEST: dict[str, Any] = {
         },
         {
             "id": "readiness-report",
-            "name": "Synthetic readiness report",
+            "name": "ICS-205 readiness report",
             "kind": "report",
             "required_permission": "extension.run",
             "scope": "incident_revision",
@@ -50,7 +48,7 @@ SYNTHETIC_MANIFEST: dict[str, Any] = {
                 "minimum_assignment_count": {"type": "integer", "minimum": 1, "maximum": 1000},
             },
             "outputs": {
-                "schema": "synthetic-readiness-report-v1",
+                "schema": "ics205-readiness-report-v1",
                 "classification": "decision_support",
             },
             "validation": "Exact contract and an approved same-incident ICS-205 revision required.",
@@ -62,7 +60,7 @@ SYNTHETIC_MANIFEST: dict[str, Any] = {
         "Approved ICS-205 revision identifier, revision number, and assignment metadata/counts."
     ],
     "approval_requirements": (
-        "This synthetic contract example is never an approval and produces no official form."
+        "This readiness summary is decision support, not approval, and is not an official form."
     ),
     "sensitivity": "internal_incident_metadata",
     "retention": "Retain with the incident; no automatic purge.",
@@ -110,10 +108,10 @@ def _summary_context(source_revision, parameters: dict[str, Any]) -> dict[str, A
 def synthetic_readiness_tool(source_revision, parameters: dict[str, Any]) -> dict[str, Any]:
     summary = _summary_context(source_revision, parameters)
     return {
-        "schema_version": "synthetic-readiness-tool-v1",
+        "schema_version": "ics205-readiness-tool-v1",
         **summary,
         "interpretation": (
-            "Synthetic contract validation only. This result is not an operational approval."
+            "Assignment completeness decision support; this result is not operational approval."
         ),
     }
 
@@ -121,13 +119,13 @@ def synthetic_readiness_tool(source_revision, parameters: dict[str, Any]) -> dic
 def synthetic_readiness_report(source_revision, parameters: dict[str, Any]) -> dict[str, Any]:
     summary = _summary_context(source_revision, parameters)
     return {
-        "schema_version": "synthetic-readiness-report-v1",
-        "title": "Synthetic ICS-205 readiness summary",
+        "schema_version": "ics205-readiness-report-v1",
+        "title": "ICS-205 readiness summary",
         "summary": {key: value for key, value in summary.items() if key != "function_counts"},
         "columns": ["Function", "Assignment count"],
         "rows": [[item["function"], item["count"]] for item in summary["function_counts"]],
         "interpretation": (
-            "Synthetic contract validation only. This report is not an ICS form or approval."
+            "Assignment completeness decision support; this report is not an ICS form or approval."
         ),
     }
 

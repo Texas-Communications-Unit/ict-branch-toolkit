@@ -2,7 +2,7 @@
 
 ## Safety boundary
 
-> **NON-PRODUCTION P3.1 TERRAIN DECISION SUPPORT**
+> **PROVISIONAL P3.1 TERRAIN DECISION SUPPORT**
 
 The terrain workspace compares one source-aware sampled profile with an
 earlier Phase 2 estimate. It is not a coverage guarantee, field validation,
@@ -47,6 +47,15 @@ ICT_TERRAIN_ENGINE=apps.rf_analysis.terrain.ProvisionalSampledLineOfSightEngine
 ICT_SYNTHETIC_TERRAIN_MODE=flat
 ICT_APPROVED_TERRAIN_CONFIGURATIONS=[{"provider":"synthetic-offline","provider_version":"terrain-profile-provider-v1","dataset_product":"ICT Toolkit deterministic terrain profile fixture","dataset_version":"synthetic-terrain-profile-v1","source_content_sha256":"125b074910d3310aec8030ae6f96f56db96809625328316c476f665daa820287","engine":"provisional_sampled_line_of_sight","engine_version":"sampled-line-of-sight-v1-provisional"}]
 ```
+
+## USGS 3DEP EPQS live provider
+
+The live deployment samples path points from USGS 3DEP EPQS through the same
+source-aware client used for HAAT. Every retained profile point includes the EPQS
+raster identifier, acquisition date, angular resolution, coordinate, and elevation.
+The provider does not interpolate missing samples. The existing sampled
+line-of-sight engine remains explicitly provisional and does not model diffraction,
+clutter, vegetation, buildings, reflections, or multipath.
 
 Supported fixture modes are `flat`, `ridge`, `valley`, `missing`, `boundary`,
 `out_of_coverage`, `datum`, and `failure`. Changing a mode changes the provider

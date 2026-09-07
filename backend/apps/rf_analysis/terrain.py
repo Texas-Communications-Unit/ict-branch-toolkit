@@ -17,6 +17,7 @@ from rest_framework.exceptions import ValidationError
 
 from .coverage import DISCLAIMER, canonical_digest
 from .models import CoverageEstimate, TerrainAnalysis
+from .usgs_3dep import EPQS_URL, USGS3DEPError, fetch_points
 
 TERRAIN_PROFILE_SCHEMA_VERSION = "terrain-profile-v1"
 TERRAIN_RESULT_SCHEMA_VERSION = "terrain-analysis-result-v1"
@@ -24,7 +25,7 @@ TERRAIN_PROVIDER_VERSION = "terrain-profile-provider-v1"
 TERRAIN_ENGINE_ID = "provisional_sampled_line_of_sight"
 TERRAIN_ENGINE_VERSION = "sampled-line-of-sight-v1-provisional"
 PATH_GENERATION_VERSION = "spherical-destination-mean-earth-radius-v1"
-NON_PRODUCTION_LABEL = "NON-PRODUCTION P3.1 TERRAIN DECISION SUPPORT"
+NON_PRODUCTION_LABEL = "PROVISIONAL P3.1 TERRAIN DECISION SUPPORT"
 TERRAIN_DISCLAIMER = (
     f"{DISCLAIMER} Sampled terrain line-of-sight screening is not diffraction modeling, "
     "field validation, frequency coordination, spectrum authorization, or a guarantee."
@@ -241,6 +242,81 @@ class SyntheticTerrainProfileProvider(TerrainProfileProvider):
             "state": "complete",
             "reason": "",
         }
+
+
+class USGS3DEPTerrainProfileProvider(TerrainProfileProvider):
+    """Keyless public USGS 3DEP profile sampler using EPQS point evidence."""
+
+    _descriptor = {
+        "provider": "usgs-3dep-epqs",
+        "provider_version": TERRAIN_PROVIDER_VERSION,
+        "dataset_product": "USGS 3D Elevation Program dynamic elevation service",
+        "dataset_version": "EPQS API v1; dynamic 3DEP current at retrieval",
+        "endpoint": EPQS_URL,
+    }
+
+    @property
+    def source(self) -> TerrainSource:
+        return TerrainSource(
+            provider=self._descriptor["provider"],
+            provider_version=self._descriptor["provider_version"],
+            dataset_product=self._descriptor["dataset_product"],
+            dataset_version=self._descriptor["dataset_version"],
+            horizontal_crs="NAD83 geographic coordinates requested as WKID 4326",
+            vertical_crs="NAVD 88 over CONUS; source-dependent outside CONUS",
+            target_vertical_crs="source vertical reference retained without transformation",
+            resolution_m="10.000",
+            license_terms_url=(
+                "https://www.usgs.gov/faqs/are-there-any-costs-or-restrictions-usage-data-"
+                "downloaded-national-map"
+            ),
+            permitted_use=(
+                "Public-domain USGS National Map data; sampled planning decision support with "
+                "source accuracy and vertical-reference limitations retained."
+            ),
+            coverage={"service": "USGS 3DEP", "primary_region": "United States and territories"},
+            source_content_sha256=canonical_digest(self._descriptor),
+            offline=False,
+        )
+
+    @property
+    def configuration(self) -> dict[str, Any]:
+        return {"endpoint": EPQS_URL, "network_required": True}
+
+    def fetch(self, points: list[dict[str, Any]]) -> TerrainProfileBatch:
+        try:
+            returned = fetch_points(points)
+        except USGS3DEPError as exc:
+            raise TerrainProviderError(str(exc)) from exc
+        samples = [
+            {
+                **point,
+                "source_elevation_m": point["elevation_m"],
+                "terrain_elevation_m": point["elevation_m"],
+                "state": "complete",
+                "reason": "",
+                "source_resolution_degrees": point["resolution_degrees"],
+                "source_raster_id": point["raster_id"],
+                "source_acquisition_date": point["acquisition_date"],
+            }
+            for point in returned
+        ]
+        return TerrainProfileBatch(
+            source=self.source,
+            acquisition_state="complete",
+            samples=samples,
+            transformation={
+                "method": "identity; source value retained",
+                "source_vertical_crs": self.source.vertical_crs,
+                "target_vertical_crs": self.source.target_vertical_crs,
+                "service_endpoint": EPQS_URL,
+            },
+            warnings=[
+                "USGS EPQS elevations are interpolated planning data, not surveyed control "
+                "elevations. Review each sample's acquisition date and resolution."
+            ],
+            retrieved_at=timezone.now(),
+        )
 
 
 class TerrainAnalysisEngine(ABC):

@@ -27,7 +27,7 @@ VALIDATION_PROFILE_ID = "phase-2-validation"
 VALIDATION_PROFILE_VERSION = "phase-2-validation-v1-provisional"
 VALIDATION_METHOD_VERSION = "deterministic-distance-ratio-comparison-v1-provisional"
 EXPORT_SCHEMA_VERSION = "phase-2-validation-evidence-export-v1"
-NON_PRODUCTION_LABEL = "NON-PRODUCTION PHASE 2 VALIDATION EVIDENCE"
+NON_PRODUCTION_LABEL = "PROVISIONAL PHASE 2 VALIDATION EVIDENCE"
 VALIDATION_DISCLAIMER = (
     f"{DISCLAIMER} This evidence checks deterministic software behavior and provenance. "
     "It is not field validation, scientific validation, spectrum authorization, or approval "

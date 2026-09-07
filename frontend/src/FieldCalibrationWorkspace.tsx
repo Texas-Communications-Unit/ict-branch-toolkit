@@ -603,7 +603,7 @@ export function FieldCalibrationWorkspace({
                   <input
                     name="observer_source"
                     maxLength={160}
-                    placeholder="Synthetic exercise team"
+                    placeholder="Reviewing team"
                     required
                   />
                 </label>

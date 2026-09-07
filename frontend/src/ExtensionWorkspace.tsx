@@ -62,10 +62,10 @@ function SummaryResult({ execution }: { execution: ExtensionExecution }) {
         <div
           className="table-scroll"
           role="region"
-          aria-label="Synthetic readiness report rows"
+          aria-label="ICS-205 readiness report rows"
         >
           <table>
-            <caption>Synthetic assignment counts by function</caption>
+            <caption>ICS-205 assignment counts by function</caption>
             <thead>
               <tr>
                 <th scope="col">Function</th>
@@ -202,7 +202,7 @@ export function ExtensionWorkspace({
       setExecutions(await listExtensionExecutions(incident.id));
       setMessage(
         execution.status === "complete"
-          ? "Synthetic extension output recorded."
+          ? "Extension output recorded."
           : execution.failure_message,
       );
     } catch (runError) {
@@ -348,10 +348,11 @@ export function ExtensionWorkspace({
             </p>
           ) : activeExtension && canRun ? (
             <form className="extension-run-form" onSubmit={runExtension}>
-              <h3>Run the synthetic contract example</h3>
+              <h3>Run the ICS-205 readiness check</h3>
               <p>
-                This example reads only approved ICS-205 assignment metadata and
-                produces non-operational decision-support evidence.
+                This check reads approved ICS-205 assignment metadata and
+                produces decision-support evidence. It does not approve the
+                plan.
               </p>
               <label>
                 Capability
@@ -393,7 +394,7 @@ export function ExtensionWorkspace({
                 type="submit"
                 disabled={busy || approvedRevisions.length === 0}
               >
-                Run synthetic extension
+                Run readiness check
               </button>
             </form>
           ) : (

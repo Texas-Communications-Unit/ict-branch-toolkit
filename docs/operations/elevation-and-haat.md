@@ -45,6 +45,23 @@ ICT_APPROVED_ELEVATION_SOURCES=[{"provider":"reviewed-provider-id","dataset_prod
 This example is a structure, not an approved source. Do not place credentials in this JSON or
 commit operational provider configuration.
 
+## USGS 3DEP EPQS live provider
+
+The live TX-COMU deployment uses the keyless U.S. Geological Survey Elevation Point
+Query Service. EPQS interpolates values from the dynamic 3DEP elevation service.
+Each retained sample includes its raster identifier, acquisition date, angular
+resolution, raw elevation, query coordinates, retrieval time, and snapshot digest.
+The provider uses bounded parallel requests to the fixed HTTPS endpoint.
+
+USGS states that National Map data are public domain and free of use restrictions.
+EPQS values are interpolated rather than surveyed control elevations. The service's
+best available raster and acquisition date can change, so reproducibility comes from
+the application's immutable retained elevation snapshot—not from re-querying later.
+
+The controlled deployment supplies the exact provider descriptor and allowlist. Do
+not copy a shortened or edited descriptor into production because approval matching
+fails closed.
+
 ## Offline synthetic fixture
 
 The bundled synthetic provider is deterministic and requires no network:

@@ -2,10 +2,10 @@
 
 ICT Branch Toolkit is an open-source web application for incident communications planning, radio-site mapping, coverage visualization, and frequency deconfliction. It is intended to support Communications Unit and Information and Communications Technology (ICT) Branch personnel during incidents, planned events, exercises, and pre-incident planning.
 
-> **Project status:** Phase 1 non-production prototype. No production-ready
-> release is available, and the application must use synthetic data only. Any
-> candidate must follow the
-> [non-production release-candidate process](docs/releases/non-production-release-candidate.md).
+> **Project status:** Live, continuously improved planning decision-support system.
+> Features retain explicit source, method, approval, and limitation status. Outputs
+> are not frequency coordination, spectrum authorization, propagation studies, or
+> coverage guarantees.
 
 ## Vision
 
@@ -158,9 +158,9 @@ pnpm test:e2e
 
 Windows PowerShell uses `.venv\Scripts\Activate.ps1` for virtual-environment activation.
 
-### Shared test deployment
+### Live deployment
 
-The shared synthetic-data test deployment uses a separate production Compose definition, a single configurable frontend port, and an external reverse proxy. Follow [the shared test deployment runbook](docs/operations/shared-test-deployment.md). It intentionally does not modify or share another application's database or document root.
+The live deployment uses the production Compose definition, a single configurable frontend port, and an external reverse proxy. Follow [the live deployment runbook](docs/operations/shared-test-deployment.md). It intentionally does not modify or share another application's database or document root.
 
 Database backups, isolated restore drills, controlled restoration, upgrades,
 and application or migration rollback follow the
@@ -176,12 +176,8 @@ Use the
 for a reviewed evaluation build and the
 [operation and monitoring runbook](docs/operations/operation-and-monitoring.md)
 for routine health, logging, backup, audit-chain, access, and escalation checks.
-The
-[release-candidate process and checklist](docs/releases/non-production-release-candidate.md)
-defines the artifacts, evidence, immutable candidate identity, and human
-approvals required before a clearly labeled non-production prototype
-prerelease. It does not authorize a tag, release, deployment, or non-synthetic
-data by itself.
+Historical release-candidate evidence remains under `docs/releases/`; current
+changes follow the repository's reviewed live-deployment workflow.
 
 ## P1.1 vertical slice
 
@@ -375,10 +371,9 @@ Approved/current deterministic JSON export requires both `rf.approve` and
 `plan.export`; its exact bytes are SHA-256 recorded and can be verified against
 the append-only audit history.
 
-P2.6 remains synthetic-only decision support. It is not field/scientific
+P2.6 is provisional planning decision support. It is not field/scientific
 validation, a propagation study, frequency coordination, spectrum
-authorization, a coverage guarantee, deployment approval, or a production
-release. See [ADR-0016](docs/adr/0016-phase-2-validation-evidence-bundles.md),
+authorization, a coverage guarantee, or deployment approval. See [ADR-0016](docs/adr/0016-phase-2-validation-evidence-bundles.md),
 the [P2.6 operations guide](docs/operations/phase-2-validation-and-rc-evaluation.md),
 and the [v0.2.0-rc.1 evidence checklist](docs/releases/v0.2.0-rc.1-evidence.md).
 

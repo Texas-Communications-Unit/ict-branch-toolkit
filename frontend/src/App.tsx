@@ -41,53 +41,6 @@ import type {
   TrunkedTalkgroup,
 } from "./types";
 
-const syntheticImportExample = JSON.stringify(
-  {
-    source: {
-      slug: "synthetic-p1-1",
-      name: "Synthetic P1.1 Fixture",
-      source_type: "synthetic",
-      authoritative_url: "https://example.invalid/synthetic-p1-1",
-    },
-    release: {
-      version: "SYN-1",
-      released_on: "2026-07-22",
-      effective_status: "effective",
-      content_sha256: "0".repeat(64),
-    },
-    conventional_channels: [
-      {
-        identifier: "SYN-VHF-1",
-        name: "Synthetic VHF Calling",
-        band: "VHF",
-        rx_frequency_hz: 155000000,
-        tx_frequency_hz: 155000000,
-        bandwidth_hz: 12500,
-        mode: "analog_fm",
-        rx_squelch: "CSQ",
-        tx_squelch: "CSQ",
-        restrictions: "Synthetic exercise use only",
-        notes: "Not an assigned or authorized frequency",
-        is_active: true,
-      },
-    ],
-    trunked_talkgroups: [
-      {
-        identifier: "SYN-TG-1",
-        name: "Synthetic Operations",
-        system_name: "Synthetic Regional System",
-        talkgroup_id: 65001,
-        mode: "P25 Phase 2",
-        restrictions: "Synthetic exercise use only",
-        notes: "Not a real talkgroup",
-        is_active: true,
-      },
-    ],
-  },
-  null,
-  2,
-);
-
 export default function App() {
   const [authenticated, setAuthenticated] = useState(hasActiveSession);
   const [incidents, setIncidents] = useState<Incident[]>([]);
@@ -517,9 +470,7 @@ export default function App() {
         </div>
         <div className="identity-summary">
           <span>{currentUser?.display_name}</span>
-          <div className="prototype-badge">
-            P3.1 Terrain Prototype · {currentUser?.role}
-          </div>
+          <div className="prototype-badge">Live · {currentUser?.role}</div>
           <button
             className="sign-out-button"
             type="button"
@@ -561,13 +512,13 @@ export default function App() {
                           Incident name
                           <input
                             name="name"
-                            placeholder="Synthetic exercise"
+                            placeholder="Incident or planned event"
                             required
                           />
                         </label>
                         <label>
                           Incident number
-                          <input name="number" placeholder="SYN-001" />
+                          <input name="number" placeholder="Incident number" />
                         </label>
                         <button type="submit">Create incident</button>
                       </form>
@@ -838,7 +789,7 @@ export default function App() {
                           Import JSON
                           <textarea
                             name="payload"
-                            defaultValue={syntheticImportExample}
+                            placeholder="Paste an approved source-aware import document"
                             rows={12}
                             required
                           />

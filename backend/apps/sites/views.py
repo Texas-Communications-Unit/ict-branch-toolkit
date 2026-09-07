@@ -1,3 +1,4 @@
+import logging
 from decimal import Decimal, InvalidOperation
 
 from django.conf import settings
@@ -26,7 +27,7 @@ from apps.plans.models import PlanRevision
 
 from .coordinates import CoordinateError, coordinate_formats, parse_coordinate
 from .exports import EXPORTERS
-from .geocoders import configured_geocoder
+from .geocoders import GeocoderError, configured_geocoder
 from .models import ManualRing, RadioSite, SiteAssignment
 from .serializers import (
     CoordinateParseSerializer,
@@ -35,6 +36,8 @@ from .serializers import (
     RadioSiteSerializer,
     SiteAssignmentSerializer,
 )
+
+logger = logging.getLogger(__name__)
 
 
 def scoped_sites(queryset: QuerySet, user, incident_path="incident"):
@@ -228,7 +231,14 @@ class GeocoderSearchView(APIView):
         serializer = GeocoderQuerySerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         provider = configured_geocoder()
-        results = provider.search(serializer.validated_data["address"])
+        try:
+            results = provider.search(serializer.validated_data["address"])
+        except GeocoderError:
+            logger.warning("Geocoder provider search failed.", exc_info=True)
+            return Response(
+                {"detail": "Geocoding service is currently unavailable."},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
         return Response(
             {
                 "provider": provider.name,
