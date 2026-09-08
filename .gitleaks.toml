@@ -14,5 +14,4 @@ regexes = ['''TRIVY_IMAGE:\s+aquasec/trivy:0\.72\.0@sha256:cffe3f5161a47a6823fbd
 
 [[allowlists]]
 description = "Environment template placeholders"
-paths = ['''^\.env\.example
-'']
+paths = ['''^\.env\.example$''']
