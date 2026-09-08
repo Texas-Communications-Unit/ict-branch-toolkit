@@ -1,6 +1,7 @@
 from django.urls import path
 from rest_framework.routers import DefaultRouter
 
+from .point_elevation import PointElevationView
 from .views import (
     CalibrationSetViewSet,
     CalibrationStatusView,
@@ -79,6 +80,11 @@ urlpatterns = [
         "elevation-provider/",
         ElevationProviderStatusView.as_view(),
         name="elevation-provider-status",
+    ),
+    path(
+        "elevation-point/",
+        PointElevationView.as_view(),
+        name="elevation-point",
     ),
     path(
         "coverage-engine/",
