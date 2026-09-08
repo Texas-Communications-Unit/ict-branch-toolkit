@@ -17,6 +17,19 @@ env_file="$HOME/.config/ict-branch-toolkit/deployment.env"
 backup_dir="$HOME/backups/ict-branch-toolkit"
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 environment_validator="$script_dir/validate-compose-environment.py"
+backup_retention_count=5
+build_reserve_kb=$((4 * 1024 * 1024))
+
+available_kb() {
+  df -Pk "$1" | awk 'NR==2 {print $4}'
+}
+
+show_disk_diagnostics() {
+  echo "Filesystem usage:" >&2
+  df -h "$HOME" "$backup_dir" 2>/dev/null >&2 || df -h "$HOME" >&2 || true
+  echo "Docker disk usage:" >&2
+  docker system df >&2 || true
+}
 
 if [[ ! -f "$env_file" ]]; then
   echo "Refusing deployment because the protected environment file is missing." >&2
@@ -86,19 +99,97 @@ fi
 "${compose[@]}" config --format json | python3 "$environment_validator"
 
 install -d -m 700 "$backup_dir"
+
+# Remove incomplete backup files from prior failed deployments. A complete backup
+# always has its matching checksum file; partial dumps have no rollback value.
+find "$backup_dir" -maxdepth 1 -type f -name 'postgresql-*.dump' -print0 \
+  | while IFS= read -r -d '' candidate; do
+      if [[ ! -f "$candidate.sha256" ]]; then
+        echo "Removing incomplete pre-deployment backup: $candidate"
+        rm -f -- "$candidate"
+      fi
+    done
+
+# Retain the newest verified backups. Before creating a new backup, keep at most
+# retention_count-1 existing backups so the completed new backup becomes the newest
+# member of the retained set. Only checksum-verified backups are eligible for removal.
+python3 - "$backup_dir" "$backup_retention_count" <<'PY'
+from __future__ import annotations
+
+import hashlib
+import sys
+from pathlib import Path
+
+backup_dir = Path(sys.argv[1])
+retention_count = int(sys.argv[2])
+keep_existing = max(retention_count - 1, 0)
+
+def verified(path: Path) -> bool:
+    checksum_path = Path(f"{path}.sha256")
+    if not checksum_path.is_file():
+        return False
+    expected = checksum_path.read_text().split()[0]
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest() == expected
+
+backups = sorted(
+    backup_dir.glob("postgresql-*.dump"),
+    key=lambda path: path.stat().st_mtime,
+    reverse=True,
+)
+verified_backups = [path for path in backups if verified(path)]
+for old_backup in verified_backups[keep_existing:]:
+    checksum = Path(f"{old_backup}.sha256")
+    print(f"Removing expired verified pre-deployment backup: {old_backup}")
+    old_backup.unlink()
+    checksum.unlink(missing_ok=True)
+PY
+
+# Require enough free capacity for approximately one uncompressed database-size
+# equivalent plus a 1 GiB safety margin before starting pg_dump.
+# shellcheck disable=SC2016
+db_size_bytes="$("${compose[@]}" exec -T db sh -c '
+  export PGPASSWORD="$POSTGRES_PASSWORD"
+  exec psql \
+    --username "$POSTGRES_USER" \
+    --dbname "$POSTGRES_DB" \
+    --tuples-only --no-align \
+    --command "SELECT pg_database_size(current_database());"
+')"
+if [[ ! "$db_size_bytes" =~ ^[0-9]+$ ]]; then
+  echo "Refusing deployment because database size could not be determined." >&2
+  show_disk_diagnostics
+  exit 1
+fi
+required_backup_kb=$((db_size_bytes / 1024 + 1024 * 1024))
+free_backup_kb="$(available_kb "$backup_dir")"
+if (( free_backup_kb < required_backup_kb )); then
+  printf 'Refusing deployment: backup filesystem has %s KiB free; at least %s KiB is required for the pre-deployment database backup.\n' \
+    "$free_backup_kb" "$required_backup_kb" >&2
+  show_disk_diagnostics
+  exit 1
+fi
+
 backup_file="$backup_dir/postgresql-$(date -u +%Y%m%dT%H%M%SZ)-pre-${expected_sha:0:12}.dump"
 
 # Read the database credentials from the already-running database container.
 # Importing the protected environment into Bash would alter quoted JSON values
 # and can override the exact values that Compose validated above.
 # shellcheck disable=SC2016
-"${compose[@]}" exec -T db sh -c '
+if ! "${compose[@]}" exec -T db sh -c '
   export PGPASSWORD="$POSTGRES_PASSWORD"
   exec pg_dump \
     --username "$POSTGRES_USER" \
     --dbname "$POSTGRES_DB" \
     --format custom
-' > "$backup_file"
+' > "$backup_file"; then
+  rm -f -- "$backup_file" "$backup_file.sha256"
+  show_disk_diagnostics
+  exit 1
+fi
 
 chmod 600 "$backup_file"
 test -s "$backup_file"
@@ -115,6 +206,16 @@ chmod 600 "$backup_file.sha256"
   cat > "$temporary_backup"
   pg_restore --list "$temporary_backup" >/dev/null
 ' < "$backup_file"
+
+# The image build needs working room independent of the database backup. Stop
+# before changing the checkout if the host cannot maintain a 4 GiB reserve.
+free_build_kb="$(available_kb "$app_dir")"
+if (( free_build_kb < build_reserve_kb )); then
+  printf 'Refusing deployment: only %s KiB is free after backup; at least %s KiB is required before image builds.\n' \
+    "$free_build_kb" "$build_reserve_kb" >&2
+  show_disk_diagnostics
+  exit 1
+fi
 
 git switch main
 git merge --ff-only "$expected_sha"
