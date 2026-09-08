@@ -71,21 +71,11 @@ jobs:
           dependencies=false
           containers=false
 
-          if matches '^\.github/workflows/security\.yml$'; then
-            full=true
-          fi
-          if matches '^backend/.*\.py$|^backend/(manage\.py|pyproject\.toml)$'; then
-            backend_code=true
-          fi
-          if matches '^frontend/(src|tests|e2e)/|^frontend/.*\.(ts|tsx|js|jsx)$'; then
-            frontend_code=true
-          fi
-          if matches '^backend/pyproject\.toml$|^frontend/(package\.json|pnpm-lock\.yaml)$'; then
-            dependencies=true
-          fi
-          if matches '(^|/)Dockerfile$|^compose[^/]*\.ya?ml$|^backend/pyproject\.toml$|^frontend/(package\.json|pnpm-lock\.yaml)$'; then
-            containers=true
-          fi
+          if matches '^\.github/workflows/security\.yml$'; then full=true; fi
+          if matches '^backend/.*\.py$|^backend/(manage\.py|pyproject\.toml)$'; then backend_code=true; fi
+          if matches '^frontend/(src|tests|e2e)/|^frontend/.*\.(ts|tsx|js|jsx)$'; then frontend_code=true; fi
+          if matches '^backend/pyproject\.toml$|^frontend/(package\.json|pnpm-lock\.yaml)$'; then dependencies=true; fi
+          if matches '(^|/)Dockerfile$|^compose[^/]*\.ya?ml$|^backend/pyproject\.toml$|^frontend/(package\.json|pnpm-lock\.yaml)$'; then containers=true; fi
 
           if [[ "$full" == true ]]; then
             backend_code=true
@@ -127,7 +117,7 @@ jobs:
             -v "${{ github.workspace }}:/repo" \
             ghcr.io/gitleaks/gitleaks:v8.30.0 \
             detect --source=/repo --redact --no-banner \
-            --config-path=/repo/.gitleaks.toml \
+            --config=/repo/.gitleaks.toml \
             --log-opts="$BASE_SHA..$HEAD_SHA" \
             --report-format=json \
             --report-path=/repo/gitleaks-report.json \
@@ -166,7 +156,7 @@ jobs:
           -v "${{ github.workspace }}:/repo"
           ghcr.io/gitleaks/gitleaks:v8.30.0
           detect --source=/repo --redact --no-banner
-          --config-path=/repo/.gitleaks.toml
+          --config=/repo/.gitleaks.toml
 
   dependency-audit:
     name: Dependency audit
