@@ -105,13 +105,17 @@ jobs:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      - name: Scan current tree on pull requests
+      - name: Scan pull request commits with Gitleaks
         if: github.event_name == 'pull_request'
-        run: >-
-          docker run --rm
-          -v "${{ github.workspace }}:/repo"
-          ghcr.io/gitleaks/gitleaks:v8.30.0
-          dir /repo --redact --no-banner
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          docker run --rm \
+            -v "${{ github.workspace }}:/repo" \
+            ghcr.io/gitleaks/gitleaks:v8.30.0 \
+            detect --source=/repo --redact --no-banner \
+            --log-opts="$BASE_SHA..$HEAD_SHA"
       - name: Scan full Git history on main and scheduled runs
         if: github.event_name != 'pull_request'
         run: >-
