@@ -117,44 +117,55 @@ jobs:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: git fetch --no-tags --depth=1 origin "$BASE_SHA" "$HEAD_SHA"
-      - name: Scan pull request commits with Gitleaks
+      - id: gitleaks_pr
+        name: Scan pull request commits with Gitleaks
         if: github.event_name == 'pull_request'
+        shell: bash
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
+          set +e
           docker run --rm \
             -v "${{ github.workspace }}:/repo" \
             ghcr.io/gitleaks/gitleaks:v8.30.0 \
             detect --source=/repo --redact --no-banner \
-            --config-path=/repo/.gitleaks.toml \
+            --config=/repo/.gitleaks.toml \
             --log-opts="$BASE_SHA..$HEAD_SHA" \
             --report-format=json \
             --report-path=/repo/gitleaks-report.json \
-            || true
-      - name: Upload Gitleaks report
-        if: github.event_name == 'pull_request' && always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: gitleaks-report-${{ github.sha }}
-          path: gitleaks-report.json
-          if-no-files-found: error
-          retention-days: 30
-      - name: Fail if Gitleaks reports findings
+            --exit-code=2
+          scan_status=$?
+          set -e
+          echo "exit_code=$scan_status" >> "$GITHUB_OUTPUT"
+      - name: Evaluate pull request secret scan
         if: github.event_name == 'pull_request'
         shell: bash
+        env:
+          GITLEAKS_EXIT_CODE: ${{ steps.gitleaks_pr.outputs.exit_code }}
         run: |
           python - <<'PY'
           import json
+          import os
           from pathlib import Path
 
+          status = int(os.environ["GITLEAKS_EXIT_CODE"])
           report = Path("gitleaks-report.json")
+
+          if status not in (0, 2):
+              raise SystemExit(f"Gitleaks execution failed with exit code {status}.")
+
           if not report.exists():
               raise SystemExit("Gitleaks report was not produced.")
 
           findings = json.loads(report.read_text())
-          if findings:
-              print("Gitleaks findings detected; see the uploaded redacted report artifact.")
+          if status == 2 or findings:
+              print(f"Gitleaks detected {len(findings)} finding(s):")
+              for finding in findings:
+                  rule = finding.get("RuleID", "unknown-rule")
+                  file_name = finding.get("File", "unknown-file")
+                  line = finding.get("StartLine", "?")
+                  print(f"- {rule}: {file_name}:{line}")
               raise SystemExit(1)
 
           print("No Gitleaks findings detected.")
@@ -166,7 +177,7 @@ jobs:
           -v "${{ github.workspace }}:/repo"
           ghcr.io/gitleaks/gitleaks:v8.30.0
           detect --source=/repo --redact --no-banner
-          --config-path=/repo/.gitleaks.toml
+          --config=/repo/.gitleaks.toml
 
   dependency-audit:
     name: Dependency audit
@@ -236,7 +247,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     env:
-      TRIVY_IMAGE: aquasec/trivy:0.72.0@sha256:cffe3f5161a47a6823fbd23d985795b3ed72a4c806da4c4df16266c02accdd6f # gitleaks:allow -- pinned public image digest
+      TRIVY_IMAGE: aquasec/trivy:0.72.0@sha256:cffe3f5161a47a6823fbd23d985795b3ed72a4c806da4c4df16266c02accdd6f
       BACKEND_IMAGE: ict-toolkit-backend:${{ github.sha }}
       FRONTEND_IMAGE: ict-toolkit-frontend:${{ github.sha }}
     steps:
