@@ -19,28 +19,168 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
 jobs:
-  secrets:
+  changes:
+    name: Determine security scope
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 5
+    outputs:
+      full: ${{ steps.scope.outputs.full }}
+      backend_code: ${{ steps.scope.outputs.backend_code }}
+      frontend_code: ${{ steps.scope.outputs.frontend_code }}
+      dependencies: ${{ steps.scope.outputs.dependencies }}
+      containers: ${{ steps.scope.outputs.containers }}
     steps:
       - uses: actions/checkout@v7
         with:
-          fetch-depth: 0
-      - name: Scan Git history with Gitleaks
+          fetch-depth: 1
+      - name: Fetch exact pull request endpoints
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: git fetch --no-tags --depth=1 origin "$BASE_SHA" "$HEAD_SHA"
+      - id: scope
+        name: Classify changed files
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          if [[ "$EVENT_NAME" != "pull_request" ]]; then
+            {
+              echo "full=true"
+              echo "backend_code=true"
+              echo "frontend_code=true"
+              echo "dependencies=true"
+              echo "containers=true"
+            } >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          git diff --name-only "$BASE_SHA" "$HEAD_SHA" > "$RUNNER_TEMP/changed-files.txt"
+          cat "$RUNNER_TEMP/changed-files.txt"
+
+          matches() {
+            grep -Eq "$1" "$RUNNER_TEMP/changed-files.txt"
+          }
+
+          full=false
+          backend_code=false
+          frontend_code=false
+          dependencies=false
+          containers=false
+
+          if matches '^\.github/workflows/security\.yml$'; then
+            full=true
+          fi
+          if matches '^backend/.*\.py$|^backend/(manage\.py|pyproject\.toml)$'; then
+            backend_code=true
+          fi
+          if matches '^frontend/(src|tests|e2e)/|^frontend/.*\.(ts|tsx|js|jsx)$'; then
+            frontend_code=true
+          fi
+          if matches '^backend/pyproject\.toml$|^frontend/(package\.json|pnpm-lock\.yaml)$'; then
+            dependencies=true
+          fi
+          if matches '(^|/)Dockerfile$|^compose[^/]*\.ya?ml$|^backend/pyproject\.toml$|^frontend/(package\.json|pnpm-lock\.yaml)$'; then
+            containers=true
+          fi
+
+          if [[ "$full" == true ]]; then
+            backend_code=true
+            frontend_code=true
+            dependencies=true
+            containers=true
+          fi
+
+          {
+            echo "full=$full"
+            echo "backend_code=$backend_code"
+            echo "frontend_code=$frontend_code"
+            echo "dependencies=$dependencies"
+            echo "containers=$containers"
+          } >> "$GITHUB_OUTPUT"
+
+  secrets:
+    name: Secret scan
+    needs: changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: ${{ github.event_name == 'pull_request' && 1 || 0 }}
+      - name: Fetch exact pull request endpoints
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: git fetch --no-tags --depth=1 origin "$BASE_SHA" "$HEAD_SHA"
+      - name: Scan pull request commits with Gitleaks
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          docker run --rm \
+            -v "${{ github.workspace }}:/repo" \
+            ghcr.io/gitleaks/gitleaks:v8.30.0 \
+            detect --source=/repo --redact --no-banner \
+            --config-path=/repo/.gitleaks.toml \
+            --log-opts="$BASE_SHA..$HEAD_SHA" \
+            --report-format=json \
+            --report-path=/repo/gitleaks-report.json \
+            || true
+      - name: Upload Gitleaks report
+        if: github.event_name == 'pull_request' && always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: gitleaks-report-${{ github.sha }}
+          path: gitleaks-report.json
+          if-no-files-found: error
+          retention-days: 30
+      - name: Fail if Gitleaks reports findings
+        if: github.event_name == 'pull_request'
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          report = Path("gitleaks-report.json")
+          if not report.exists():
+              raise SystemExit("Gitleaks report was not produced.")
+
+          findings = json.loads(report.read_text())
+          if findings:
+              print("Gitleaks findings detected; see the uploaded redacted report artifact.")
+              raise SystemExit(1)
+
+          print("No Gitleaks findings detected.")
+          PY
+      - name: Scan full Git history on main and scheduled runs
+        if: github.event_name != 'pull_request'
         run: >-
           docker run --rm
           -v "${{ github.workspace }}:/repo"
           ghcr.io/gitleaks/gitleaks:v8.30.0
           detect --source=/repo --redact --no-banner
+          --config-path=/repo/.gitleaks.toml
 
   dependency-audit:
+    name: Dependency audit
+    needs: changes
+    if: needs.changes.outputs.dependencies == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/pyproject.toml
       - run: python -m pip install --upgrade pip pip-audit
       - run: pip install -e ".[dev]" && pip-audit
         working-directory: backend
@@ -52,39 +192,51 @@ jobs:
           node-version: "24"
           cache: pnpm
           cache-dependency-path: frontend/pnpm-lock.yaml
-      - run: pnpm install --frozen-lockfile
+      - run: pnpm install --frozen-lockfile --prefer-offline
         working-directory: frontend
       - run: pnpm audit --audit-level high
         working-directory: frontend
 
-  static-analysis:
-    name: CodeQL (${{ matrix.language }})
+  codeql-python:
+    name: CodeQL (python)
+    needs: changes
+    if: needs.changes.outputs.backend_code == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 20
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - language: javascript-typescript
-            build-mode: none
-          - language: python
-            build-mode: none
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
       - uses: github/codeql-action/init@v4
         with:
-          languages: ${{ matrix.language }}
-          build-mode: ${{ matrix.build-mode }}
+          languages: python
+          build-mode: none
       - uses: github/codeql-action/analyze@v4
         with:
-          category: "/language:${{ matrix.language }}"
+          category: /language:python
+
+  codeql-javascript:
+    name: CodeQL (javascript-typescript)
+    needs: changes
+    if: needs.changes.outputs.frontend_code == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: github/codeql-action/init@v4
+        with:
+          languages: javascript-typescript
+          build-mode: none
+      - uses: github/codeql-action/analyze@v4
+        with:
+          category: /language:javascript-typescript
 
   container-security:
+    name: Container security and SBOM
+    needs: changes
+    if: needs.changes.outputs.containers == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 25
     env:
-      TRIVY_IMAGE: >-
-        aquasec/trivy:0.72.0@sha256:cffe3f5161a47a6823fbd23d985795b3ed72a4c806da4c4df16266c02accdd6f
+      TRIVY_IMAGE: aquasec/trivy:0.72.0@sha256:cffe3f5161a47a6823fbd23d985795b3ed72a4c806da4c4df16266c02accdd6f # gitleaks:allow -- pinned public image digest
       BACKEND_IMAGE: ict-toolkit-backend:${{ github.sha }}
       FRONTEND_IMAGE: ict-toolkit-frontend:${{ github.sha }}
     steps:
