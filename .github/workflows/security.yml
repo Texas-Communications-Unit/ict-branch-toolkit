@@ -204,8 +204,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     env:
-      TRIVY_IMAGE: >-
-        aquasec/trivy:0.72.0@sha256:cffe3f5161a47a6823fbd23d985795b3ed72a4c806da4c4df16266c02accdd6f # gitleaks:allow
+      # gitleaks:allow -- pinned public Trivy image digest, not a credential.
+      TRIVY_IMAGE: aquasec/trivy:0.72.0@sha256:cffe3f5161a47a6823fbd23d985795b3ed72a4c806da4c4df16266c02accdd6f
       BACKEND_IMAGE: ict-toolkit-backend:${{ github.sha }}
       FRONTEND_IMAGE: ict-toolkit-frontend:${{ github.sha }}
     steps:
