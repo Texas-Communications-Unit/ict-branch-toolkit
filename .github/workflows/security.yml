@@ -32,7 +32,13 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
-          fetch-depth: 0
+          fetch-depth: 1
+      - name: Fetch exact pull request endpoints
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: git fetch --no-tags --depth=1 origin "$BASE_SHA" "$HEAD_SHA"
       - id: scope
         name: Classify changed files
         shell: bash
@@ -104,7 +110,13 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
-          fetch-depth: 0
+          fetch-depth: ${{ github.event_name == 'pull_request' && 1 || 0 }}
+      - name: Fetch exact pull request endpoints
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: git fetch --no-tags --depth=1 origin "$BASE_SHA" "$HEAD_SHA"
       - name: Scan pull request commits with Gitleaks
         if: github.event_name == 'pull_request'
         env:
