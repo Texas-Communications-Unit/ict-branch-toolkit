@@ -1,6 +1,11 @@
 name: Actions Reconciler
 
 on:
+  pull_request:
+    paths:
+      - ".github/workflows/actions-reconciler.yml"
+      - "scripts/reconcile-actions.py"
+      - "tests/test_reconcile_actions.py"
   schedule:
     - cron: "17 * * * *"
   workflow_dispatch:
@@ -13,30 +18,41 @@ on:
 
 permissions:
   contents: read
-  actions: write
 
 concurrency:
-  group: actions-reconciler
+  group: "actions-reconciler-${{ github.event.pull_request.number || 'scheduled' }}"
   cancel-in-progress: false
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
 jobs:
-  reconcile:
-    name: Reconcile recent workflow runs
+  policy-test:
+    name: Validate reconciliation policy
     runs-on: ubuntu-latest
-    timeout-minutes: 10
-
+    timeout-minutes: 5
     steps:
       - name: Check out repository
         uses: actions/checkout@v7
         with:
           fetch-depth: 1
-
-      - name: Validate reconciliation policy
+      - name: Run reconciler policy tests
         run: python -m unittest discover -s tests -p 'test_reconcile_actions.py' -v
 
+  reconcile:
+    name: Reconcile recent workflow runs
+    if: github.event_name != 'pull_request'
+    needs: policy-test
+    permissions:
+      contents: read
+      actions: write
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
       - name: Reconcile Actions runs
         env:
           GITHUB_TOKEN: ${{ github.token }}
