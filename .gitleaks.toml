@@ -1,6 +1,13 @@
 title = "ICT Branch Toolkit Gitleaks configuration"
 
 # Keep the complete upstream Gitleaks ruleset. Repository-specific allowlists
-# should be added only for reviewed false positives.
+# are added only for reviewed false positives.
 [extend]
 useDefault = true
+
+[[allowlists]]
+description = "Pinned public Trivy image digest used for container integrity"
+condition = "AND"
+regexTarget = "line"
+paths = ['''^\.github/workflows/security\.yml$''']
+regexes = ['''TRIVY_IMAGE:\s+aquasec/trivy:0\.72\.0@sha256:cffe3f5161a47a6823fbd23d985795b3ed72a4c806da4c4df16266c02accdd6f''']
