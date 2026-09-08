@@ -71,11 +71,21 @@ jobs:
           dependencies=false
           containers=false
 
-          if matches '^\.github/workflows/security\.yml$'; then full=true; fi
-          if matches '^backend/.*\.py$|^backend/(manage\.py|pyproject\.toml)$'; then backend_code=true; fi
-          if matches '^frontend/(src|tests|e2e)/|^frontend/.*\.(ts|tsx|js|jsx)$'; then frontend_code=true; fi
-          if matches '^backend/pyproject\.toml$|^frontend/(package\.json|pnpm-lock\.yaml)$'; then dependencies=true; fi
-          if matches '(^|/)Dockerfile$|^compose[^/]*\.ya?ml$|^backend/pyproject\.toml$|^frontend/(package\.json|pnpm-lock\.yaml)$'; then containers=true; fi
+          if matches '^\.github/workflows/security\.yml$'; then
+            full=true
+          fi
+          if matches '^backend/.*\.py$|^backend/(manage\.py|pyproject\.toml)$'; then
+            backend_code=true
+          fi
+          if matches '^frontend/(src|tests|e2e)/|^frontend/.*\.(ts|tsx|js|jsx)$'; then
+            frontend_code=true
+          fi
+          if matches '^backend/pyproject\.toml$|^frontend/(package\.json|pnpm-lock\.yaml)$'; then
+            dependencies=true
+          fi
+          if matches '(^|/)Dockerfile$|^compose[^/]*\.ya?ml$|^backend/pyproject\.toml$|^frontend/(package\.json|pnpm-lock\.yaml)$'; then
+            containers=true
+          fi
 
           if [[ "$full" == true ]]; then
             backend_code=true
