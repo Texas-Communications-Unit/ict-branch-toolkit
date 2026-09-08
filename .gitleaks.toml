@@ -1,0 +1,6 @@
+title = "ICT Branch Toolkit Gitleaks configuration"
+
+# Keep the complete upstream Gitleaks ruleset. Repository-specific allowlists
+# should be added only for reviewed false positives.
+[extend]
+useDefault = true
