@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { KeyboardEvent, ReactNode } from "react";
 
 export interface WorkspaceTab {
@@ -16,6 +16,14 @@ interface WorkspaceTabsProps {
 export function WorkspaceTabs({ tabs, initialTab }: WorkspaceTabsProps) {
   const [activeTab, setActiveTab] = useState(initialTab);
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
+
+  useEffect(() => {
+    // Interactive canvases such as MapLibre can be initialized while their
+    // tabpanel is hidden and therefore measure a zero or stale container size.
+    // Preserve mounted workspace state, but notify responsive children after
+    // React has made the newly selected panel visible.
+    window.dispatchEvent(new Event("resize"));
+  }, [activeTab]);
 
   function selectTab(index: number) {
     const tab = tabs[index];
