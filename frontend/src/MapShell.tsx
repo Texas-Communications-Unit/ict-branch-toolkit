@@ -1,4 +1,5 @@
 import * as maplibregl from "maplibre-gl";
+import workerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url";
 import type {
   GeoJSONSource,
   LngLatBoundsLike,
@@ -44,6 +45,8 @@ import type {
   RadioSite,
   SiteAssignment,
 } from "./types";
+
+maplibregl.setWorkerUrl(workerUrl);
 
 const TEXAS_BOUNDS: LngLatBoundsLike = [
   [-106.65, 25.84],
