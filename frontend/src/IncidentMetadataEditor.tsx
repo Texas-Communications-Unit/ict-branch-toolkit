@@ -1,8 +1,9 @@
 import { type FormEvent, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 
-import { ApiError, listIncidents } from "./api";
+import { listIncidents } from "./api";
 import {
+  IncidentEditApiError,
   updateIncidentName,
   updateOperationalPeriod,
 } from "./incidentEditingApi";
@@ -15,7 +16,7 @@ function toLocalDateTime(value: string) {
 }
 
 function validationMessage(error: unknown) {
-  if (!(error instanceof ApiError)) {
+  if (!(error instanceof IncidentEditApiError)) {
     return error instanceof Error ? error.message : "Unable to save metadata.";
   }
   if (error.status === 403) {
@@ -309,7 +310,9 @@ export function IncidentMetadataEditor() {
                         setStartsAt(toLocalDateTime(selectedPeriod.starts_at));
                         setEndsAt(toLocalDateTime(selectedPeriod.ends_at));
                         setError("");
-                        setStatus("Operational-period edit canceled; no changes were saved.");
+                        setStatus(
+                          "Operational-period edit canceled; no changes were saved.",
+                        );
                       }}
                     >
                       Cancel
