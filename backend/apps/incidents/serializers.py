@@ -5,6 +5,19 @@ from apps.accounts.policy import permissions_for_user
 from .models import Incident, IncidentMembership, OperationalPeriod
 
 
+def _reject_disallowed_update_fields(serializer, data, allowed_fields):
+    if not serializer.instance:
+        return
+    disallowed = set(data) - allowed_fields
+    if disallowed:
+        raise serializers.ValidationError(
+            {
+                field: "This field cannot be changed after creation."
+                for field in sorted(disallowed)
+            }
+        )
+
+
 class OperationalPeriodSerializer(serializers.ModelSerializer):
     MUTABLE_UPDATE_FIELDS = {"name", "starts_at", "ends_at"}
 
@@ -22,6 +35,10 @@ class OperationalPeriodSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ["id", "created_at", "updated_at", "archived_at"]
 
+    def to_internal_value(self, data):
+        _reject_disallowed_update_fields(self, data, self.MUTABLE_UPDATE_FIELDS)
+        return super().to_internal_value(data)
+
     def validate_name(self, value):
         normalized = value.strip()
         if not normalized:
@@ -29,15 +46,6 @@ class OperationalPeriodSerializer(serializers.ModelSerializer):
         return normalized
 
     def validate(self, attrs):
-        if self.instance:
-            disallowed = set(attrs) - self.MUTABLE_UPDATE_FIELDS
-            if disallowed:
-                raise serializers.ValidationError(
-                    {
-                        field: "This field cannot be changed after creation."
-                        for field in sorted(disallowed)
-                    }
-                )
         starts_at = attrs.get("starts_at", getattr(self.instance, "starts_at", None))
         ends_at = attrs.get("ends_at", getattr(self.instance, "ends_at", None))
         if starts_at and ends_at and ends_at <= starts_at:
@@ -66,23 +74,15 @@ class IncidentSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ["id", "created_at", "updated_at", "archived_at", "permissions"]
 
+    def to_internal_value(self, data):
+        _reject_disallowed_update_fields(self, data, self.MUTABLE_UPDATE_FIELDS)
+        return super().to_internal_value(data)
+
     def validate_name(self, value):
         normalized = value.strip()
         if not normalized:
             raise serializers.ValidationError("Incident name cannot be blank.")
         return normalized
-
-    def validate(self, attrs):
-        if self.instance:
-            disallowed = set(attrs) - self.MUTABLE_UPDATE_FIELDS
-            if disallowed:
-                raise serializers.ValidationError(
-                    {
-                        field: "This field cannot be changed after creation."
-                        for field in sorted(disallowed)
-                    }
-                )
-        return attrs
 
     def get_permissions(self, incident) -> list[str]:
         request = self.context.get("request")
