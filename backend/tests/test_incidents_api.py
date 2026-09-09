@@ -32,7 +32,11 @@ def test_authenticated_reader_can_list_but_not_create(client):
     user = get_user_model().objects.create_user("reader", password="safe-test-password")
     response = client.get("/api/incidents/", **auth_header(user))
     assert response.status_code == 200
-    response = client.post("/api/incidents/", {"name": "Synthetic Incident"}, **auth_header(user))
+    response = client.post(
+        "/api/incidents/",
+        {"name": "Synthetic Incident"},
+        **auth_header(user),
+    )
     assert response.status_code == 403
 
 
@@ -69,7 +73,9 @@ def test_administrator_creates_incident_and_operational_period(client):
 
 @pytest.mark.django_db
 def test_operational_period_requires_end_after_start(client):
-    admin = get_user_model().objects.create_superuser("admin", password="safe-test-password")
+    admin = get_user_model().objects.create_superuser(
+        "admin", password="safe-test-password"
+    )
     incident = Incident.objects.create(name="Synthetic Incident", created_by=admin)
     response = client.post(
         "/api/operational-periods/",
@@ -88,7 +94,9 @@ def test_operational_period_requires_end_after_start(client):
 
 @pytest.mark.django_db
 def test_authorized_incident_name_update_preserves_identity_and_audits_values(client):
-    admin = get_user_model().objects.create_superuser("edit-admin", password="safe-test-password")
+    admin = get_user_model().objects.create_superuser(
+        "edit-admin", password="safe-test-password"
+    )
     incident = Incident.objects.create(
         name="Synthetic Incdent",
         incident_number="SYN-EDIT-1",
@@ -106,7 +114,7 @@ def test_authorized_incident_name_update_preserves_identity_and_audits_values(cl
     assert response.json()["id"] == str(incident.id)
     assert response.json()["name"] == "Synthetic Incident"
     incident.refresh_from_db()
-    assert incident.id == response.json()["id"] or str(incident.id) == response.json()["id"]
+    assert str(incident.id) == response.json()["id"]
     assert incident.incident_number == "SYN-EDIT-1"
 
     event = AuditEvent.objects.get(action="incident.updated", target_id=str(incident.id))
@@ -119,7 +127,9 @@ def test_authorized_incident_name_update_preserves_identity_and_audits_values(cl
 
 @pytest.mark.django_db
 def test_authorized_operational_period_update_preserves_scope_and_audits_values(client):
-    admin = get_user_model().objects.create_superuser("period-admin", password="safe-test-password")
+    admin = get_user_model().objects.create_superuser(
+        "period-admin", password="safe-test-password"
+    )
     incident = Incident.objects.create(name="Synthetic Incident", created_by=admin)
     period = OperationalPeriod.objects.create(
         incident=incident,
@@ -158,8 +168,12 @@ def test_authorized_operational_period_update_preserves_scope_and_audits_values(
 
 @pytest.mark.django_db
 def test_read_only_incident_member_cannot_edit_incident_or_period(client):
-    admin = get_user_model().objects.create_superuser("scope-admin", password="safe-test-password")
-    reader = get_user_model().objects.create_user("scope-reader", password="safe-test-password")
+    admin = get_user_model().objects.create_superuser(
+        "scope-admin", password="safe-test-password"
+    )
+    reader = get_user_model().objects.create_user(
+        "scope-reader", password="safe-test-password"
+    )
     incident = Incident.objects.create(name="Synthetic Incident", created_by=admin)
     add_incident_member(incident, reader, Role.READ_ONLY, admin)
     period = OperationalPeriod.objects.create(
@@ -190,12 +204,16 @@ def test_read_only_incident_member_cannot_edit_incident_or_period(client):
     period.refresh_from_db()
     assert incident.name == "Synthetic Incident"
     assert period.name == "Operational Period 1"
-    assert not AuditEvent.objects.filter(action__in=["incident.updated", "operational_period.updated"]).exists()
+    assert not AuditEvent.objects.filter(
+        action__in=["incident.updated", "operational_period.updated"]
+    ).exists()
 
 
 @pytest.mark.django_db
 def test_incident_update_rejects_blank_and_immutable_fields_without_audit(client):
-    admin = get_user_model().objects.create_superuser("validation-admin", password="safe-test-password")
+    admin = get_user_model().objects.create_superuser(
+        "validation-admin", password="safe-test-password"
+    )
     incident = Incident.objects.create(
         name="Synthetic Incident",
         incident_number="SYN-IMMUTABLE",
@@ -230,7 +248,9 @@ def test_incident_update_rejects_blank_and_immutable_fields_without_audit(client
 
 @pytest.mark.django_db
 def test_operational_period_update_rejects_invalid_time_and_cross_incident_move(client):
-    admin = get_user_model().objects.create_superuser("period-validation", password="safe-test-password")
+    admin = get_user_model().objects.create_superuser(
+        "period-validation", password="safe-test-password"
+    )
     incident = Incident.objects.create(name="Synthetic Incident A", created_by=admin)
     other_incident = Incident.objects.create(name="Synthetic Incident B", created_by=admin)
     period = OperationalPeriod.objects.create(
