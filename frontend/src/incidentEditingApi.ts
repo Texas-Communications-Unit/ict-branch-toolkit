@@ -1,9 +1,20 @@
-import { ApiError } from "./api";
 import type { Incident, OperationalPeriod } from "./types";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
 const TOKEN_KEY = "ict-toolkit-token";
 const TOKEN_EXPIRES_AT_KEY = "ict-toolkit-token-expires-at";
+
+export class IncidentEditApiError extends Error {
+  status: number;
+  data: unknown;
+
+  constructor(message: string, status: number, data: unknown) {
+    super(message);
+    this.name = "IncidentEditApiError";
+    this.status = status;
+    this.data = data;
+  }
+}
 
 function activeToken(): string {
   const token = sessionStorage.getItem(TOKEN_KEY);
@@ -36,7 +47,11 @@ async function patch<T>(path: string, payload: Record<string, string>): Promise<
     } catch {
       // Keep the server's plain-text response.
     }
-    throw new ApiError(text || `Request failed with status ${response.status}`, response.status, data);
+    throw new IncidentEditApiError(
+      text || `Request failed with status ${response.status}`,
+      response.status,
+      data,
+    );
   }
   return (await response.json()) as T;
 }
