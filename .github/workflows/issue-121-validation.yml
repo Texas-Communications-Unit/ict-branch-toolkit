@@ -1,0 +1,75 @@
+name: Issue 121 editing validation
+
+on:
+  push:
+    branches:
+      - issue-121-edit-incident-operational-period
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: issue-121-editing-validation-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Prepare synthetic development environment
+        run: cp .env.example .env
+
+      - name: Build validation containers
+        run: docker compose build backend frontend
+
+      - name: Check backend formatting
+        run: |
+          docker compose run --rm backend ruff format apps/incidents tests/test_incidents_api.py
+          git diff -- backend/apps/incidents backend/tests/test_incidents_api.py
+          git diff --exit-code -- backend/apps/incidents backend/tests/test_incidents_api.py
+
+      - name: Lint backend
+        run: docker compose run --rm backend ruff check apps/incidents tests/test_incidents_api.py
+
+      - name: Check Django configuration and migrations
+        run: |
+          docker compose run --rm backend python manage.py check
+          docker compose run --rm backend python manage.py makemigrations --check --dry-run
+
+      - name: Run incident API regression tests
+        run: docker compose run --rm backend pytest tests/test_incidents_api.py
+
+      - name: Normalize frontend formatting
+        run: |
+          docker compose run --rm -T frontend pnpm exec prettier src/incidentEditingApi.ts > frontend/src/incidentEditingApi.ts.tmp
+          mv frontend/src/incidentEditingApi.ts.tmp frontend/src/incidentEditingApi.ts
+          docker compose run --rm -T frontend pnpm exec prettier src/IncidentMetadataEditor.test.tsx > frontend/src/IncidentMetadataEditor.test.tsx.tmp
+          mv frontend/src/IncidentMetadataEditor.test.tsx.tmp frontend/src/IncidentMetadataEditor.test.tsx
+          docker compose run --rm -T frontend pnpm exec prettier src/IncidentMetadataEditor.tsx > frontend/src/IncidentMetadataEditor.tsx.tmp
+          mv frontend/src/IncidentMetadataEditor.tsx.tmp frontend/src/IncidentMetadataEditor.tsx
+          if ! git diff --quiet -- frontend/src/incidentEditingApi.ts frontend/src/IncidentMetadataEditor.test.tsx frontend/src/IncidentMetadataEditor.tsx; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add frontend/src/incidentEditingApi.ts frontend/src/IncidentMetadataEditor.test.tsx frontend/src/IncidentMetadataEditor.tsx
+            git commit -m "style: format Issue 121 frontend files"
+            git push origin HEAD:issue-121-edit-incident-operational-period
+          fi
+
+      - name: Check frontend formatting
+        run: docker compose run --rm frontend pnpm format:check
+
+      - name: Lint and type-check frontend
+        run: |
+          docker compose run --rm frontend pnpm lint
+          docker compose run --rm frontend pnpm typecheck
+
+      - name: Run incident editor component tests
+        run: docker compose run --rm frontend pnpm exec vitest run src/IncidentMetadataEditor.test.tsx
+
+      - name: Build frontend
+        run: docker compose run --rm frontend pnpm build

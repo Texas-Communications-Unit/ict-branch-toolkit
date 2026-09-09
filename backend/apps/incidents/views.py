@@ -1,4 +1,4 @@
-from django.db import connection
+from django.db import connection, transaction
 from django.db.models import Prefetch
 from django.http import JsonResponse
 from django.utils import timezone
@@ -42,6 +42,24 @@ def health(request):
             cursor.execute("SELECT PostGIS_Version()")
             payload["postgis"] = cursor.fetchone()[0]
     return JsonResponse(payload)
+
+
+def _audit_value(value):
+    if hasattr(value, "isoformat"):
+        return value.isoformat()
+    return value
+
+
+def _change_details(instance, validated_data, *, incident_id):
+    changed_fields = sorted(validated_data)
+    before = {field: _audit_value(getattr(instance, field)) for field in changed_fields}
+    after = {field: _audit_value(value) for field, value in validated_data.items()}
+    return {
+        "incident_id": str(incident_id),
+        "changed_fields": changed_fields,
+        "before": before,
+        "after": after,
+    }
 
 
 class IncidentViewSet(viewsets.ModelViewSet):
@@ -88,13 +106,19 @@ class IncidentViewSet(viewsets.ModelViewSet):
     def perform_update(self, serializer):
         if serializer.instance.archived_at:
             raise ValidationError("Archived incidents cannot be changed.")
-        incident = serializer.save()
-        record_event(
-            actor=self.request.user,
-            action="incident.updated",
-            target=incident,
-            details={"changed_fields": sorted(serializer.validated_data)},
+        details = _change_details(
+            serializer.instance,
+            serializer.validated_data,
+            incident_id=serializer.instance.id,
         )
+        with transaction.atomic():
+            incident = serializer.save()
+            record_event(
+                actor=self.request.user,
+                action="incident.updated",
+                target=incident,
+                details=details,
+            )
 
     def destroy(self, request, *args, **kwargs):
         raise MethodNotAllowed("DELETE", detail="Archive incidents instead of deleting them.")
@@ -144,13 +168,19 @@ class OperationalPeriodViewSet(viewsets.ModelViewSet):
     def perform_update(self, serializer):
         if serializer.instance.archived_at:
             raise ValidationError("Archived operational periods cannot be changed.")
-        period = serializer.save()
-        record_event(
-            actor=self.request.user,
-            action="operational_period.updated",
-            target=period,
-            details={"changed_fields": sorted(serializer.validated_data)},
+        details = _change_details(
+            serializer.instance,
+            serializer.validated_data,
+            incident_id=serializer.instance.incident_id,
         )
+        with transaction.atomic():
+            period = serializer.save()
+            record_event(
+                actor=self.request.user,
+                action="operational_period.updated",
+                target=period,
+                details=details,
+            )
 
     def destroy(self, request, *args, **kwargs):
         raise MethodNotAllowed(
