@@ -45,8 +45,8 @@ jobs:
           python - <<'PY'
           from pathlib import Path
 
-          path = Path("src/MapShell.tsx")
-          text = path.read_text()
+          map_path = Path("src/MapShell.tsx")
+          text = map_path.read_text()
           import_line = 'import * as maplibregl from "maplibre-gl";\n'
           worker_import = 'import workerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url";\n'
           setup_line = 'maplibregl.setWorkerUrl(workerUrl);\n\n'
@@ -56,9 +56,17 @@ jobs:
           marker = 'const TEXAS_BOUNDS: LngLatBoundsLike = ['
           if setup_line not in text:
               text = text.replace(marker, setup_line + marker, 1)
-          path.write_text(text)
+          map_path.write_text(text)
+
+          setup_path = Path("tests/setup.ts")
+          setup_text = setup_path.read_text()
+          navigation_line = '  NavigationControl: class {},\n'
+          worker_mock = '  setWorkerUrl: vi.fn(),\n'
+          if worker_mock not in setup_text:
+              setup_text = setup_text.replace(navigation_line, navigation_line + worker_mock, 1)
+          setup_path.write_text(setup_text)
           PY
-          pnpm exec prettier --write src/MapShell.tsx package.json pnpm-lock.yaml
+          pnpm exec prettier --write src/MapShell.tsx tests/setup.ts package.json pnpm-lock.yaml
 
       - name: Validate frontend
         working-directory: frontend
@@ -75,6 +83,6 @@ jobs:
           rm .github/workflows/issue-144-maplibre-upgrade.yml
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add frontend/package.json frontend/pnpm-lock.yaml frontend/src/MapShell.tsx .github/workflows/issue-144-maplibre-upgrade.yml
+          git add frontend/package.json frontend/pnpm-lock.yaml frontend/src/MapShell.tsx frontend/tests/setup.ts .github/workflows/issue-144-maplibre-upgrade.yml
           git commit -m "fix: upgrade MapLibre to patched v6 release"
           git push origin HEAD:issue-144-maplibre-security-upgrade
