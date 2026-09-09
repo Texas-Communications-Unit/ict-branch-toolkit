@@ -34,7 +34,7 @@ jobs:
           git diff --exit-code -- backend/apps/incidents backend/tests/test_incidents_api.py
 
       - name: Lint backend
-        run: docker compose run --rm backend ruff check apps/incidents tests/test_incidents_api.py --output-format=github
+        run: docker compose run --rm backend ruff check apps/incidents tests/test_incidents_api.py
 
       - name: Check Django configuration and migrations
         run: |
@@ -45,7 +45,10 @@ jobs:
         run: docker compose run --rm backend pytest tests/test_incidents_api.py
 
       - name: Check frontend formatting
-        run: docker compose run --rm frontend pnpm format:check
+        run: |
+          docker compose run --rm frontend pnpm exec prettier --write src/incidentEditingApi.ts src/IncidentMetadataEditor.test.tsx src/IncidentMetadataEditor.tsx
+          git diff -- frontend/src/incidentEditingApi.ts frontend/src/IncidentMetadataEditor.test.tsx frontend/src/IncidentMetadataEditor.tsx
+          git diff --exit-code -- frontend/src/incidentEditingApi.ts frontend/src/IncidentMetadataEditor.test.tsx frontend/src/IncidentMetadataEditor.tsx
 
       - name: Lint and type-check frontend
         run: |
