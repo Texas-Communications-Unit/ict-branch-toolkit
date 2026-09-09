@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { WorkspaceTabs } from "../src/WorkspaceTabs";
@@ -42,4 +42,38 @@ test("provides keyboard-operable workspace tabs", async () => {
   expect(screen.getByRole("tab", { name: "Resources" })).toHaveFocus();
   await userEvent.keyboard("{Home}");
   expect(screen.getByRole("tab", { name: "Incidents" })).toHaveFocus();
+});
+
+test("notifies responsive workspaces when a hidden tab becomes active", async () => {
+  const user = userEvent.setup();
+  const dispatchEvent = vi.spyOn(window, "dispatchEvent");
+
+  render(
+    <WorkspaceTabs
+      initialTab="planning"
+      tabs={[
+        {
+          id: "planning",
+          label: "Planning",
+          content: <p>Planning content</p>,
+        },
+        {
+          id: "map",
+          label: "Map",
+          layout: "single",
+          content: <div>Map content</div>,
+        },
+      ]}
+    />,
+  );
+
+  dispatchEvent.mockClear();
+  await user.click(screen.getByRole("tab", { name: "Map" }));
+
+  expect(screen.getByRole("tabpanel", { name: "Map" })).toBeVisible();
+  await waitFor(() =>
+    expect(dispatchEvent).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "resize" }),
+    ),
+  );
 });
