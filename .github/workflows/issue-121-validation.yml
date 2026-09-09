@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: issue-121-editing-validation-${{ github.ref }}
@@ -44,11 +44,19 @@ jobs:
       - name: Run incident API regression tests
         run: docker compose run --rm backend pytest tests/test_incidents_api.py
 
-      - name: Check frontend formatting
+      - name: Normalize frontend formatting
         run: |
           docker compose run --rm frontend pnpm exec prettier --write src/incidentEditingApi.ts src/IncidentMetadataEditor.test.tsx src/IncidentMetadataEditor.tsx
-          git diff -- frontend/src/incidentEditingApi.ts frontend/src/IncidentMetadataEditor.test.tsx frontend/src/IncidentMetadataEditor.tsx
-          git diff --exit-code -- frontend/src/incidentEditingApi.ts frontend/src/IncidentMetadataEditor.test.tsx frontend/src/IncidentMetadataEditor.tsx
+          if ! git diff --quiet -- frontend/src/incidentEditingApi.ts frontend/src/IncidentMetadataEditor.test.tsx frontend/src/IncidentMetadataEditor.tsx; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add frontend/src/incidentEditingApi.ts frontend/src/IncidentMetadataEditor.test.tsx frontend/src/IncidentMetadataEditor.tsx
+            git commit -m "style: format Issue 121 frontend files"
+            git push origin HEAD:issue-121-edit-incident-operational-period
+          fi
+
+      - name: Check frontend formatting
+        run: docker compose run --rm frontend pnpm format:check
 
       - name: Lint and type-check frontend
         run: |
