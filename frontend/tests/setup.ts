@@ -71,4 +71,5 @@ vi.mock("maplibre-gl", () => ({
   Popup: MockPopup,
   LngLatBounds: MockBounds,
   NavigationControl: class {},
+  setWorkerUrl: vi.fn(),
 }));
