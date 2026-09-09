@@ -28,7 +28,10 @@ jobs:
         run: docker compose build backend frontend
 
       - name: Check backend formatting
-        run: docker compose run --rm backend ruff format --check apps/incidents tests/test_incidents_api.py
+        run: |
+          docker compose run --rm backend ruff format apps/incidents tests/test_incidents_api.py
+          git diff -- backend/apps/incidents backend/tests/test_incidents_api.py
+          git diff --exit-code -- backend/apps/incidents backend/tests/test_incidents_api.py
 
       - name: Lint backend
         run: docker compose run --rm backend ruff check apps/incidents tests/test_incidents_api.py
