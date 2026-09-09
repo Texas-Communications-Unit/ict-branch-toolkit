@@ -2,6 +2,7 @@ import { FormEvent, useState } from "react";
 
 import { searchFccAntennaStructures, searchFccLicenses } from "./api";
 import type { FccAntennaStructure, FccLicenseSearchResult } from "./types";
+import { formatMetersAsFeet } from "./unitFormatting";
 
 export function FccReferenceWorkspace() {
   const [kind, setKind] = useState<"licenses" | "structures">("licenses");
@@ -158,6 +159,9 @@ export function FccReferenceWorkspace() {
                   <span>
                     {item.structure_type || "Structure type not listed"} ·
                     Status {item.status_code || "not listed"}
+                  </span>
+                  <span>
+                    Overall height: {formatMetersAsFeet(item.overall_height_m)}
                   </span>
                   <span>
                     {item.latitude && item.longitude
