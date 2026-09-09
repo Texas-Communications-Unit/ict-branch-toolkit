@@ -23,14 +23,14 @@ function validationMessage(error: unknown) {
     return "Your incident role does not allow this metadata change.";
   }
   if (typeof error.data === "object" && error.data !== null) {
-    const messages = Object.entries(error.data as Record<string, unknown>).flatMap(
-      ([field, value]) => {
-        const values = Array.isArray(value) ? value : [value];
-        return values
-          .filter((item): item is string => typeof item === "string")
-          .map((item) => `${field.replaceAll("_", " ")}: ${item}`);
-      },
-    );
+    const messages = Object.entries(
+      error.data as Record<string, unknown>,
+    ).flatMap(([field, value]) => {
+      const values = Array.isArray(value) ? value : [value];
+      return values
+        .filter((item): item is string => typeof item === "string")
+        .map((item) => `${field.replaceAll("_", " ")}: ${item}`);
+    });
     if (messages.length) return messages.join(" ");
   }
   return error.message || "Unable to save metadata.";
@@ -131,7 +131,9 @@ export function IncidentMetadataEditor() {
 
   useEffect(() => {
     setPeriodName(selectedPeriod?.name ?? "");
-    setStartsAt(selectedPeriod ? toLocalDateTime(selectedPeriod.starts_at) : "");
+    setStartsAt(
+      selectedPeriod ? toLocalDateTime(selectedPeriod.starts_at) : "",
+    );
     setEndsAt(selectedPeriod ? toLocalDateTime(selectedPeriod.ends_at) : "");
   }, [selectedPeriod]);
 
@@ -142,7 +144,10 @@ export function IncidentMetadataEditor() {
     setError("");
     setStatus("");
     try {
-      const updated = await updateIncidentName(selectedIncident.id, incidentName);
+      const updated = await updateIncidentName(
+        selectedIncident.id,
+        incidentName,
+      );
       setIncidents((current) =>
         current.map((incident) =>
           incident.id === updated.id ? updated : incident,
@@ -253,7 +258,9 @@ export function IncidentMetadataEditor() {
           {canEditPeriod && selectedIncident && (
             <div className="period-edit-workspace">
               {selectedIncident.operational_periods.length === 0 ? (
-                <p className="empty">This incident has no operational periods.</p>
+                <p className="empty">
+                  This incident has no operational periods.
+                </p>
               ) : (
                 <form className="compact-form" onSubmit={savePeriod}>
                   <label>
@@ -325,8 +332,9 @@ export function IncidentMetadataEditor() {
         </>
       )}
       <p id="incident-edit-history-note" className="map-note">
-        Corrections affect current lifecycle metadata only. Existing approved plan
-        revisions and previously generated historical artifacts are not rewritten.
+        Corrections affect current lifecycle metadata only. Existing approved
+        plan revisions and previously generated historical artifacts are not
+        rewritten.
       </p>
       {status && (
         <p role="status" aria-live="polite" className="site-message">

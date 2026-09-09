@@ -30,7 +30,10 @@ function activeToken(): string {
   return token;
 }
 
-async function patch<T>(path: string, payload: Record<string, string>): Promise<T> {
+async function patch<T>(
+  path: string,
+  payload: Record<string, string>,
+): Promise<T> {
   const response = await fetch(`${API_BASE}${path}`, {
     method: "PATCH",
     headers: {
@@ -56,7 +59,10 @@ async function patch<T>(path: string, payload: Record<string, string>): Promise<
   return (await response.json()) as T;
 }
 
-export function updateIncidentName(id: string, name: string): Promise<Incident> {
+export function updateIncidentName(
+  id: string,
+  name: string,
+): Promise<Incident> {
   return patch<Incident>(`/api/incidents/${encodeURIComponent(id)}/`, { name });
 }
 

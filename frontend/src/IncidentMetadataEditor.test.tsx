@@ -65,7 +65,12 @@ describe("IncidentMetadataEditor", () => {
         return {
           ok: true,
           status: 200,
-          json: async () => ({ count: 1, next: null, previous: null, results: [incident] }),
+          json: async () => ({
+            count: 1,
+            next: null,
+            previous: null,
+            results: [incident],
+          }),
         } as Response;
       }),
     );
@@ -132,13 +137,19 @@ describe("IncidentMetadataEditor", () => {
           return {
             ok: false,
             status: 400,
-            text: async () => JSON.stringify({ name: ["Incident name cannot be blank."] }),
+            text: async () =>
+              JSON.stringify({ name: ["Incident name cannot be blank."] }),
           } as Response;
         }
         return {
           ok: true,
           status: 200,
-          json: async () => ({ count: 1, next: null, previous: null, results: [incident] }),
+          json: async () => ({
+            count: 1,
+            next: null,
+            previous: null,
+            results: [incident],
+          }),
         } as Response;
       }),
     );
