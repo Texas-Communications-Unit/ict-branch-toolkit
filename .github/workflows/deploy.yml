@@ -79,6 +79,48 @@ jobs:
             "$DEPLOY_USER@$DEPLOY_HOST" \
             true
 
+      - name: Recover safe disk capacity
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+        shell: bash
+        run: |
+          ssh \
+            -i "$HOME/.ssh/deploy_key" \
+            -p "$DEPLOY_PORT" \
+            -o BatchMode=yes \
+            -o ConnectTimeout=15 \
+            -o IdentitiesOnly=yes \
+            -o StrictHostKeyChecking=yes \
+            "$DEPLOY_USER@$DEPLOY_HOST" \
+            'bash -s' <<'REMOTE'
+          set -euo pipefail
+          echo "Disk usage before safe cleanup:"
+          df -h "$HOME" || true
+          docker system df || true
+
+          # Remove only abandoned deployment scratch directories and Docker data
+          # that is not referenced by active containers. Named volumes are never pruned.
+          find "$HOME/.cache/ict-branch-toolkit" \
+            -mindepth 1 -maxdepth 1 -type d -name 'deploy-*' -mtime +1 \
+            -exec rm -rf -- {} + 2>/dev/null || true
+          docker builder prune --force --filter 'until=168h' || true
+          docker container prune --force --filter 'until=168h' || true
+          docker image prune --all --force --filter 'until=168h' || true
+
+          echo "Disk usage after safe cleanup:"
+          df -h "$HOME" || true
+          docker system df || true
+
+          available_kb="$(df -Pk "$HOME" | awk 'NR==2 {print $4}')"
+          minimum_kb=$((2 * 1024 * 1024))
+          if (( available_kb < minimum_kb )); then
+            echo "Refusing deployment: less than 2 GiB is free after safe cleanup." >&2
+            exit 1
+          fi
+          REMOTE
+
       - name: Upload deployment scripts
         env:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
