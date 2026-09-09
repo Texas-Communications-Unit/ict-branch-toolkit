@@ -46,7 +46,12 @@ jobs:
 
       - name: Normalize frontend formatting
         run: |
-          docker compose run --rm frontend pnpm exec prettier --write src/incidentEditingApi.ts src/IncidentMetadataEditor.test.tsx src/IncidentMetadataEditor.tsx
+          docker compose run --rm -T frontend pnpm exec prettier src/incidentEditingApi.ts > frontend/src/incidentEditingApi.ts.tmp
+          mv frontend/src/incidentEditingApi.ts.tmp frontend/src/incidentEditingApi.ts
+          docker compose run --rm -T frontend pnpm exec prettier src/IncidentMetadataEditor.test.tsx > frontend/src/IncidentMetadataEditor.test.tsx.tmp
+          mv frontend/src/IncidentMetadataEditor.test.tsx.tmp frontend/src/IncidentMetadataEditor.test.tsx
+          docker compose run --rm -T frontend pnpm exec prettier src/IncidentMetadataEditor.tsx > frontend/src/IncidentMetadataEditor.tsx.tmp
+          mv frontend/src/IncidentMetadataEditor.tsx.tmp frontend/src/IncidentMetadataEditor.tsx
           if ! git diff --quiet -- frontend/src/incidentEditingApi.ts frontend/src/IncidentMetadataEditor.test.tsx frontend/src/IncidentMetadataEditor.tsx; then
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
