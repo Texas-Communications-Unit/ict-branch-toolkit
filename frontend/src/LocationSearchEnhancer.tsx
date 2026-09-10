@@ -8,7 +8,9 @@ import {
 
 function populateCanonicalCoordinate(result: LocationSearchResult) {
   const panel = document.querySelector<HTMLElement>("section.map-panel");
-  const input = panel?.querySelector<HTMLInputElement>(
+  if (!panel) return false;
+
+  const input = panel.querySelector<HTMLInputElement>(
     'input[placeholder="33.214500, -97.133100"]',
   );
   if (!input) return false;
