@@ -8,7 +8,9 @@ import { FccUnitEnhancer } from "./FccUnitEnhancer";
 import { IncidentMetadataEditor } from "./IncidentMetadataEditor";
 import { LocationSearchEnhancer } from "./LocationSearchEnhancer";
 import { MapObjectSelectionEnhancer } from "./MapObjectSelectionEnhancer";
+import { NifogResourceCategoriesEnhancer } from "./NifogResourceCategoriesEnhancer";
 import "./mapObjectSelection.css";
+import "./NifogResourceCategories.css";
 import "./styles.css";
 
 createRoot(document.getElementById("root")!).render(
@@ -19,5 +21,6 @@ createRoot(document.getElementById("root")!).render(
     <IncidentMetadataEditor />
     <LocationSearchEnhancer />
     <MapObjectSelectionEnhancer />
+    <NifogResourceCategoriesEnhancer />
   </StrictMode>,
 );
