@@ -232,6 +232,20 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 11.9.0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+      - name: Install frontend dependencies
+        run: pnpm install --frozen-lockfile --prefer-offline
+        working-directory: frontend
+      - name: Verify production frontend build
+        run: pnpm build
+        working-directory: frontend
       - uses: github/codeql-action/init@v4
         with:
           languages: javascript-typescript
