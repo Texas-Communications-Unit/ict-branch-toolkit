@@ -1,8 +1,6 @@
 import re
-from dataclasses import asdict
 
 from rest_framework import serializers, status
-from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -12,7 +10,10 @@ from .geocoders import GeocoderError, configured_geocoder
 from .what3words import What3WordsError, configured_what3words
 
 
-WHAT3WORDS_RE = re.compile(r"^(?:https?://(?:www\.)?what3words\.com/)?/?/?/?([a-z]+\.[a-z]+\.[a-z]+)$", re.IGNORECASE)
+WHAT3WORDS_RE = re.compile(
+    r"^(?:https?://(?:www\.)?what3words\.com/)?/?/?/?([a-z]+\.[a-z]+\.[a-z]+)$",
+    re.IGNORECASE,
+)
 
 
 class LocationResolveSerializer(serializers.Serializer):
