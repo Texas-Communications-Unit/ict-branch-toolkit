@@ -29,16 +29,32 @@ class DeterministicTestGeocoder:
     name = "synthetic-test-provider"
 
     def search(self, query: str) -> list[GeocoderResult]:
-        if query.strip().lower() != "synthetic eoc":
-            return []
-        return [
-            GeocoderResult(
-                label="Synthetic EOC (test fixture)",
-                latitude=33.2145,
-                longitude=-97.1331,
-                provider=self.name,
-            )
-        ]
+        normalized = query.strip().lower()
+        if normalized == "synthetic eoc":
+            return [
+                GeocoderResult(
+                    label="Synthetic EOC (test fixture)",
+                    latitude=33.2145,
+                    longitude=-97.1331,
+                    provider=self.name,
+                )
+            ]
+        if normalized == "alpha rd & bravo st":
+            return [
+                GeocoderResult(
+                    label="Alpha Rd & Bravo St, Synthetic City, TX 75000 (test fixture)",
+                    latitude=33.2,
+                    longitude=-97.1,
+                    provider=self.name,
+                ),
+                GeocoderResult(
+                    label="Alpha Rd & Bravo St, Other Synthetic City, TX 75001 (test fixture)",
+                    latitude=33.3,
+                    longitude=-97.2,
+                    provider=self.name,
+                ),
+            ]
+        return []
 
 
 class GeocoderError(Exception):
