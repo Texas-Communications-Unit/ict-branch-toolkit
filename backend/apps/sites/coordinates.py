@@ -46,6 +46,16 @@ def _component(text: str, axis: str) -> tuple[float, str]:
     return value, ("decimal" if len(numbers) == 1 else "ddm" if len(numbers) == 2 else "dms")
 
 
+def _google_style_pair(text: str) -> tuple[str, str] | None:
+    match = re.search(
+        r"@\s*([-+]?\d+(?:\.\d+)?)\s*,\s*([-+]?\d+(?:\.\d+)?)(?:,|$)",
+        text,
+    )
+    if not match:
+        return None
+    return match.group(1), match.group(2)
+
+
 def parse_coordinate(text: str) -> ParsedCoordinate:
     original = text.strip()
     if not original:
@@ -57,6 +67,12 @@ def parse_coordinate(text: str) -> ParsedCoordinate:
         except (MGRSError, ValueError) as exc:
             raise CoordinateError("The USNG/MGRS coordinate is invalid or incomplete.") from exc
         return ParsedCoordinate(latitude, longitude, "mgrs")
+
+    google_pair = _google_style_pair(original)
+    if google_pair:
+        latitude, _ = _component(google_pair[0], "latitude")
+        longitude, _ = _component(google_pair[1], "longitude")
+        return ParsedCoordinate(latitude, longitude, "decimal")
 
     parts = re.split(r"\s*[,;]\s*", original)
     if len(parts) == 1:
