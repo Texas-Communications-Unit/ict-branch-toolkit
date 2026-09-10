@@ -6,6 +6,7 @@ import App from "./App";
 import { ElevationEnhancer } from "./ElevationEnhancer";
 import { FccUnitEnhancer } from "./FccUnitEnhancer";
 import { IncidentMetadataEditor } from "./IncidentMetadataEditor";
+import { LocationSearchEnhancer } from "./LocationSearchEnhancer";
 import { MapObjectSelectionEnhancer } from "./MapObjectSelectionEnhancer";
 import "./mapObjectSelection.css";
 import "./styles.css";
@@ -16,6 +17,7 @@ createRoot(document.getElementById("root")!).render(
     <ElevationEnhancer />
     <FccUnitEnhancer />
     <IncidentMetadataEditor />
+    <LocationSearchEnhancer />
     <MapObjectSelectionEnhancer />
   </StrictMode>,
 );
