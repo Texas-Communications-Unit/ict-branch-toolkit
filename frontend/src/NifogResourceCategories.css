@@ -1,0 +1,91 @@
+.nifog-categories-enhanced > .resource-grid > div:first-child {
+  display: none;
+}
+
+.nifog-categories-enhanced > .resource-grid {
+  grid-template-columns: 1fr;
+}
+
+.nifog-categorized-view {
+  border-top: 1px solid var(--tx-comu-border);
+  margin-top: 1.25rem;
+  padding-top: 1.25rem;
+}
+
+.nifog-resource-categories {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.nifog-resource-category {
+  border: 1px solid var(--tx-comu-border);
+  border-radius: 0.75rem;
+  overflow: hidden;
+}
+
+.nifog-resource-category > summary {
+  align-items: center;
+  cursor: pointer;
+  display: flex;
+  gap: 0.75rem;
+  justify-content: space-between;
+  min-height: 2.75rem;
+  padding: 0.75rem 1rem;
+}
+
+.nifog-resource-category > summary:focus-visible {
+  outline: 3px solid currentColor;
+  outline-offset: -3px;
+}
+
+.nifog-resource-category[open] > summary {
+  border-bottom: 1px solid var(--tx-comu-border);
+}
+
+.nifog-source-reference,
+.nifog-resource-category > .empty {
+  margin: 0;
+  padding: 0.75rem 1rem;
+}
+
+.nifog-table-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.nifog-table-scroll:focus-visible {
+  outline: 3px solid currentColor;
+  outline-offset: -3px;
+}
+
+.nifog-frequency-table {
+  border-collapse: collapse;
+  min-width: 82rem;
+  width: 100%;
+}
+
+.nifog-frequency-table th,
+.nifog-frequency-table td {
+  border-bottom: 1px solid var(--tx-comu-border);
+  padding: 0.7rem;
+  text-align: left;
+  vertical-align: top;
+}
+
+.nifog-frequency-table thead th {
+  background: var(--tx-comu-light);
+  position: sticky;
+  top: 0;
+}
+
+.nifog-frequency-table td:nth-child(3),
+.nifog-frequency-table td:nth-child(5) {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+@media (max-width: 40rem) {
+  .nifog-resource-category > summary {
+    align-items: flex-start;
+  }
+}
