@@ -1,0 +1,46 @@
+.fcc-tower-marker.is-map-object-selected,
+.fcc-tower-results button.is-map-object-selected {
+  outline: 3px solid var(--tx-comu-orange, #f58220);
+  outline-offset: 3px;
+}
+
+.fcc-tower-marker.is-map-object-selected {
+  position: relative;
+}
+
+.map-object-selection-badge {
+  display: inline-block;
+  margin-left: 0.45rem;
+  padding: 0.1rem 0.35rem;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  font-size: 0.75em;
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.fcc-tower-marker .map-object-selection-badge {
+  position: absolute;
+  left: 50%;
+  top: calc(100% + 0.35rem);
+  transform: translateX(-50%);
+  background: white;
+  color: #111;
+  pointer-events: none;
+}
+
+.fcc-tower-detail.is-map-object-selected {
+  border-left: 4px solid var(--tx-comu-orange, #f58220);
+  padding-left: 1rem;
+}
+
+.map-object-selection-summary {
+  font-weight: 700;
+}
+
+.map-object-selection-close {
+  min-height: 44px;
+  min-width: 44px;
+  margin-bottom: 0.75rem;
+}
