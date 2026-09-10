@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import { NifogResourceCategories } from "./NifogResourceCategories";
@@ -53,7 +53,7 @@ function channel(overrides: Partial<ConventionalChannel>): ConventionalChannel {
 }
 
 describe("categorized NIFOG resources", () => {
-  it("groups by imported source section and keeps disclosures collapsed by default", () => {
+  it("groups by imported source section and keeps disclosures independently operable", () => {
     render(
       <NifogResourceCategories
         channels={[
@@ -70,26 +70,42 @@ describe("categorized NIFOG resources", () => {
       />,
     );
 
-    const vhf = screen.getByText("VHF Tactical Simplex – VCALL & VTAC").closest("details");
-    const eightHundred = screen.getByText("800 MHz Calling Channels").closest("details");
+    const vhfSummary = screen
+      .getByText("VHF Tactical Simplex – VCALL & VTAC")
+      .closest("summary");
+    const eightHundredSummary = screen
+      .getByText("800 MHz Calling Channels")
+      .closest("summary");
+    const vhf = vhfSummary?.closest("details");
+    const eightHundred = eightHundredSummary?.closest("details");
+
     expect(vhf).not.toHaveAttribute("open");
     expect(eightHundred).not.toHaveAttribute("open");
-
-    fireEvent.click(within(vhf!).getByText("VHF Tactical Simplex – VCALL & VTAC"));
-    fireEvent.click(within(eightHundred!).getByText("800 MHz Calling Channels"));
+    fireEvent.click(vhfSummary!);
+    fireEvent.click(eightHundredSummary!);
     expect(vhf).toHaveAttribute("open");
     expect(eightHundred).toHaveAttribute("open");
   });
 
   it("renders exact technical fields, source version, and authorization warning", () => {
     render(<NifogResourceCategories channels={[channel({})]} />);
+    const summary = screen
+      .getByText("VHF Tactical Simplex – VCALL & VTAC")
+      .closest("summary");
+    fireEvent.click(summary!);
 
     expect(screen.getByText("151.137500 MHz")).toBeInTheDocument();
     expect(screen.getAllByText("156.7")).toHaveLength(2);
     expect(screen.getByText("11K2F3E")).toBeInTheDocument();
-    expect(screen.getByText(/Synthetic NIFOG · release SYN-2026 · page\(s\) 29/)).toBeInTheDocument();
-    expect(screen.getByText(/does not itself authorize transmission/i)).toBeInTheDocument();
-    expect(screen.getByRole("columnheader", { name: "Mobile RX Frequency" })).toBeInTheDocument();
+    expect(
+      screen.getByText(/Synthetic NIFOG · release SYN-2026 · page\(s\) 29/),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/does not itself authorize transmission/i),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("columnheader", { name: "Mobile RX Frequency" }),
+    ).toBeInTheDocument();
   });
 
   it("preserves non-NIFOG conventional records in a separate disclosure", () => {
@@ -116,7 +132,9 @@ describe("categorized NIFOG resources", () => {
       />,
     );
 
-    expect(screen.getByText("Other conventional reference channels")).toBeInTheDocument();
+    expect(
+      screen.getByText("Other conventional reference channels"),
+    ).toBeInTheDocument();
     expect(screen.getByText("Synthetic Local Channel")).toBeInTheDocument();
   });
 });
