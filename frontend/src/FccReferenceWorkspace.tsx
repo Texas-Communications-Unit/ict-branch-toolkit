@@ -4,9 +4,38 @@ import { searchFccAntennaStructures, searchFccLicenses } from "./api";
 import type { FccAntennaStructure, FccLicenseSearchResult } from "./types";
 import { formatMetersAsFeet } from "./unitFormatting";
 
+type NifogFrequencyMatch = {
+  identifier: string;
+  name: string;
+  matched_roles: ("rx" | "tx")[];
+  channel_rx_frequency_hz: number;
+  channel_tx_frequency_hz: number | null;
+  source: {
+    slug: string;
+    name: string;
+    authoritative_url: string;
+  };
+  release: {
+    id: string;
+    version: string;
+    released_on: string | null;
+    document_title: string;
+    publisher: string;
+    retrieved_on: string | null;
+    content_sha256: string;
+  };
+};
+
+type EnrichedLicense = FccLicenseSearchResult & {
+  nifog_frequency_matches?: {
+    frequency_hz: number;
+    matches: NifogFrequencyMatch[];
+  }[];
+};
+
 export function FccReferenceWorkspace() {
   const [kind, setKind] = useState<"licenses" | "structures">("licenses");
-  const [licenses, setLicenses] = useState<FccLicenseSearchResult[]>([]);
+  const [licenses, setLicenses] = useState<EnrichedLicense[]>([]);
   const [structures, setStructures] = useState<FccAntennaStructure[]>([]);
   const [message, setMessage] = useState(
     "Enter search criteria to query the imported FCC reference data.",
@@ -143,6 +172,27 @@ export function FccReferenceWorkspace() {
                       .map((hz) => `${(hz / 1_000_000).toFixed(6)} MHz`)
                       .join(" · ") || "No frequency records"}
                   </span>
+                  {(item.nifog_frequency_matches ?? []).map((entry) => (
+                    <div
+                      className="nifog-frequency-match"
+                      key={`nifog-${entry.frequency_hz}`}
+                      aria-label={`NIFOG exact-frequency match for ${(entry.frequency_hz / 1_000_000).toFixed(6)} megahertz`}
+                    >
+                      <strong>Interoperability reference match</strong>
+                      <span>
+                        {(entry.frequency_hz / 1_000_000).toFixed(6)} MHz ·{" "}
+                        {entry.matches.map((match) => match.identifier).join(", ")}
+                      </span>
+                      {entry.matches.map((match) => (
+                        <small key={`${match.release.id}-${match.identifier}`}>
+                          {match.identifier} · {match.name} · matched {match.matched_roles.join("/").toUpperCase()} · {match.source.name} {match.release.version}
+                        </small>
+                      ))}
+                      <small>
+                        Decision-support only. Exact frequency matching does not authorize transmission, establish licensing applicability, or confirm emission compatibility.
+                      </small>
+                    </div>
+                  ))}
                   <small>
                     {item.batch.dataset_label} · retrieved{" "}
                     {new Date(item.batch.retrieved_at).toLocaleDateString()} ·{" "}

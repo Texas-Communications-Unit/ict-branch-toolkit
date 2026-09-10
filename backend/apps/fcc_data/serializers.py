@@ -10,6 +10,7 @@ from .models import (
     UlsLicense,
     UlsLocation,
 )
+from .nifog import build_nifog_match_index, matches_for_frequency
 
 
 class FccBatchSummarySerializer(serializers.ModelSerializer):
@@ -80,9 +81,41 @@ class FccMapFeatureCollectionSerializer(serializers.Serializer):
     results = FccMapFeatureSerializer(many=True)
 
 
+class NifogSourceSerializer(serializers.Serializer):
+    slug = serializers.CharField()
+    name = serializers.CharField()
+    authoritative_url = serializers.URLField(allow_blank=True)
+
+
+class NifogReleaseSerializer(serializers.Serializer):
+    id = serializers.UUIDField()
+    version = serializers.CharField()
+    released_on = serializers.DateField(allow_null=True)
+    document_title = serializers.CharField(allow_blank=True)
+    publisher = serializers.CharField(allow_blank=True)
+    retrieved_on = serializers.DateField(allow_null=True)
+    content_sha256 = serializers.CharField()
+
+
+class NifogFrequencyMatchSerializer(serializers.Serializer):
+    identifier = serializers.CharField()
+    name = serializers.CharField()
+    matched_roles = serializers.ListField(child=serializers.ChoiceField(choices=["rx", "tx"]))
+    channel_rx_frequency_hz = serializers.IntegerField()
+    channel_tx_frequency_hz = serializers.IntegerField(allow_null=True)
+    source = NifogSourceSerializer()
+    release = NifogReleaseSerializer()
+
+
+class FccFrequencyEnrichmentSerializer(serializers.Serializer):
+    frequency_hz = serializers.IntegerField()
+    matches = NifogFrequencyMatchSerializer(many=True)
+
+
 class UlsLicenseSerializer(serializers.ModelSerializer):
     batch = FccBatchSummarySerializer(read_only=True)
     frequencies_hz = serializers.SerializerMethodField()
+    nifog_frequency_matches = serializers.SerializerMethodField()
     location_count = serializers.IntegerField(read_only=True)
     frequency_count = serializers.IntegerField(read_only=True)
 
@@ -108,15 +141,32 @@ class UlsLicenseSerializer(serializers.ModelSerializer):
             "location_count",
             "frequency_count",
             "frequencies_hz",
+            "nifog_frequency_matches",
             "batch",
         ]
 
+    def _frequencies(self, obj) -> list[int]:
+        cached = getattr(obj, "_fcc_display_frequencies", None)
+        if cached is None:
+            cached = list(
+                obj.frequencies.order_by("frequency_hz")
+                .values_list("frequency_hz", flat=True)
+                .distinct()[:10]
+            )
+            obj._fcc_display_frequencies = cached
+        return cached
+
     def get_frequencies_hz(self, obj) -> list[int]:
-        return list(
-            obj.frequencies.order_by("frequency_hz")
-            .values_list("frequency_hz", flat=True)
-            .distinct()[:10]
-        )
+        return self._frequencies(obj)
+
+    def get_nifog_frequency_matches(self, obj) -> list[dict]:
+        frequencies = self._frequencies(obj)
+        index = build_nifog_match_index(frequencies)
+        return [
+            {"frequency_hz": frequency, "matches": index.get(frequency, [])}
+            for frequency in frequencies
+            if index.get(frequency)
+        ]
 
 
 class FccTowerFrequencySerializer(serializers.ModelSerializer):
@@ -127,6 +177,7 @@ class FccTowerFrequencySerializer(serializers.ModelSerializer):
         allow_null=True,
         required=False,
     )
+    nifog_matches = serializers.SerializerMethodField()
 
     class Meta:
         model = UlsFrequency
@@ -137,7 +188,12 @@ class FccTowerFrequencySerializer(serializers.ModelSerializer):
             "output_power_w",
             "effective_radiated_power_w",
             "number_of_units",
+            "nifog_matches",
         ]
+
+    def get_nifog_matches(self, obj) -> list[dict]:
+        cached = getattr(obj, "nifog_matches", None)
+        return cached if cached is not None else matches_for_frequency(obj.frequency_hz)
 
 
 class FccTowerEmissionSerializer(serializers.ModelSerializer):
