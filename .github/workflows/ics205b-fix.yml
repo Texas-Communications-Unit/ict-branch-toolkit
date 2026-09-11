@@ -17,6 +17,7 @@ jobs:
       - uses: actions/checkout@v7
         with:
           ref: issue-162-ics205b-workspace
+          fetch-depth: 0
       - name: Remove invalid noninteractive tab stop
         shell: bash
         run: |
@@ -46,7 +47,7 @@ jobs:
       - run: python -m pip install ruff==0.13.2
       - run: ruff format apps/extensions/ics205b_export.py
         working-directory: backend
-      - name: Commit fixes
+      - name: Commit and push fixes safely
         shell: bash
         run: |
           git config user.name "github-actions[bot]"
@@ -57,4 +58,6 @@ jobs:
             exit 0
           fi
           git commit -m "fix: resolve ICS 205B validation failures"
+          git fetch origin issue-162-ics205b-workspace
+          git rebase origin/issue-162-ics205b-workspace
           git push origin HEAD:issue-162-ics205b-workspace
