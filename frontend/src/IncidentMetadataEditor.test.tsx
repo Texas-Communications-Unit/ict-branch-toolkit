@@ -78,9 +78,11 @@ describe("IncidentMetadataEditor", () => {
     render(<IncidentMetadataEditor />);
 
     const name = await screen.findByLabelText("Incident name");
-    expect(name).toHaveValue("Synthetic Incdent");
-    expect(screen.getByLabelText("Period name")).toHaveValue(
-      "Operational Period One",
+    await waitFor(() => expect(name).toHaveValue("Synthetic Incdent"));
+    await waitFor(() =>
+      expect(screen.getByLabelText("Period name")).toHaveValue(
+        "Operational Period One",
+      ),
     );
 
     fireEvent.change(name, { target: { value: "Synthetic Incident" } });

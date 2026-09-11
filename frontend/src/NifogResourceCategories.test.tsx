@@ -94,7 +94,7 @@ describe("categorized NIFOG resources", () => {
       .closest("summary");
     fireEvent.click(summary!);
 
-    expect(screen.getByText("151.137500 MHz")).toBeInTheDocument();
+    expect(screen.getAllByText("151.137500 MHz")).toHaveLength(2);
     expect(screen.getAllByText("156.7")).toHaveLength(2);
     expect(screen.getByText("11K2F3E")).toBeInTheDocument();
     expect(
