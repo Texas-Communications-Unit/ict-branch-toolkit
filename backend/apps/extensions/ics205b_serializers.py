@@ -24,6 +24,7 @@ class ICS205BAssignmentSerializer(serializers.ModelSerializer):
             "updated_at",
         ]
         read_only_fields = ["created_at", "updated_at"]
+        extra_kwargs = {"position": {"required": False}}
 
 
 class ICS205BFormSerializer(serializers.ModelSerializer):
