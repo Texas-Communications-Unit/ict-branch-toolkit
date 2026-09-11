@@ -1,6 +1,7 @@
 from django.urls import path
 from rest_framework.routers import DefaultRouter
 
+from .ics205b_views import ICS205BAssignmentViewSet, ICS205BFormViewSet
 from .views import (
     ExtensionCatalogView,
     ExtensionDisableView,
@@ -14,6 +15,12 @@ router.register(
     "extension-executions",
     ExtensionExecutionViewSet,
     basename="extension-execution",
+)
+router.register("ics205b-forms", ICS205BFormViewSet, basename="ics205b-form")
+router.register(
+    "ics205b-assignments",
+    ICS205BAssignmentViewSet,
+    basename="ics205b-assignment",
 )
 
 urlpatterns = [
