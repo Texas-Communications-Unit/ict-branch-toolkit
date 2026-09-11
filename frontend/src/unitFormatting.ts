@@ -20,7 +20,9 @@ export function formatMetersAsFeet(value: MetricValue): string {
   const meters = parseMetricValue(value);
   if (meters === null) return "Not listed";
   const rawFeet = meters * METERS_TO_FEET;
-  const feet = Math.round(rawFeet + Number.EPSILON * Math.max(1, Math.abs(rawFeet)));
+  const feet = Math.round(
+    rawFeet + Number.EPSILON * Math.max(1, Math.abs(rawFeet)),
+  );
   return `${feet.toLocaleString("en-US")} ft (${formatMetricSource(meters)} m)`;
 }
 
