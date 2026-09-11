@@ -129,7 +129,7 @@ class ExtensionExecution(models.Model):
         raise ValidationError("Extension executions are retained.")
 
 
-from .ics205b_models import (  # noqa: E402
+from .ics205b_models import (  # noqa: E402, I001
     ICS205BAssignment as ICS205BAssignment,
     ICS205BForm as ICS205BForm,
 )
