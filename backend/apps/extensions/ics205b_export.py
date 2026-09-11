@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from copy import copy
 from datetime import datetime
 from io import BytesIO
 
@@ -29,13 +28,13 @@ def _local(value: datetime | None) -> datetime | None:
 
 
 def _date(value: datetime | None) -> str:
-    value = _local(value)
-    return value.strftime("%m/%d/%Y") if value else ""
+    localized = _local(value)
+    return localized.strftime("%m/%d/%Y") if localized else ""
 
 
 def _time(value: datetime | None) -> str:
-    value = _local(value)
-    return value.strftime("%H:%M") if value else ""
+    localized = _local(value)
+    return localized.strftime("%H:%M") if localized else ""
 
 
 def _prepared_by(form: ICS205BForm) -> str:
@@ -65,23 +64,19 @@ class _NumberedCanvas(canvas.Canvas):
         super().save()
 
 
-def _draw_pdf_header_footer(pdf: canvas.Canvas, doc, form: ICS205BForm):
+def _draw_pdf_header_footer(pdf: canvas.Canvas, _doc, form: ICS205BForm):
     page_width, page_height = landscape(letter)
     left = 0.25 * inch
     right = page_width - 0.25 * inch
     top = page_height - 0.25 * inch
-    thin = 0.5
-
-    pdf.saveState()
-    pdf.setStrokeColor(colors.black)
-    pdf.setLineWidth(thin)
-    pdf.setFont("Helvetica-Bold", 10)
-
-    # Header: title plus incident/date/operational-period blocks.
     header_bottom = top - 0.78 * inch
     title_right = left + 2.55 * inch
     incident_right = title_right + 1.72 * inch
     prepared_right = incident_right + 1.55 * inch
+
+    pdf.saveState()
+    pdf.setStrokeColor(colors.black)
+    pdf.setLineWidth(0.5)
     pdf.rect(left, header_bottom, right - left, top - header_bottom)
     for x in [title_right, incident_right, prepared_right]:
         pdf.line(x, header_bottom, x, top)
@@ -99,42 +94,63 @@ def _draw_pdf_header_footer(pdf: canvas.Canvas, doc, form: ICS205BForm):
     )
 
     pdf.setFont("Helvetica-Bold", 9)
-    pdf.drawCentredString((title_right + incident_right) / 2, top - 0.16 * inch, "1. Incident Name")
+    pdf.drawCentredString(
+        (title_right + incident_right) / 2,
+        top - 0.16 * inch,
+        "1. Incident Name",
+    )
     pdf.setFont("Helvetica", 9)
     pdf.drawCentredString(
-        (title_right + incident_right) / 2, top - 0.49 * inch, form.incident.name[:34]
+        (title_right + incident_right) / 2,
+        top - 0.49 * inch,
+        form.incident.name[:34],
     )
 
     pdf.setFont("Helvetica-Bold", 9)
     pdf.drawCentredString(
-        (incident_right + prepared_right) / 2, top - 0.16 * inch, "2. Date/Time Prepared"
+        (incident_right + prepared_right) / 2,
+        top - 0.16 * inch,
+        "2. Date/Time Prepared",
     )
     pdf.setFont("Helvetica", 8)
     pdf.drawString(
-        incident_right + 0.08 * inch, top - 0.40 * inch, f"Date: {_date(form.prepared_at)}"
-    )
-    pdf.drawString(
-        incident_right + 0.08 * inch, top - 0.62 * inch, f"Time: {_time(form.prepared_at)}"
-    )
-
-    pdf.setFont("Helvetica-Bold", 9)
-    pdf.drawCentredString(
-        (prepared_right + right) / 2, top - 0.16 * inch, "3. Operational Period Date/Time"
-    )
-    pdf.setFont("Helvetica", 8)
-    pdf.drawString(
-        prepared_right + 0.08 * inch,
+        incident_right + 0.08 * inch,
         top - 0.40 * inch,
-        f"From: {_date(form.operational_period.starts_at)} {_time(form.operational_period.starts_at)}",
+        f"Date: {_date(form.prepared_at)}",
     )
     pdf.drawString(
-        prepared_right + 0.08 * inch,
+        incident_right + 0.08 * inch,
         top - 0.62 * inch,
-        f"To: {_date(form.operational_period.ends_at)} {_time(form.operational_period.ends_at)}",
+        f"Time: {_time(form.prepared_at)}",
     )
+
+    pdf.setFont("Helvetica-Bold", 9)
+    pdf.drawCentredString(
+        (prepared_right + right) / 2,
+        top - 0.16 * inch,
+        "3. Operational Period Date/Time",
+    )
+    pdf.setFont("Helvetica", 8)
+    period_start = (
+        f"From: {_date(form.operational_period.starts_at)} "
+        f"{_time(form.operational_period.starts_at)}"
+    )
+    period_end = (
+        f"To: {_date(form.operational_period.ends_at)} "
+        f"{_time(form.operational_period.ends_at)}"
+    )
+    pdf.drawString(prepared_right + 0.08 * inch, top - 0.40 * inch, period_start)
+    pdf.drawString(prepared_right + 0.08 * inch, top - 0.62 * inch, period_end)
 
     pdf.setFillColor(colors.HexColor("#E7E6E6"))
-    pdf.rect(left, header_bottom - 0.28 * inch, right - left, 0.28 * inch, stroke=1, fill=1)
+    pdf.rect(
+        left,
+        header_bottom - 0.28 * inch,
+        right - left,
+        0.28 * inch,
+        stroke=1,
+        fill=1,
+    )
     pdf.setFillColor(colors.black)
     pdf.setFont("Helvetica-Bold", 9)
     pdf.drawCentredString(
@@ -143,44 +159,49 @@ def _draw_pdf_header_footer(pdf: canvas.Canvas, doc, form: ICS205BForm):
         "4. Information Technology Infrastructure & Services Assignment",
     )
 
-    # Footer: repeat all prepared-by/location information on every page.
     footer_top = 0.90 * inch
     footer_bottom = 0.34 * inch
-    pdf.rect(left, footer_bottom, right - left, footer_top - footer_bottom)
     footer_width = right - left
+    pdf.rect(left, footer_bottom, footer_width, footer_top - footer_bottom)
     cuts = [0.25, 0.37, 0.49, 0.62, 0.78, 0.86, 0.93]
     for ratio in cuts:
         x = left + footer_width * ratio
         pdf.line(x, footer_bottom, x, footer_top)
-    pdf.setFont("Helvetica-Bold", 6.8)
+
     labels = [
-        (left + 0.03 * inch, "5. Prepared By (Name and Position)"),
-        (left + footer_width * 0.25 + 0.03 * inch, "Phone Number"),
-        (left + footer_width * 0.37 + 0.03 * inch, "Signature"),
-        (left + footer_width * 0.49 + 0.03 * inch, "Date / Time"),
-        (left + footer_width * 0.62 + 0.03 * inch, "6. Incident Location"),
-        (left + footer_width * 0.78 + 0.03 * inch, "State"),
-        (left + footer_width * 0.86 + 0.03 * inch, "County"),
-        (left + footer_width * 0.93 + 0.03 * inch, "City"),
+        (0.00, "5. Prepared By (Name and Position)"),
+        (0.25, "Phone Number"),
+        (0.37, "Signature"),
+        (0.49, "Date / Time"),
+        (0.62, "6. Incident Location"),
+        (0.78, "State"),
+        (0.86, "County"),
+        (0.93, "City"),
     ]
-    for x, text in labels:
-        pdf.drawString(x, footer_top - 0.14 * inch, text)
-    pdf.setFont("Helvetica", 6.8)
     values = [
-        (left + 0.03 * inch, _prepared_by(form)),
-        (left + footer_width * 0.25 + 0.03 * inch, form.prepared_by_phone),
-        (left + footer_width * 0.37 + 0.03 * inch, form.prepared_by_signature),
-        (
-            left + footer_width * 0.49 + 0.03 * inch,
-            f"{_date(form.prepared_at)} {_time(form.prepared_at)}",
-        ),
-        (left + footer_width * 0.62 + 0.03 * inch, form.incident_location),
-        (left + footer_width * 0.78 + 0.03 * inch, form.state),
-        (left + footer_width * 0.86 + 0.03 * inch, form.county),
-        (left + footer_width * 0.93 + 0.03 * inch, form.city),
+        (0.00, _prepared_by(form)),
+        (0.25, form.prepared_by_phone),
+        (0.37, form.prepared_by_signature),
+        (0.49, f"{_date(form.prepared_at)} {_time(form.prepared_at)}"),
+        (0.62, form.incident_location),
+        (0.78, form.state),
+        (0.86, form.county),
+        (0.93, form.city),
     ]
-    for x, text in values:
-        pdf.drawString(x, footer_bottom + 0.12 * inch, (text or "")[:34])
+    pdf.setFont("Helvetica-Bold", 6.8)
+    for ratio, text in labels:
+        pdf.drawString(
+            left + footer_width * ratio + 0.03 * inch,
+            footer_top - 0.14 * inch,
+            text,
+        )
+    pdf.setFont("Helvetica", 6.8)
+    for ratio, text in values:
+        pdf.drawString(
+            left + footer_width * ratio + 0.03 * inch,
+            footer_bottom + 0.12 * inch,
+            (text or "")[:34],
+        )
 
     pdf.setFont("Helvetica", 7)
     pdf.drawString(left, 0.20 * inch, "ICS Form 205b")
@@ -190,7 +211,7 @@ def _draw_pdf_header_footer(pdf: canvas.Canvas, doc, form: ICS205BForm):
 
 def render_ics205b_pdf(form: ICS205BForm) -> bytes:
     buffer = BytesIO()
-    doc = SimpleDocTemplate(
+    document = SimpleDocTemplate(
         buffer,
         pagesize=landscape(letter),
         leftMargin=0.25 * inch,
@@ -232,23 +253,19 @@ def render_ics205b_pdf(form: ICS205BForm) -> bytes:
     ]
     rows = [[Paragraph(value, header_style) for value in headings]]
     for item in form.assignments.all():
-        rows.append(
-            [
-                Paragraph(value or "", body_style)
-                for value in [
-                    item.assignment,
-                    item.it_resource_type,
-                    item.resource_name,
-                    item.usage_description,
-                    item.platform,
-                    item.developer,
-                    item.login_install,
-                    item.equipment_location,
-                    item.poc_information,
-                    item.remarks,
-                ]
-            ]
-        )
+        values = [
+            item.assignment,
+            item.it_resource_type,
+            item.resource_name,
+            item.usage_description,
+            item.platform,
+            item.developer,
+            item.login_install,
+            item.equipment_location,
+            item.poc_information,
+            item.remarks,
+        ]
+        rows.append([Paragraph(value or "", body_style) for value in values])
     if len(rows) == 1:
         rows.append([Paragraph("", body_style) for _ in headings])
 
@@ -268,10 +285,10 @@ def render_ics205b_pdf(form: ICS205BForm) -> bytes:
             ]
         )
     )
-    doc.build(
+    document.build(
         [table],
-        onFirstPage=lambda pdf, current_doc: _draw_pdf_header_footer(pdf, current_doc, form),
-        onLaterPages=lambda pdf, current_doc: _draw_pdf_header_footer(pdf, current_doc, form),
+        onFirstPage=lambda pdf, doc: _draw_pdf_header_footer(pdf, doc, form),
+        onLaterPages=lambda pdf, doc: _draw_pdf_header_footer(pdf, doc, form),
         canvasmaker=_NumberedCanvas,
     )
     return buffer.getvalue()
@@ -282,11 +299,12 @@ def _border() -> Border:
     return Border(left=thin, right=thin, top=thin, bottom=thin)
 
 
-def _build_excel_page(ws, form: ICS205BForm, assignments, page_number: int, page_count: int):
+def _build_excel_page(ws, form, assignments, page_number: int, page_count: int):
     ws.sheet_view.showGridLines = False
     for col in range(1, 11):
         ws.column_dimensions[get_column_letter(col)].width = 18.7265625
     ws.column_dimensions["K"].width = 37.7265625
+
     heights = {1: 25, 2: 20.15, 3: 20.15, 4: 25, 5: 55, 27: 20.15, 28: 36, 29: 16}
     for row in range(6, 27):
         heights[row] = 36
@@ -307,13 +325,12 @@ def _build_excel_page(ws, form: ICS205BForm, assignments, page_number: int, page
         "G28:H28",
         "B29:J29",
     ] + [f"H{row}:I{row}" for row in range(6, 27)]
-    for ref in merges:
-        ws.merge_cells(ref)
+    for cell_range in merges:
+        ws.merge_cells(cell_range)
 
     center = Alignment(horizontal="center", vertical="center", wrap_text=True)
     left = Alignment(horizontal="left", vertical="top", wrap_text=True)
     bold = Font(bold=True, size=10)
-    title = Font(bold=True, size=15)
     gray = PatternFill("solid", fgColor="E7E6E6")
 
     for row in ws.iter_rows(min_row=1, max_row=29, min_col=1, max_col=11):
@@ -323,7 +340,7 @@ def _build_excel_page(ws, form: ICS205BForm, assignments, page_number: int, page
             cell.font = Font(size=9)
 
     ws["A1"] = "INCIDENT INFORMATION\nMANAGEMENT PLAN (ICS 205b)"
-    ws["A1"].font = title
+    ws["A1"].font = Font(bold=True, size=15)
     ws["A1"].alignment = center
     ws["D1"] = "1. Incident Name"
     ws["D1"].font = bold
@@ -367,8 +384,8 @@ def _build_excel_page(ws, form: ICS205BForm, assignments, page_number: int, page
         "POC Information",
         "Remarks",
     ]
-    target_columns = ["A", "B", "C", "D", "E", "F", "G", "H", "J", "K"]
-    for col, value in zip(target_columns, headings, strict=True):
+    columns = ["A", "B", "C", "D", "E", "F", "G", "H", "J", "K"]
+    for col, value in zip(columns, headings, strict=True):
         ws[f"{col}5"] = value
         ws[f"{col}5"].font = bold
         ws[f"{col}5"].alignment = center
@@ -388,19 +405,22 @@ def _build_excel_page(ws, form: ICS205BForm, assignments, page_number: int, page
             item.poc_information,
             item.remarks,
         ]
-        for col, value in zip(target_columns, values, strict=True):
+        for col, value in zip(columns, values, strict=True):
             ws[f"{col}{row_number}"] = value
             ws[f"{col}{row_number}"].alignment = left
 
-    ws["A27"] = "5. Prepared By (Name and Position)"
-    ws["D27"] = "Phone Number"
-    ws["E27"] = "Signature"
-    ws["F27"] = "Date / Time"
-    ws["G27"] = "6. Incident Location"
-    ws["I27"] = "State"
-    ws["J27"] = "County"
-    ws["K27"] = "City"
-    for ref in ["A27", "D27", "E27", "F27", "G27", "I27", "J27", "K27"]:
+    footer_labels = {
+        "A27": "5. Prepared By (Name and Position)",
+        "D27": "Phone Number",
+        "E27": "Signature",
+        "F27": "Date / Time",
+        "G27": "6. Incident Location",
+        "I27": "State",
+        "J27": "County",
+        "K27": "City",
+    }
+    for ref, value in footer_labels.items():
+        ws[ref] = value
         ws[ref].font = Font(bold=True, size=8)
     ws["A28"] = _prepared_by(form)
     ws["D28"] = form.prepared_by_phone
