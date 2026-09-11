@@ -37,7 +37,15 @@ jobs:
           src/WorkspaceTabs.tsx
           src/main.tsx
           src/workspaceTabRegistry.ts
-      - run: pnpm lint
+      - name: Lint ICS 205B changed frontend files
+        run: >-
+          pnpm exec eslint
+          src/ics205bApi.ts
+          src/ICS205BWorkspace.tsx
+          src/WorkspaceTabs.tsx
+          src/main.tsx
+          src/workspaceTabRegistry.ts
+          --max-warnings=0
       - run: pnpm typecheck
       - run: pnpm test -- --run
       - run: pnpm build
