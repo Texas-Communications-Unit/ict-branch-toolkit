@@ -48,7 +48,8 @@ jobs:
           src/workspaceTabRegistry.ts
           --max-warnings=0
       - run: pnpm typecheck
-      - run: pnpm test -- --run
+      - name: Run workspace-tab regression tests
+        run: pnpm exec vitest run tests/WorkspaceTabs.test.tsx
       - run: pnpm build
 
   backend:
