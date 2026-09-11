@@ -76,10 +76,6 @@ class ICS205BFormSerializer(serializers.ModelSerializer):
             and operational_period.incident_id != incident.id
         ):
             raise serializers.ValidationError(
-                {
-                    "operational_period": (
-                        "Operational period must belong to the selected incident."
-                    )
-                }
+                {"operational_period": ("Operational period must belong to the selected incident.")}
             )
         return attrs

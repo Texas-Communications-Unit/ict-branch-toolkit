@@ -12,7 +12,13 @@ from rest_framework.response import Response
 
 from apps.accounts.models import Role
 from apps.accounts.permissions import PolicyPermission
-from apps.accounts.policy import PLAN_EDIT, PLAN_EXPORT, PLAN_VIEW, role_for_user, user_has_permission
+from apps.accounts.policy import (
+    PLAN_EDIT,
+    PLAN_EXPORT,
+    PLAN_VIEW,
+    role_for_user,
+    user_has_permission,
+)
 from apps.audit.services import record_event
 
 from .ics205b_export import render_ics205b_pdf, render_ics205b_xlsx
@@ -62,8 +68,9 @@ class ICS205BFormViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         queryset = _scoped(
-            ICS205BForm.objects.select_related("incident", "operational_period", "created_by")
-            .prefetch_related("assignments"),
+            ICS205BForm.objects.select_related(
+                "incident", "operational_period", "created_by"
+            ).prefetch_related("assignments"),
             self.request.user,
         )
         incident = self.request.query_params.get("incident")
@@ -116,9 +123,7 @@ class ICS205BFormViewSet(viewsets.ModelViewSet):
         _export_event(request=request, form=form, export_format="xlsx", content=content)
         response = HttpResponse(
             content,
-            content_type=(
-                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            ),
+            content_type=("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),
         )
         response["Content-Disposition"] = 'attachment; filename="ics-205b.xlsx"'
         return response
@@ -140,9 +145,7 @@ class ICS205BAssignmentViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         queryset = _scoped(
-            ICS205BAssignment.objects.select_related(
-                "form__incident", "form__operational_period"
-            ),
+            ICS205BAssignment.objects.select_related("form__incident", "form__operational_period"),
             self.request.user,
             "form__incident",
         )

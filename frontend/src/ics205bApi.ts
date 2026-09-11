@@ -76,7 +76,10 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
       sessionStorage.removeItem(TOKEN_EXPIRES_AT_KEY);
       window.dispatchEvent(new Event(AUTHENTICATION_EXPIRED_EVENT));
     }
-    throw new Error((await response.text()) || `Request failed with status ${response.status}`);
+    throw new Error(
+      (await response.text()) ||
+        `Request failed with status ${response.status}`,
+    );
   }
   if (response.status === 204) return undefined as T;
   return (await response.json()) as T;
@@ -109,10 +112,13 @@ export function updateICS205BForm(
   formId: string,
   payload: Record<string, unknown>,
 ): Promise<ICS205BForm> {
-  return request<ICS205BForm>(`/api/ics205b-forms/${encodeURIComponent(formId)}/`, {
-    method: "PATCH",
-    body: JSON.stringify(payload),
-  });
+  return request<ICS205BForm>(
+    `/api/ics205b-forms/${encodeURIComponent(formId)}/`,
+    {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    },
+  );
 }
 
 export function createICS205BAssignment(
@@ -151,7 +157,8 @@ export async function downloadICS205B(
     `${API_BASE}/api/ics205b-forms/${encodeURIComponent(formId)}/${format}/`,
     { headers: { Authorization: `Token ${token}` } },
   );
-  if (!response.ok) throw new Error((await response.text()) || "Export failed.");
+  if (!response.ok)
+    throw new Error((await response.text()) || "Export failed.");
   const url = URL.createObjectURL(await response.blob());
   const anchor = document.createElement("a");
   anchor.href = url;

@@ -101,19 +101,37 @@ def _draw_pdf_header_footer(pdf: canvas.Canvas, doc, form: ICS205BForm):
     pdf.setFont("Helvetica-Bold", 9)
     pdf.drawCentredString((title_right + incident_right) / 2, top - 0.16 * inch, "1. Incident Name")
     pdf.setFont("Helvetica", 9)
-    pdf.drawCentredString((title_right + incident_right) / 2, top - 0.49 * inch, form.incident.name[:34])
+    pdf.drawCentredString(
+        (title_right + incident_right) / 2, top - 0.49 * inch, form.incident.name[:34]
+    )
 
     pdf.setFont("Helvetica-Bold", 9)
-    pdf.drawCentredString((incident_right + prepared_right) / 2, top - 0.16 * inch, "2. Date/Time Prepared")
+    pdf.drawCentredString(
+        (incident_right + prepared_right) / 2, top - 0.16 * inch, "2. Date/Time Prepared"
+    )
     pdf.setFont("Helvetica", 8)
-    pdf.drawString(incident_right + 0.08 * inch, top - 0.40 * inch, f"Date: {_date(form.prepared_at)}")
-    pdf.drawString(incident_right + 0.08 * inch, top - 0.62 * inch, f"Time: {_time(form.prepared_at)}")
+    pdf.drawString(
+        incident_right + 0.08 * inch, top - 0.40 * inch, f"Date: {_date(form.prepared_at)}"
+    )
+    pdf.drawString(
+        incident_right + 0.08 * inch, top - 0.62 * inch, f"Time: {_time(form.prepared_at)}"
+    )
 
     pdf.setFont("Helvetica-Bold", 9)
-    pdf.drawCentredString((prepared_right + right) / 2, top - 0.16 * inch, "3. Operational Period Date/Time")
+    pdf.drawCentredString(
+        (prepared_right + right) / 2, top - 0.16 * inch, "3. Operational Period Date/Time"
+    )
     pdf.setFont("Helvetica", 8)
-    pdf.drawString(prepared_right + 0.08 * inch, top - 0.40 * inch, f"From: {_date(form.operational_period.starts_at)} {_time(form.operational_period.starts_at)}")
-    pdf.drawString(prepared_right + 0.08 * inch, top - 0.62 * inch, f"To: {_date(form.operational_period.ends_at)} {_time(form.operational_period.ends_at)}")
+    pdf.drawString(
+        prepared_right + 0.08 * inch,
+        top - 0.40 * inch,
+        f"From: {_date(form.operational_period.starts_at)} {_time(form.operational_period.starts_at)}",
+    )
+    pdf.drawString(
+        prepared_right + 0.08 * inch,
+        top - 0.62 * inch,
+        f"To: {_date(form.operational_period.ends_at)} {_time(form.operational_period.ends_at)}",
+    )
 
     pdf.setFillColor(colors.HexColor("#E7E6E6"))
     pdf.rect(left, header_bottom - 0.28 * inch, right - left, 0.28 * inch, stroke=1, fill=1)
@@ -152,7 +170,10 @@ def _draw_pdf_header_footer(pdf: canvas.Canvas, doc, form: ICS205BForm):
         (left + 0.03 * inch, _prepared_by(form)),
         (left + footer_width * 0.25 + 0.03 * inch, form.prepared_by_phone),
         (left + footer_width * 0.37 + 0.03 * inch, form.prepared_by_signature),
-        (left + footer_width * 0.49 + 0.03 * inch, f"{_date(form.prepared_at)} {_time(form.prepared_at)}"),
+        (
+            left + footer_width * 0.49 + 0.03 * inch,
+            f"{_date(form.prepared_at)} {_time(form.prepared_at)}",
+        ),
         (left + footer_width * 0.62 + 0.03 * inch, form.incident_location),
         (left + footer_width * 0.78 + 0.03 * inch, form.state),
         (left + footer_width * 0.86 + 0.03 * inch, form.county),
@@ -273,8 +294,18 @@ def _build_excel_page(ws, form: ICS205BForm, assignments, page_number: int, page
         ws.row_dimensions[row].height = height
 
     merges = [
-        "A1:C3", "D1:E1", "D2:E3", "F1:G1", "H1:K1", "A4:K4", "H5:I5",
-        "A27:C27", "A28:C28", "G27:H27", "G28:H28", "B29:J29",
+        "A1:C3",
+        "D1:E1",
+        "D2:E3",
+        "F1:G1",
+        "H1:K1",
+        "A4:K4",
+        "H5:I5",
+        "A27:C27",
+        "A28:C28",
+        "G27:H27",
+        "G28:H28",
+        "B29:J29",
     ] + [f"H{row}:I{row}" for row in range(6, 27)]
     for ref in merges:
         ws.merge_cells(ref)
@@ -325,9 +356,16 @@ def _build_excel_page(ws, form: ICS205BForm, assignments, page_number: int, page
         cell.fill = gray
 
     headings = [
-        "Assignment", "IT Resource Type", "Name of\nApplication or\nResource", "Usage or\nDescription",
-        "Platform", "Developer", "Login/Install", "Equipment Location\nWeb Address, IP Address or SSID",
-        "POC Information", "Remarks",
+        "Assignment",
+        "IT Resource Type",
+        "Name of\nApplication or\nResource",
+        "Usage or\nDescription",
+        "Platform",
+        "Developer",
+        "Login/Install",
+        "Equipment Location\nWeb Address, IP Address or SSID",
+        "POC Information",
+        "Remarks",
     ]
     target_columns = ["A", "B", "C", "D", "E", "F", "G", "H", "J", "K"]
     for col, value in zip(target_columns, headings, strict=True):
@@ -339,9 +377,16 @@ def _build_excel_page(ws, form: ICS205BForm, assignments, page_number: int, page
 
     for row_number, item in enumerate(assignments, start=6):
         values = [
-            item.assignment, item.it_resource_type, item.resource_name, item.usage_description,
-            item.platform, item.developer, item.login_install, item.equipment_location,
-            item.poc_information, item.remarks,
+            item.assignment,
+            item.it_resource_type,
+            item.resource_name,
+            item.usage_description,
+            item.platform,
+            item.developer,
+            item.login_install,
+            item.equipment_location,
+            item.poc_information,
+            item.remarks,
         ]
         for col, value in zip(target_columns, values, strict=True):
             ws[f"{col}{row_number}"] = value

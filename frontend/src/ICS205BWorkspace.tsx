@@ -59,14 +59,18 @@ export function ICS205BWorkspace() {
   const [form, setForm] = useState<ICS205BForm | null>(null);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
-  const [editingAssignmentId, setEditingAssignmentId] = useState<string | null>(null);
+  const [editingAssignmentId, setEditingAssignmentId] = useState<string | null>(
+    null,
+  );
   const [draft, setDraft] = useState<AssignmentDraft>({ ...EMPTY_ASSIGNMENT });
 
   const incident = useMemo(
     () => incidents.find((item) => item.id === incidentId),
     [incidentId, incidents],
   );
-  const period = incident?.operational_periods.find((item) => item.id === periodId);
+  const period = incident?.operational_periods.find(
+    (item) => item.id === periodId,
+  );
   const canEdit = incident?.permissions.includes("plan.edit") ?? false;
   const canExport = incident?.permissions.includes("plan.export") ?? false;
 
@@ -81,7 +85,9 @@ export function ICS205BWorkspace() {
       setForm(forms[0] ?? null);
       setMessage("");
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Unable to load ICS 205B.");
+      setMessage(
+        error instanceof Error ? error.message : "Unable to load ICS 205B.",
+      );
     } finally {
       setLoading(false);
     }
@@ -97,7 +103,11 @@ export function ICS205BWorkspace() {
       })
       .catch((error) => {
         if (active)
-          setMessage(error instanceof Error ? error.message : "Unable to load incidents.");
+          setMessage(
+            error instanceof Error
+              ? error.message
+              : "Unable to load incidents.",
+          );
       });
     return () => {
       active = false;
@@ -126,7 +136,9 @@ export function ICS205BWorkspace() {
       await refreshForm();
       setMessage(success);
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "ICS 205B action failed.");
+      setMessage(
+        error instanceof Error ? error.message : "ICS 205B action failed.",
+      );
     } finally {
       setLoading(false);
     }
@@ -157,7 +169,9 @@ export function ICS205BWorkspace() {
           prepared_by_name: String(data.get("prepared_by_name") || ""),
           prepared_by_position: String(data.get("prepared_by_position") || ""),
           prepared_by_phone: String(data.get("prepared_by_phone") || ""),
-          prepared_by_signature: String(data.get("prepared_by_signature") || ""),
+          prepared_by_signature: String(
+            data.get("prepared_by_signature") || "",
+          ),
           incident_location: String(data.get("incident_location") || ""),
           state: String(data.get("state") || ""),
           county: String(data.get("county") || ""),
@@ -225,19 +239,23 @@ export function ICS205BWorkspace() {
         <span className="count">{form?.assignments.length ?? 0}</span>
       </div>
       <p>
-        Incident Information Management Plan for Information Technology infrastructure and
-        services assignments. Excel and PDF exports follow the supplied ICS 205B spreadsheet
-        layout and form revision 6/15/2018.
+        Incident Information Management Plan for Information Technology
+        infrastructure and services assignments. Excel and PDF exports follow
+        the supplied ICS 205B spreadsheet layout and form revision 6/15/2018.
       </p>
       <p className="warning-text">
-        <strong>Credential safety:</strong> Login/Install is for instructions or identifiers only.
-        Do not enter passwords, API keys, access tokens, private keys, or other credentials.
+        <strong>Credential safety:</strong> Login/Install is for instructions or
+        identifiers only. Do not enter passwords, API keys, access tokens,
+        private keys, or other credentials.
       </p>
 
       <div className="form-grid">
         <label>
           Incident
-          <select value={incidentId} onChange={(event) => setIncidentId(event.target.value)}>
+          <select
+            value={incidentId}
+            onChange={(event) => setIncidentId(event.target.value)}
+          >
             <option value="">Select incident</option>
             {incidents.map((item) => (
               <option key={item.id} value={item.id}>
@@ -248,7 +266,10 @@ export function ICS205BWorkspace() {
         </label>
         <label>
           Operational period
-          <select value={periodId} onChange={(event) => setPeriodId(event.target.value)}>
+          <select
+            value={periodId}
+            onChange={(event) => setPeriodId(event.target.value)}
+          >
             <option value="">Select operational period</option>
             {incident?.operational_periods.map((item) => (
               <option key={item.id} value={item.id}>
@@ -260,10 +281,16 @@ export function ICS205BWorkspace() {
       </div>
 
       {!periodId && incident && (
-        <p role="status">Create an operational period before creating an ICS 205B.</p>
+        <p role="status">
+          Create an operational period before creating an ICS 205B.
+        </p>
       )}
       {periodId && !form && canEdit && (
-        <button type="button" onClick={() => void handleCreateForm()} disabled={loading}>
+        <button
+          type="button"
+          onClick={() => void handleCreateForm()}
+          disabled={loading}
+        >
           Create ICS 205B
         </button>
       )}
@@ -283,13 +310,18 @@ export function ICS205BWorkspace() {
               <div>
                 <dt>3. Operational Period</dt>
                 <dd>
-                  {period?.name ?? form.operational_period_name}: {form.operational_period_starts_at}
+                  {period?.name ?? form.operational_period_name}:{" "}
+                  {form.operational_period_starts_at}
                   {" — "}
                   {form.operational_period_ends_at}
                 </dd>
               </div>
             </dl>
-            <form key={form.updated_at} className="form-grid" onSubmit={handleHeaderSave}>
+            <form
+              key={form.updated_at}
+              className="form-grid"
+              onSubmit={handleHeaderSave}
+            >
               <label>
                 2. Date/Time Prepared
                 <input
@@ -301,35 +333,67 @@ export function ICS205BWorkspace() {
               </label>
               <label>
                 5. Prepared By — Name
-                <input name="prepared_by_name" defaultValue={form.prepared_by_name} disabled={!canEdit} />
+                <input
+                  name="prepared_by_name"
+                  defaultValue={form.prepared_by_name}
+                  disabled={!canEdit}
+                />
               </label>
               <label>
                 Position
-                <input name="prepared_by_position" defaultValue={form.prepared_by_position} disabled={!canEdit} />
+                <input
+                  name="prepared_by_position"
+                  defaultValue={form.prepared_by_position}
+                  disabled={!canEdit}
+                />
               </label>
               <label>
                 Phone Number
-                <input name="prepared_by_phone" defaultValue={form.prepared_by_phone} disabled={!canEdit} />
+                <input
+                  name="prepared_by_phone"
+                  defaultValue={form.prepared_by_phone}
+                  disabled={!canEdit}
+                />
               </label>
               <label>
                 Signature / typed signature
-                <input name="prepared_by_signature" defaultValue={form.prepared_by_signature} disabled={!canEdit} />
+                <input
+                  name="prepared_by_signature"
+                  defaultValue={form.prepared_by_signature}
+                  disabled={!canEdit}
+                />
               </label>
               <label>
                 6. Incident Location
-                <input name="incident_location" defaultValue={form.incident_location} disabled={!canEdit} />
+                <input
+                  name="incident_location"
+                  defaultValue={form.incident_location}
+                  disabled={!canEdit}
+                />
               </label>
               <label>
                 State
-                <input name="state" defaultValue={form.state} disabled={!canEdit} />
+                <input
+                  name="state"
+                  defaultValue={form.state}
+                  disabled={!canEdit}
+                />
               </label>
               <label>
                 County
-                <input name="county" defaultValue={form.county} disabled={!canEdit} />
+                <input
+                  name="county"
+                  defaultValue={form.county}
+                  disabled={!canEdit}
+                />
               </label>
               <label>
                 City
-                <input name="city" defaultValue={form.city} disabled={!canEdit} />
+                <input
+                  name="city"
+                  defaultValue={form.city}
+                  disabled={!canEdit}
+                />
               </label>
               {canEdit && <button type="submit">Save form information</button>}
             </form>
@@ -339,7 +403,11 @@ export function ICS205BWorkspace() {
             <h3 id="ics205b-assignments-heading">
               4. Information Technology Infrastructure &amp; Services Assignment
             </h3>
-            <div className="table-wrap" tabIndex={0} aria-label="ICS 205B assignments table">
+            <div
+              className="table-wrap"
+              tabIndex={0}
+              aria-label="ICS 205B assignments table"
+            >
               <table className="data-table">
                 <caption>ICS 205B information technology assignments</caption>
                 <thead>
@@ -351,7 +419,9 @@ export function ICS205BWorkspace() {
                     <th scope="col">Platform</th>
                     <th scope="col">Developer</th>
                     <th scope="col">Login/Install</th>
-                    <th scope="col">Equipment Location / Web Address, IP Address or SSID</th>
+                    <th scope="col">
+                      Equipment Location / Web Address, IP Address or SSID
+                    </th>
                     <th scope="col">POC Information</th>
                     <th scope="col">Remarks</th>
                     {canEdit && <th scope="col">Actions</th>}
@@ -360,7 +430,9 @@ export function ICS205BWorkspace() {
                 <tbody>
                   {form.assignments.length === 0 ? (
                     <tr>
-                      <td colSpan={canEdit ? 11 : 10}>No IT assignments have been entered.</td>
+                      <td colSpan={canEdit ? 11 : 10}>
+                        No IT assignments have been entered.
+                      </td>
                     </tr>
                   ) : (
                     form.assignments.map((item) => (
@@ -377,8 +449,18 @@ export function ICS205BWorkspace() {
                         <td>{item.remarks}</td>
                         {canEdit && (
                           <td>
-                            <button type="button" onClick={() => beginEdit(item)}>Edit</button>{" "}
-                            <button type="button" onClick={() => void removeAssignment(item)}>Delete</button>
+                            <button
+                              type="button"
+                              onClick={() => beginEdit(item)}
+                            >
+                              Edit
+                            </button>{" "}
+                            <button
+                              type="button"
+                              onClick={() => void removeAssignment(item)}
+                            >
+                              Delete
+                            </button>
                           </td>
                         )}
                       </tr>
@@ -392,47 +474,95 @@ export function ICS205BWorkspace() {
           {canEdit && (
             <form className="form-grid" onSubmit={handleAssignmentSave}>
               <h3 id="ics205b-assignment-editor" tabIndex={-1}>
-                {editingAssignmentId ? "Edit IT assignment" : "Add IT assignment"}
+                {editingAssignmentId
+                  ? "Edit IT assignment"
+                  : "Add IT assignment"}
               </h3>
               <label>
                 Assignment
-                <input value={draft.assignment} onChange={(event) => setField("assignment", event.target.value)} />
+                <input
+                  value={draft.assignment}
+                  onChange={(event) =>
+                    setField("assignment", event.target.value)
+                  }
+                />
               </label>
               <label>
                 IT Resource Type
-                <input value={draft.it_resource_type} onChange={(event) => setField("it_resource_type", event.target.value)} />
+                <input
+                  value={draft.it_resource_type}
+                  onChange={(event) =>
+                    setField("it_resource_type", event.target.value)
+                  }
+                />
               </label>
               <label>
                 Name of Application or Resource
-                <input value={draft.resource_name} onChange={(event) => setField("resource_name", event.target.value)} />
+                <input
+                  value={draft.resource_name}
+                  onChange={(event) =>
+                    setField("resource_name", event.target.value)
+                  }
+                />
               </label>
               <label>
                 Usage or Description
-                <textarea value={draft.usage_description} onChange={(event) => setField("usage_description", event.target.value)} />
+                <textarea
+                  value={draft.usage_description}
+                  onChange={(event) =>
+                    setField("usage_description", event.target.value)
+                  }
+                />
               </label>
               <label>
                 Platform
-                <input value={draft.platform} onChange={(event) => setField("platform", event.target.value)} />
+                <input
+                  value={draft.platform}
+                  onChange={(event) => setField("platform", event.target.value)}
+                />
               </label>
               <label>
                 Developer
-                <input value={draft.developer} onChange={(event) => setField("developer", event.target.value)} />
+                <input
+                  value={draft.developer}
+                  onChange={(event) =>
+                    setField("developer", event.target.value)
+                  }
+                />
               </label>
               <label>
                 Login/Install
-                <textarea value={draft.login_install} onChange={(event) => setField("login_install", event.target.value)} />
+                <textarea
+                  value={draft.login_install}
+                  onChange={(event) =>
+                    setField("login_install", event.target.value)
+                  }
+                />
               </label>
               <label>
                 Equipment Location / Web Address, IP Address or SSID
-                <textarea value={draft.equipment_location} onChange={(event) => setField("equipment_location", event.target.value)} />
+                <textarea
+                  value={draft.equipment_location}
+                  onChange={(event) =>
+                    setField("equipment_location", event.target.value)
+                  }
+                />
               </label>
               <label>
                 POC Information
-                <textarea value={draft.poc_information} onChange={(event) => setField("poc_information", event.target.value)} />
+                <textarea
+                  value={draft.poc_information}
+                  onChange={(event) =>
+                    setField("poc_information", event.target.value)
+                  }
+                />
               </label>
               <label>
                 Remarks
-                <textarea value={draft.remarks} onChange={(event) => setField("remarks", event.target.value)} />
+                <textarea
+                  value={draft.remarks}
+                  onChange={(event) => setField("remarks", event.target.value)}
+                />
               </label>
               <button type="submit" disabled={loading}>
                 {editingAssignmentId ? "Save assignment" : "Add assignment"}
@@ -453,10 +583,18 @@ export function ICS205BWorkspace() {
 
           {canExport && (
             <div className="button-row" aria-label="ICS 205B exports">
-              <button type="button" onClick={() => void exportForm("xlsx")} disabled={loading}>
+              <button
+                type="button"
+                onClick={() => void exportForm("xlsx")}
+                disabled={loading}
+              >
                 Export Excel
               </button>
-              <button type="button" onClick={() => void exportForm("pdf")} disabled={loading}>
+              <button
+                type="button"
+                onClick={() => void exportForm("pdf")}
+                disabled={loading}
+              >
                 Export PDF
               </button>
             </div>
