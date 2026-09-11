@@ -45,6 +45,9 @@ class ICS205BForm(models.Model):
             )
         ]
 
+    def __str__(self):
+        return f"ICS 205B: {self.incident} / {self.operational_period}"
+
     def clean(self):
         super().clean()
         if (
@@ -55,9 +58,6 @@ class ICS205BForm(models.Model):
             raise ValidationError(
                 {"operational_period": "Operational period must belong to the selected incident."}
             )
-
-    def __str__(self):
-        return f"ICS 205B: {self.incident} / {self.operational_period}"
 
 
 class ICS205BAssignment(models.Model):
