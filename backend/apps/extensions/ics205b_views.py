@@ -20,12 +20,14 @@ from .ics205b_models import ICS205BAssignment, ICS205BForm
 from .ics205b_serializers import ICS205BAssignmentSerializer, ICS205BFormSerializer
 
 
-def _scoped_forms(queryset, user):
+def _scoped(queryset, user, incident_path="incident"):
     if role_for_user(user) == Role.ADMINISTRATOR:
         return queryset
     return queryset.filter(
-        incident__memberships__user=user,
-        incident__memberships__is_active=True,
+        **{
+            f"{incident_path}__memberships__user": user,
+            f"{incident_path}__memberships__is_active": True,
+        }
     ).distinct()
 
 
@@ -59,7 +61,7 @@ class ICS205BFormViewSet(viewsets.ModelViewSet):
     }
 
     def get_queryset(self):
-        queryset = _scoped_forms(
+        queryset = _scoped(
             ICS205BForm.objects.select_related("incident", "operational_period", "created_by")
             .prefetch_related("assignments"),
             self.request.user,
@@ -137,11 +139,12 @@ class ICS205BAssignmentViewSet(viewsets.ModelViewSet):
     }
 
     def get_queryset(self):
-        queryset = _scoped_forms(
+        queryset = _scoped(
             ICS205BAssignment.objects.select_related(
                 "form__incident", "form__operational_period"
             ),
             self.request.user,
+            "form__incident",
         )
         form_id = self.request.query_params.get("form")
         return queryset.filter(form_id=form_id) if form_id else queryset
@@ -190,10 +193,10 @@ class ICS205BAssignmentViewSet(viewsets.ModelViewSet):
     def reorder(self, request):
         form_id = request.data.get("form")
         ordered_ids = request.data.get("assignment_ids", [])
-        try:
-            form = self.get_queryset().filter(form_id=form_id).first().form
-        except AttributeError as exc:
-            raise ValidationError({"form": "ICS 205B form not found."}) from exc
+        first_assignment = self.get_queryset().filter(form_id=form_id).first()
+        if first_assignment is None:
+            raise ValidationError({"form": "ICS 205B form not found or has no assignments."})
+        form = first_assignment.form
         if not user_has_permission(request.user, PLAN_EDIT, form.incident):
             raise PermissionDenied("Your incident role cannot reorder ICS 205B assignments.")
         assignments = list(form.assignments.all())
