@@ -1,5 +1,6 @@
-import django.db.models.deletion
 import uuid
+
+import django.db.models.deletion
 from django.conf import settings
 from django.db import migrations, models
 
@@ -7,7 +8,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
     dependencies = [
         ("extensions", "0001_initial"),
-        ("incidents", "0001_initial"),
+        ("incidents", "0003_auxcomm_and_incm_roles"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
