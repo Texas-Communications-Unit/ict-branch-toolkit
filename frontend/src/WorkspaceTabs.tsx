@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import type { KeyboardEvent, ReactNode } from "react";
 
+import { getRegisteredWorkspaceTabs } from "./workspaceTabRegistry";
+
 export interface WorkspaceTab {
   id: string;
   label: string;
@@ -14,6 +16,10 @@ interface WorkspaceTabsProps {
 }
 
 export function WorkspaceTabs({ tabs, initialTab }: WorkspaceTabsProps) {
+  const registeredTabs = getRegisteredWorkspaceTabs().filter(
+    (registered) => !tabs.some((tab) => tab.id === registered.id),
+  );
+  const allTabs = [...tabs, ...registeredTabs];
   const [activeTab, setActiveTab] = useState(initialTab);
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
 
@@ -26,7 +32,7 @@ export function WorkspaceTabs({ tabs, initialTab }: WorkspaceTabsProps) {
   }, [activeTab]);
 
   function selectTab(index: number) {
-    const tab = tabs[index];
+    const tab = allTabs[index];
     if (!tab) return;
     setActiveTab(tab.id);
     tabRefs.current[index]?.focus();
@@ -37,11 +43,11 @@ export function WorkspaceTabs({ tabs, initialTab }: WorkspaceTabsProps) {
     index: number,
   ) {
     let nextIndex: number | null = null;
-    if (event.key === "ArrowRight") nextIndex = (index + 1) % tabs.length;
+    if (event.key === "ArrowRight") nextIndex = (index + 1) % allTabs.length;
     if (event.key === "ArrowLeft")
-      nextIndex = (index - 1 + tabs.length) % tabs.length;
+      nextIndex = (index - 1 + allTabs.length) % allTabs.length;
     if (event.key === "Home") nextIndex = 0;
-    if (event.key === "End") nextIndex = tabs.length - 1;
+    if (event.key === "End") nextIndex = allTabs.length - 1;
     if (nextIndex === null) return;
     event.preventDefault();
     selectTab(nextIndex);
@@ -54,7 +60,7 @@ export function WorkspaceTabs({ tabs, initialTab }: WorkspaceTabsProps) {
         aria-label="Planning workspace sections"
       >
         <div className="workspace-tablist" role="tablist">
-          {tabs.map((tab, index) => {
+          {allTabs.map((tab, index) => {
             const selected = tab.id === activeTab;
             return (
               <button
@@ -78,7 +84,7 @@ export function WorkspaceTabs({ tabs, initialTab }: WorkspaceTabsProps) {
           })}
         </div>
       </nav>
-      {tabs.map((tab) => (
+      {allTabs.map((tab) => (
         <section
           key={tab.id}
           id={`workspace-panel-${tab.id}`}
