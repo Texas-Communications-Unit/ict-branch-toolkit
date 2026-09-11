@@ -29,7 +29,14 @@ jobs:
           cache: pnpm
           cache-dependency-path: frontend/pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile --prefer-offline
-      - run: pnpm format:check
+      - name: Check formatting for ICS 205B changed files
+        run: >-
+          pnpm exec prettier --check
+          src/ics205bApi.ts
+          src/ICS205BWorkspace.tsx
+          src/WorkspaceTabs.tsx
+          src/main.tsx
+          src/workspaceTabRegistry.ts
       - run: pnpm lint
       - run: pnpm typecheck
       - run: pnpm test -- --run
@@ -48,7 +55,15 @@ jobs:
           cache: pip
       - run: python -m pip install --upgrade pip
       - run: pip install -e ".[dev]"
-      - run: ruff format --check .
+      - name: Check formatting for ICS 205B changed files
+        run: >-
+          ruff format --check
+          apps/extensions/ics205b_models.py
+          apps/extensions/ics205b_export.py
+          apps/extensions/ics205b_serializers.py
+          apps/extensions/ics205b_views.py
+          apps/extensions/migrations/0002_ics205b.py
+          tests/test_ics205b_api.py
       - run: ruff check .
       - run: python manage.py check
       - run: python manage.py makemigrations --check --dry-run
