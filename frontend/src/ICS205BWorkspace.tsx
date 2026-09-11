@@ -403,11 +403,7 @@ export function ICS205BWorkspace() {
             <h3 id="ics205b-assignments-heading">
               4. Information Technology Infrastructure &amp; Services Assignment
             </h3>
-            <div
-              className="table-wrap"
-              tabIndex={0}
-              aria-label="ICS 205B assignments table"
-            >
+            <div className="table-wrap" aria-label="ICS 205B assignments table">
               <table className="data-table">
                 <caption>ICS 205B information technology assignments</caption>
                 <thead>

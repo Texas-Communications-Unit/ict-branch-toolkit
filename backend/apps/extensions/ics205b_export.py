@@ -136,8 +136,7 @@ def _draw_pdf_header_footer(pdf: canvas.Canvas, _doc, form: ICS205BForm):
         f"{_time(form.operational_period.starts_at)}"
     )
     period_end = (
-        f"To: {_date(form.operational_period.ends_at)} "
-        f"{_time(form.operational_period.ends_at)}"
+        f"To: {_date(form.operational_period.ends_at)} {_time(form.operational_period.ends_at)}"
     )
     pdf.drawString(prepared_right + 0.08 * inch, top - 0.40 * inch, period_start)
     pdf.drawString(prepared_right + 0.08 * inch, top - 0.62 * inch, period_end)
