@@ -1,0 +1,49 @@
+name: Frontend regression validation
+# Temporary branch-only validation. Remove before merge.
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "frontend/**"
+      - ".github/workflows/frontend-regression-validation.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 11.9.0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile --prefer-offline
+      - name: Check formatting of changed frontend files
+        run: >-
+          pnpm exec prettier --check
+          src/IncidentMetadataEditor.test.tsx
+          tests/LocationSearchEnhancer.test.tsx
+          src/NifogResourceCategories.test.tsx
+          src/unitFormatting.ts
+      - name: Lint changed frontend files
+        run: >-
+          pnpm exec eslint
+          src/IncidentMetadataEditor.test.tsx
+          tests/LocationSearchEnhancer.test.tsx
+          src/NifogResourceCategories.test.tsx
+          src/unitFormatting.ts
+          --max-warnings=0
+      - run: pnpm typecheck
+      - name: Run complete frontend test suite
+        run: pnpm test -- --run
+      - run: pnpm build
