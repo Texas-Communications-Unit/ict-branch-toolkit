@@ -1,4 +1,4 @@
-import { act, render, screen } from "@testing-library/react";
+import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { LocationSearchEnhancer } from "../src/LocationSearchEnhancer";
@@ -54,10 +54,11 @@ test("resolves locally with external lookup disabled and exposes a textual resul
   await user.click(screen.getByRole("button", { name: "Resolve location" }));
 
   expect(api.resolveLocation).toHaveBeenCalledWith("33.2145, -97.1331", false);
-  expect(
-    await screen.findByRole("list", { name: "Normalized location results" }),
-  ).toBeInTheDocument();
-  expect(screen.getByText(/WGS 84/)).toBeInTheDocument();
+  const results = await screen.findByRole("list", {
+    name: "Normalized location results",
+  });
+  expect(results).toBeInTheDocument();
+  expect(within(results).getByText(/WGS 84/)).toBeInTheDocument();
 });
 
 test("requires an explicit operator choice before external lookup", async () => {
