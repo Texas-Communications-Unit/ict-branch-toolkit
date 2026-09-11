@@ -78,8 +78,12 @@ test("requires an explicit operator choice before external lookup", async () => 
   await user.type(screen.getByLabelText("Location"), "Alpha Rd & Bravo St");
   await user.click(screen.getByRole("button", { name: "Resolve location" }));
 
-  expect(await screen.findByText(/External lookup was not approved/)).toBeInTheDocument();
-  expect(screen.getByText(/protected or sensitive operational locations/)).toBeInTheDocument();
+  expect(
+    await screen.findByText(/External lookup was not approved/),
+  ).toBeInTheDocument();
+  expect(
+    screen.getByText(/protected or sensitive operational locations/),
+  ).toBeInTheDocument();
 });
 
 test("selecting a keyboard-accessible result populates the canonical coordinate field", async () => {
@@ -121,7 +125,9 @@ test("selecting a keyboard-accessible result populates the canonical coordinate 
   );
   await user.click(screen.getByRole("button", { name: "Resolve location" }));
   await user.click(
-    await screen.findByRole("button", { name: /Synthetic EOC, Synthetic City, TX/ }),
+    await screen.findByRole("button", {
+      name: /Synthetic EOC, Synthetic City, TX/,
+    }),
   );
   await act(async () => Promise.resolve());
 
@@ -131,5 +137,7 @@ test("selecting a keyboard-accessible result populates the canonical coordinate 
     )?.value,
   ).toBe("33.214500, -97.133100");
   expect(clicked).toHaveBeenCalled();
-  expect(screen.getByRole("status")).toHaveTextContent(/sent to the existing map preview workflow/);
+  expect(screen.getByRole("status")).toHaveTextContent(
+    /sent to the existing map preview workflow/,
+  );
 });
