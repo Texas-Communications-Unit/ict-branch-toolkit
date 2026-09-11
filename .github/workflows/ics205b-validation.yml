@@ -1,4 +1,5 @@
 name: ICS 205B validation
+# Temporary branch-only validation. Remove before merge.
 
 on:
   pull_request:
