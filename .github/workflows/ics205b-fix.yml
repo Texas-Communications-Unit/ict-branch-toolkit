@@ -1,0 +1,60 @@
+name: ICS 205B focused fixer
+
+on:
+  push:
+    branches: [issue-162-ics205b-workspace]
+    paths:
+      - ".github/workflows/ics205b-fix.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: issue-162-ics205b-workspace
+      - name: Remove invalid noninteractive tab stop
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('frontend/src/ICS205BWorkspace.tsx')
+          text = path.read_text()
+          old = '''            <div\n              className="table-wrap"\n              tabIndex={0}\n              aria-label="ICS 205B assignments table"\n            >'''
+          new = '''            <div\n              className="table-wrap"\n              aria-label="ICS 205B assignments table"\n            >'''
+          if old not in text:
+              raise SystemExit('Expected ICS 205B table wrapper was not found')
+          path.write_text(text.replace(old, new, 1))
+          PY
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 11.9.0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - run: pnpm install --frozen-lockfile --prefer-offline
+        working-directory: frontend
+      - run: pnpm exec prettier --write src/ICS205BWorkspace.tsx
+        working-directory: frontend
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - run: python -m pip install ruff==0.13.2
+      - run: ruff format apps/extensions/ics205b_export.py
+        working-directory: backend
+      - name: Commit fixes
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add frontend/src/ICS205BWorkspace.tsx backend/apps/extensions/ics205b_export.py
+          if git diff --cached --quiet; then
+            echo "No focused fixes required."
+            exit 0
+          fi
+          git commit -m "fix: resolve ICS 205B validation failures"
+          git push origin HEAD:issue-162-ics205b-workspace
