@@ -4,6 +4,8 @@ from .ics205b_models import ICS205BAssignment, ICS205BForm
 
 
 class ICS205BAssignmentSerializer(serializers.ModelSerializer):
+    position = serializers.IntegerField(required=False, min_value=1)
+
     class Meta:
         model = ICS205BAssignment
         fields = [
@@ -24,7 +26,25 @@ class ICS205BAssignmentSerializer(serializers.ModelSerializer):
             "updated_at",
         ]
         read_only_fields = ["created_at", "updated_at"]
-        extra_kwargs = {"position": {"required": False}}
+        # The model-level uniqueness constraint is retained, but DRF's generated
+        # UniqueTogetherValidator makes optional position fields required before
+        # perform_create can assign the next row position.
+        validators = []
+
+    def validate(self, attrs):
+        form = attrs.get("form", getattr(self.instance, "form", None))
+        position = attrs.get("position", getattr(self.instance, "position", None))
+        if form is None or position is None:
+            return attrs
+
+        existing = ICS205BAssignment.objects.filter(form=form, position=position)
+        if self.instance is not None:
+            existing = existing.exclude(pk=self.instance.pk)
+        if existing.exists():
+            raise serializers.ValidationError(
+                {"position": "Another ICS 205B assignment already uses this position."}
+            )
+        return attrs
 
 
 class ICS205BFormSerializer(serializers.ModelSerializer):
