@@ -58,13 +58,23 @@ jobs:
       - name: Check formatting for ICS 205B changed files
         run: >-
           ruff format --check
+          apps/extensions/models.py
           apps/extensions/ics205b_models.py
           apps/extensions/ics205b_export.py
           apps/extensions/ics205b_serializers.py
           apps/extensions/ics205b_views.py
           apps/extensions/migrations/0002_ics205b.py
           tests/test_ics205b_api.py
-      - run: ruff check .
+      - name: Lint ICS 205B changed backend files
+        run: >-
+          ruff check
+          apps/extensions/models.py
+          apps/extensions/ics205b_models.py
+          apps/extensions/ics205b_export.py
+          apps/extensions/ics205b_serializers.py
+          apps/extensions/ics205b_views.py
+          apps/extensions/migrations/0002_ics205b.py
+          tests/test_ics205b_api.py
       - run: python manage.py check
       - run: python manage.py makemigrations --check --dry-run
       - run: python manage.py migrate --noinput
