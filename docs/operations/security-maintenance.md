@@ -29,6 +29,51 @@ Daily scans rebuild the candidate from main, not the already-running image. Comp
 
 ## Exceptions and incident response
 
+### Backend defense in depth
+
+The production backend drops all Linux capabilities and sets
+`no-new-privileges`. The installed-stack check inspects the running Gunicorn
+process's capability sets and `NoNewPrivs`, then runs normal health, synthetic
+application, and recovery checks. The backend does not need privileged ports,
+mount administration, or setuid escalation for its application duties. These
+controls reduce operating-system privilege exposure; they do not patch parser
+libraries, prevent every exploit, or change vulnerability applicability to
+not-affected by themselves. Continue reviewing the full reports in #168.
+
+The backend currently retains its existing container UID and writable media/
+static paths. Moving it to a non-root UID requires a separate tested ownership
+migration for existing volumes; do not recursively change production attachment
+ownership as part of scan triage.
+
+### Advisory applicability review
+
+Group full Trivy JSON by advisory ID and source package, preserving all package
+matches. Source-package advisories can describe a server, command-line tool, or
+optional binding absent from the installed image. Check the vendor's affected
+component and preconditions, installed binary/library inventory, and the actual
+application call path before proposing an applicability disposition. A matched
+shared library must not be dismissed merely because its package name differs
+from the vendor's title. Conversely, absence of a server executable can be
+relevant to a server-only advisory without making the entire source package safe.
+
+Keep a private per-advisory record with evidence, preliminary disposition,
+remaining uncertainty, named reviewer, and next review date. `Investigating`
+is the default until the evidence supports a narrower conclusion; human review
+is required before recording accepted risk or a scanner exception. Keep issue
+#168 open until every critical/high advisory has a reviewed outcome and follow-up.
+Check the CISA Known Exploited Vulnerabilities catalog using its version/date;
+absence from that catalog is not evidence that an issue is unexploitable.
+
+Retiring deployment SSH secrets requires checking **all** workflow consumers.
+The main deployment uses Azure OIDC, while FCC synchronization and the retained
+capacity workflow still need transport migration. Keep the administrator SSH
+credential separate. Remove a machine credential from the server and GitHub only
+after its consumers have migrated and the replacement operations are verified.
+
+Sources: [Docker runtime privileges](https://docs.docker.com/engine/containers/run/#runtime-privilege-and-linux-capabilities),
+[Debian security tracker](https://security-tracker.debian.org/tracker/), and
+[CISA catalog source](https://github.com/cisagov/kev-data).
+
 Never add a blanket advisory ignore, disable push protection, or bypass the deployment gate to clear a release. A justified false-positive or temporary risk acceptance requires a private record containing advisory ID, affected version and exposure, evidence, named owner/approver, expiry, and compensating controls. Any narrowly scoped scanner exception must link to that record without publishing sensitive details.
 
 If a credential is exposed, revoke/rotate it first, assess access logs, and then remove the exposure. If exploitation is suspected, preserve evidence, restrict affected access, and follow the organization's incident process. Do not test an exploit against production without explicit approval.
