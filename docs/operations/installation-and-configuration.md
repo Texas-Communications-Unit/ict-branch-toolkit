@@ -147,8 +147,10 @@ results of these checks:
 3. The internal health path returns JSON with `status: "ok"`,
    `database: "postgresql"`, and a non-empty `postgis` value.
 4. The public HTTPS health path succeeds and HTTP redirects as approved.
-5. Responses include `X-Content-Type-Options: nosniff`,
-   `X-Frame-Options: DENY`, and `Referrer-Policy: same-origin`.
+5. Responses include `X-Content-Type-Options: nosniff` and
+   `X-Frame-Options: DENY`. API responses retain `Referrer-Policy: same-origin`;
+   frontend documents using the approved OSM service use
+   `strict-origin-when-cross-origin` so browser tile identification is not suppressed.
 6. A named evaluator can sign in, sees only authorized synthetic incidents, and
    receives an authorization failure for a synthetic incident outside their
    membership.

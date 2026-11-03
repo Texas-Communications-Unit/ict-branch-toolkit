@@ -16,6 +16,11 @@ esac
 
 app_dir="$HOME/apps/ict-branch-toolkit"
 env_file="$HOME/.config/ict-branch-toolkit/deployment.env"
+
+# A schema upgrade and a reference-data import must not overlap on this host.
+install -d -m 700 "$HOME/.cache/ict-branch-toolkit"
+exec 9>"$HOME/.cache/ict-branch-toolkit/maintenance.lock"
+flock -n 9 || { echo "Another deployment or FCC sync is active; retry later." >&2; exit 1; }
 data_dir="$HOME/data/ict-branch-toolkit/fcc"
 backup_dir="$HOME/backups/ict-branch-toolkit"
 source_url="https://data.fcc.gov/download/pub/uls/complete/$archive_name"
