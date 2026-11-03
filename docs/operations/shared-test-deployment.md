@@ -17,7 +17,9 @@ personal, credential, and restricted channel information according to applicable
 
 ## Application host
 
-Clone the repository into a dedicated directory, check out an approved commit, and create a root-owned environment file that is readable only by root. Do not copy `.env.example` unchanged.
+Clone the repository into a dedicated directory, check out an approved commit,
+and create a deployment-account-owned environment file with mode `0600`, readable
+only by that account and root. Do not copy `.env.example` unchanged.
 
 Required values:
 
@@ -93,7 +95,7 @@ SMTP credentials to the repository.
 
 The approved shared-test sender is `toolkit@tx-comu.org`, authenticated through DreamHost at
 `smtp.dreamhost.com:587` using STARTTLS. The application does not use the mailbox's IMAP or POP3
-settings. Store the mailbox password only in the root-owned deployment environment file.
+settings. Store the mailbox password only in the protected deployment environment file.
 
 `DJANGO_HSTS_SECONDS=3600` is a deliberately short initial test value. The
 current application also emits the HSTS `includeSubDomains` and `preload`
@@ -146,8 +148,8 @@ listener that trusts this header to an untrusted network.
 
 ## Controlled GitHub deployment
 
-The `Deploy live system` GitHub Actions workflow provides the manually dispatched
-deployment path for the live host. Configure a protected
+The `Deploy to Server` GitHub Actions workflow runs on pushes to `main` and can
+also be dispatched manually. Configure a protected
 `shared-test` environment and require human review before the job can access its
 repository secrets.
 
@@ -160,11 +162,11 @@ Required repository or environment secrets:
 - `DEPLOY_KNOWN_HOSTS`
 
 The workflow accepts only the exact commit on `main`, refuses a dirty server
-checkout, creates and validates a compressed PostgreSQL backup, builds new
-images before replacing containers, and waits for all production health checks.
-It must be started manually from the Actions tab ("Run workflow") and then
-approved once at the `shared-test` environment gate; there is no separate
-typed confirmation step. For this
+checkout, creates a matched PostgreSQL, attachment, and protected-configuration
+recovery set, builds new images before replacing containers, and waits for all
+production health checks. The job allows 60 minutes. Both push-triggered and
+manually dispatched jobs must be approved at the `shared-test` environment gate;
+there is no separate typed confirmation step. For this
 live system, the deployment script overlays the approved public OSM, Census,
 USGS 3DEP, CISA NIFOG, and FCC-supporting configuration into a restricted temporary
 environment file. It does not
@@ -175,6 +177,62 @@ Before approving an upgrade, follow the
 to run an isolated restore drill. The controlled deployment writes a SHA-256
 sidecar for its pre-deployment backup, but the backup and checksum must still be
 copied to approved encrypted storage outside the application host.
+
+### Consistent upgrade backups and maintenance
+
+Approve a maintenance window before releasing a deployment. The recovery helper
+stops the frontend and backend while keeping PostgreSQL running, creates and
+validates the database dump and attachment archive, and privately saves the
+original protected deployment environment before candidate provider overlays.
+Restore this file with the recorded source commit to reconstruct the prior
+deployment's approved overlays. This can take several minutes for large
+reference databases; the pause lasts for the full backup, not only the image swap.
+Prevent user changes for the entire approved upgrade window, including the build
+and post-upgrade verification interval; a recovery point precedes those later
+writes. The original containers are resumed before builds start, including after ordinary
+backup failures or SIGTERM/SIGINT. A failed resume fails the deployment and needs
+operator intervention. A forced kill, host failure, or lost remote process must
+be followed by an explicit service-health check; no shell trap can guarantee
+recovery from SIGKILL.
+
+The final `.recovery.json` marker records the source and target commits and the
+three matched files. Each file has a SHA-256 sidecar. No code promotion occurs
+unless backup validation and application resumption succeed. Keep the environment
+copy private: it contains credentials and the inventory encryption key. Never
+upload recovery-set contents as public Actions artifacts. Retention removes
+the matching attachment/configuration companions only for verified complete sets;
+corrupt or incomplete companions require operator review. Restore the matching
+attachments and configuration alongside the database using the recovery runbook.
+
+Deployment and scheduled FCC synchronization share a host maintenance lock under
+the deployment account. A conflicting operation exits before writing and must be
+retried; this does not create an unbounded queue or bypass approval.
+
+### Azure host preparation
+
+Use a dedicated deployment account with an OpenSSH deployment key. Its home must
+contain `apps/ict-branch-toolkit`, the protected
+`.config/ict-branch-toolkit/deployment.env`, and `backups/ict-branch-toolkit`.
+Keep backups on the managed data disk through a directory or symlink. Configure
+Docker's `data-root` on the persistent data disk and a systemd `RequiresMountsFor`
+dependency so a missing disk cannot initialize an empty replacement database.
+Docker access is root-equivalent and must be limited to trusted deployment keys.
+When Apache and the application run on the same VM, use
+`APP_BIND_ADDRESS=127.0.0.1` and `APP_PORT=8088`. Do not publish the application,
+backend, or database ports to the Internet; expose HTTP/HTTPS and approved SSH only.
+
+The frontend must send a valid Referer to the approved public OSM service. For
+Apache, use `Referrer-Policy: strict-origin-when-cross-origin` on frontend responses
+and retain `same-origin` for `/api/`. This exposes only the public origin on
+external HTTPS requests, not incident paths or query strings. A blanket frontend
+`same-origin` policy suppresses OSM identification and can produce blocked tiles.
+Check the live frontend policy, API health, and an operator-viewed map after a
+proxy change. Do not automate map browsing, tile prefetching, or cache bypass.
+
+Keep server addresses, private keys, credentials, certificates, and recovery data
+out of the repository. Store the five `DEPLOY_*` values in GitHub secrets and
+preserve existing application/database/encryption secrets on the server during
+retargeting. Verify SSH from the actual Actions runner before the first deployment.
 
 The `shared-test` environment requires human review before the job can run.
 The job re-resolves `origin/main` immediately after that approval gate and

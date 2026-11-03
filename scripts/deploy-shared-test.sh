@@ -17,8 +17,14 @@ env_file="$HOME/.config/ict-branch-toolkit/deployment.env"
 backup_dir="$HOME/backups/ict-branch-toolkit"
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 environment_validator="$script_dir/validate-compose-environment.py"
+recovery_helper="$script_dir/deployment-recovery-set.py"
 backup_retention_count=5
 build_reserve_kb=$((4 * 1024 * 1024))
+
+# Serialize upgrades with scheduled FCC writes on the same deployment account.
+install -d -m 700 "$HOME/.cache/ict-branch-toolkit"
+exec 9>"$HOME/.cache/ict-branch-toolkit/maintenance.lock"
+flock -n 9 || { echo "Another deployment or FCC sync is active; retry later." >&2; exit 1; }
 
 available_kb() {
   df -Pk "$1" | awk 'NR==2 {print $4}'
@@ -37,6 +43,10 @@ if [[ ! -f "$env_file" ]]; then
 fi
 if [[ ! -f "$environment_validator" ]]; then
   echo "Refusing deployment because the environment validator is missing." >&2
+  exit 1
+fi
+if [[ ! -f "$recovery_helper" ]]; then
+  echo "Refusing deployment because the recovery-set helper is missing." >&2
   exit 1
 fi
 
@@ -117,6 +127,7 @@ python3 - "$backup_dir" "$backup_retention_count" <<'PY'
 from __future__ import annotations
 
 import hashlib
+import json
 import sys
 from pathlib import Path
 
@@ -126,14 +137,18 @@ keep_existing = max(retention_count - 1, 0)
 
 def verified(path: Path) -> bool:
     checksum_path = Path(f"{path}.sha256")
-    if not checksum_path.is_file():
+    if (not path.is_file() or path.is_symlink()
+        or not checksum_path.is_file() or checksum_path.is_symlink()):
         return False
-    expected = checksum_path.read_text().split()[0]
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
-            digest.update(chunk)
-    return digest.hexdigest() == expected
+    try:
+        expected = checksum_path.read_text().split()[0]
+        digest = hashlib.sha256()
+        with path.open("rb") as handle:
+            for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+                digest.update(chunk)
+        return digest.hexdigest() == expected
+    except (OSError, IndexError, UnicodeError):
+        return False
 
 backups = sorted(
     backup_dir.glob("postgresql-*.dump"),
@@ -142,70 +157,45 @@ backups = sorted(
 )
 verified_backups = [path for path in backups if verified(path)]
 for old_backup in verified_backups[keep_existing:]:
+    manifest = Path(f"{old_backup}.recovery.json")
+    members = []
+    if manifest.exists() or manifest.is_symlink():
+        # Keep any incomplete/corrupt recovery set for operator review. Never
+        # delete arbitrary paths supplied by a manifest or follow symlinks.
+        if manifest.is_symlink():
+            continue
+        try:
+            metadata = json.loads(manifest.read_text())
+        except (OSError, ValueError):
+            continue
+        members = [Path(f"{old_backup}.attachments.tar.gz"),
+                   Path(f"{old_backup}.deployment.env")]
+        if (not isinstance(metadata, dict)
+            or metadata.get("format") != "ict-toolkit-recovery-set-v1"
+            or metadata.get("files") != [old_backup.name, *(p.name for p in members)]
+            or not all(not p.is_symlink() and verified(p) for p in members)):
+            continue
     checksum = Path(f"{old_backup}.sha256")
     print(f"Removing expired verified pre-deployment backup: {old_backup}")
     old_backup.unlink()
     checksum.unlink(missing_ok=True)
+    for member in members:
+        member.unlink()
+        Path(f"{member}.sha256").unlink()
+    if members:
+        manifest.unlink()
 PY
 
-# Require enough free capacity for approximately one uncompressed database-size
-# equivalent plus a 1 GiB safety margin before starting pg_dump.
-# shellcheck disable=SC2016
-db_size_bytes="$("${compose[@]}" exec -T db sh -c '
-  export PGPASSWORD="$POSTGRES_PASSWORD"
-  exec psql \
-    --username "$POSTGRES_USER" \
-    --dbname "$POSTGRES_DB" \
-    --tuples-only --no-align \
-    --command "SELECT pg_database_size(current_database());"
-')"
-if [[ ! "$db_size_bytes" =~ ^[0-9]+$ ]]; then
-  echo "Refusing deployment because database size could not be determined." >&2
-  show_disk_diagnostics
-  exit 1
-fi
-required_backup_kb=$((db_size_bytes / 1024 + 1024 * 1024))
-free_backup_kb="$(available_kb "$backup_dir")"
-if (( free_backup_kb < required_backup_kb )); then
-  printf 'Refusing deployment: backup filesystem has %s KiB free; at least %s KiB is required for the pre-deployment database backup.\n' \
-    "$free_backup_kb" "$required_backup_kb" >&2
-  show_disk_diagnostics
-  exit 1
-fi
-
-backup_file="$backup_dir/postgresql-$(date -u +%Y%m%dT%H%M%SZ)-pre-${expected_sha:0:12}.dump"
-
-# Read the database credentials from the already-running database container.
-# Importing the protected environment into Bash would alter quoted JSON values
-# and can override the exact values that Compose validated above.
-# shellcheck disable=SC2016
-if ! "${compose[@]}" exec -T db sh -c '
-  export PGPASSWORD="$POSTGRES_PASSWORD"
-  exec pg_dump \
-    --username "$POSTGRES_USER" \
-    --dbname "$POSTGRES_DB" \
-    --format custom
-' > "$backup_file"; then
-  rm -f -- "$backup_file" "$backup_file.sha256"
-  show_disk_diagnostics
-  exit 1
-fi
-
-chmod 600 "$backup_file"
-test -s "$backup_file"
-(
-  cd "$backup_dir"
-  sha256sum "$(basename "$backup_file")" > "$(basename "$backup_file").sha256"
-)
-chmod 600 "$backup_file.sha256"
-
-# shellcheck disable=SC2016
-"${compose[@]}" exec -T db sh -c '
-  temporary_backup="$(mktemp)"
-  trap "rm -f \"$temporary_backup\"" EXIT
-  cat > "$temporary_backup"
-  pg_restore --list "$temporary_backup" >/dev/null
-' < "$backup_file"
+# Pause application writes only for the consistent snapshot. The helper resumes
+# the original containers even if backup/archive validation fails. No new code
+# or database migration is started until the matched set has been completed.
+backup_file="$(python3 "$recovery_helper" \
+  --env-file "$resolved_env" \
+  --protected-env-file "$env_file" \
+  --compose-file "$app_dir/compose.production.yaml" \
+  --backup-dir "$backup_dir" \
+  --source-commit "$(git rev-parse HEAD)" \
+  --target-commit "$expected_sha")"
 
 # The image build needs working room independent of the database backup. Stop
 # before changing the checkout if the host cannot maintain a 4 GiB reserve.
