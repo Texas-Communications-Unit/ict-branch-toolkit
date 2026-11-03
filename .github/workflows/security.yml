@@ -111,13 +111,14 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
-          fetch-depth: ${{ github.event_name == 'pull_request' && 1 || 0 }}
+          # Scan every commit in the PR range, including secrets removed later.
+          fetch-depth: 0
       - name: Fetch exact pull request endpoints
         if: github.event_name == 'pull_request'
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: git fetch --no-tags --depth=1 origin "$BASE_SHA" "$HEAD_SHA"
+        run: git fetch --no-tags origin "$BASE_SHA" "$HEAD_SHA"
       - id: gitleaks_pr
         name: Scan pull request commits with Gitleaks
         if: github.event_name == 'pull_request'
@@ -342,6 +343,10 @@ jobs:
         run: |
           docker build --pull --tag "$BACKEND_IMAGE" backend
           docker build --pull --target production --tag "$FRONTEND_IMAGE" frontend
+          database_image="$(awk '$1 == "image:" {print $2; exit}' compose.production.yaml)"
+          [[ "$database_image" == postgis/postgis:* ]]
+          echo "DATABASE_IMAGE=$database_image" >> "$GITHUB_ENV"
+          docker pull "$database_image"
       - name: Generate vulnerability-aware CycloneDX SBOMs
         run: |
           mkdir -p security-artifacts
@@ -358,6 +363,12 @@ jobs:
             --volume "${{ github.workspace }}/security-artifacts:/artifacts" \
             "$TRIVY_IMAGE" image --scanners vuln --format cyclonedx \
             --output /artifacts/frontend.cdx.json "$FRONTEND_IMAGE"
+          docker run --rm \
+            --volume /var/run/docker.sock:/var/run/docker.sock \
+            --volume trivy-cache:/root/.cache/trivy \
+            --volume "${{ github.workspace }}/security-artifacts:/artifacts" \
+            "$TRIVY_IMAGE" image --scanners vuln --format cyclonedx \
+            --output /artifacts/database.cdx.json "$DATABASE_IMAGE"
           (
             cd security-artifacts
             sha256sum ./*.cdx.json > SHA256SUMS
@@ -376,6 +387,12 @@ jobs:
             --volume trivy-cache:/root/.cache/trivy \
             "$TRIVY_IMAGE" image --scanners vuln --ignore-unfixed \
             --severity HIGH,CRITICAL --exit-code 1 "$FRONTEND_IMAGE" \
+            || scan_status=1
+          docker run --rm \
+            --volume /var/run/docker.sock:/var/run/docker.sock \
+            --volume trivy-cache:/root/.cache/trivy \
+            "$TRIVY_IMAGE" image --scanners vuln --ignore-unfixed \
+            --severity HIGH,CRITICAL --exit-code 1 "$DATABASE_IMAGE" \
             || scan_status=1
           exit "$scan_status"
       - uses: actions/upload-artifact@v7
