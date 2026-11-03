@@ -38,7 +38,13 @@ jobs:
           except OSError as error:
               print(f"Target comparison failed: {type(error).__name__}", flush=True)
           print(f"Configured port is standard SSH port: {port == 22}", flush=True)
-          for label, host, number in (("Configured", configured, port), ("Public Toolkit", canonical, 22)):
+          targets = (
+              ("Configured", configured, port),
+              ("Public Toolkit SSH", canonical, 22),
+              ("Public Toolkit HTTPS", canonical, 443),
+              ("GitHub SSH", "github.com", 22),
+          )
+          for label, host, number in targets:
               try:
                   with socket.create_connection((host, number), timeout=10):
                       print(f"{label} TCP connection: reachable", flush=True)
