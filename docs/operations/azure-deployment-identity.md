@@ -6,14 +6,15 @@ reverse proxy, database, data disk, and administrator SSH rule remain unchanged.
 
 ## Administrator setup
 
-Use Azure CLI signed in through an organization-approved method. Keep Entra
+Use Azure CLI and GitHub CLI signed in through organization-approved methods. Keep Entra
 Security Defaults and Conditional Access enabled. The setup operator needs
 permission to create a user-assigned identity and federated credential, create
 a custom role definition in the VM resource group, and assign that role at the
 VM. Subscription ownership or appropriately delegated permissions are required;
 ordinary VM access is insufficient. Review the script before running it.
 
-From an approved repository checkout in Linux or Azure Cloud Shell Bash:
+From an approved repository checkout in Linux or Azure Cloud Shell Bash with
+both CLIs installed and authenticated:
 
 ```bash
 az account set --subscription '<approved-subscription-id>'
@@ -26,7 +27,21 @@ VM, and configures this exact trust:
 
 - Issuer: `https://token.actions.githubusercontent.com`
 - Audience: `api://AzureADTokenExchange`
-- Subject: `repo:Texas-Communications-Unit/ict-branch-toolkit:environment:shared-test`
+- Subject: GitHub's effective `sub_claim_prefix` followed by `:environment:shared-test`.
+
+The setup script reads `GET /repos/{owner}/{repo}/actions/oidc/customization/sub`
+through GitHub CLI before making Azure changes. With immutable subjects enabled,
+the prefix has the form `repo:OWNER@OWNER-ID/REPOSITORY@REPOSITORY-ID`; the older
+name-only form does not match it. Do not disable immutable subjects or add a
+wildcard to work around an authentication failure. The script rejects custom
+subject templates, missing effective prefixes, and unexpected repository names.
+Review a custom template separately before using this setup procedure.
+
+For `AADSTS700213`, compare the Azure credential's subject, issuer, and audience
+with the **Federated token details** in the failed Azure Login step. Update only
+the Azure subject to match the exact GitHub-issued value; retain the protected
+environment suffix and VM-scoped permissions. See Microsoft's
+[immutable-subject migration guidance](https://learn.microsoft.com/en-us/entra/workload-id/workload-identities-github-immutable-subjects).
 
 The custom role has exactly:
 

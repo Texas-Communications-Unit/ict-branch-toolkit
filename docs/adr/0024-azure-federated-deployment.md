@@ -17,6 +17,9 @@ only to this repository's protected `shared-test` environment. Keep the
 environment restricted to `main` with required human review. Grant only VM read
 and managed Run Command read/write/delete, assigned at the single VM resource scope.
 Do not attach the deployment identity to the VM or grant network/IAM management.
+Read the effective GitHub OIDC subject prefix from the repository API instead of
+assuming name-only claims. Immutable owner/repository IDs remain enabled; append
+the protected environment suffix to the exact returned prefix.
 
 The security workflow must pass before environment approval and identity token
 issuance. Deliver the three deployment helpers from the exact scanned checkout
