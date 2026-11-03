@@ -1,4 +1,4 @@
-FROM python:3.12.16-slim-bookworm AS base
+FROM python:3.12.16-slim-trixie AS base
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
@@ -6,7 +6,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 RUN apt-get update \
     && apt-get upgrade -y \
-    && apt-get install --no-install-recommends -y libgdal32 libgeos-c1v5 \
+    && apt-get install --no-install-recommends -y libgdal36 libgeos-c1t64 \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
