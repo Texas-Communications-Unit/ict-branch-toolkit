@@ -903,7 +903,7 @@ export default function App() {
         <div className="footer-links">
           <a
             href="https://github.com/Texas-Communications-Unit/ict-branch-toolkit"
-            aria-label="View ICT Branch Toolkit source code on GitHub"
+            aria-label="View source code for ICT Branch Toolkit on GitHub"
           >
             View source code
           </a>
