@@ -20,6 +20,7 @@ class GateTests(unittest.TestCase):
             "codeql-python",
             "codeql-javascript",
             "container-security",
+            "installed-stack",
         )
         result = {name: {"result": "success"} for name in names}
         result["changes"]["outputs"] = dict.fromkeys(

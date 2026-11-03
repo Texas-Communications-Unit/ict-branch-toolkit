@@ -27,7 +27,7 @@ updates:
     open-pull-requests-limit: 5
     assignees: [KD7CAO]
   - package-ecosystem: docker
-    directories: [/backend, /frontend]
+    directories: [/backend, /frontend, /database]
     schedule:
       interval: daily
     open-pull-requests-limit: 5

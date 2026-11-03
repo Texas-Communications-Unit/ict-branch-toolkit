@@ -21,6 +21,7 @@ def validate(results, full_scan):
         "codeql-python": flags["backend_code"],
         "codeql-javascript": flags["frontend_code"],
         "container-security": flags["containers"],
+        "installed-stack": flags["backend_code"] or flags["containers"],
     }
     for name, applicable in required.items():
         result = results[name]["result"]

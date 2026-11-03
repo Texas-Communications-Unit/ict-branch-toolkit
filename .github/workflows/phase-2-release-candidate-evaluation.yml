@@ -2,18 +2,7 @@ name: Phase 2 RC evaluation
 
 on:
   workflow_dispatch:
-  pull_request:
-    branches: [main]
-    paths:
-      - ".github/workflows/phase-2-release-candidate-evaluation.yml"
-      - "backend/apps/rf_analysis/**"
-      - "backend/Dockerfile"
-      - "backend/tests/test_phase2_validation_api.py"
-      - "frontend/src/Phase2ValidationWorkspace.tsx"
-      - "frontend/tests/Phase2ValidationWorkspace.test.tsx"
-      - "compose.production.yaml"
-      - "scripts/database-recovery.sh"
-      - "docs/releases/v0.2.0-rc.1*"
+  workflow_call:
 
 concurrency:
   group: "phase-2-rc-evaluation-${{ github.event.pull_request.number || github.sha }}"
@@ -28,7 +17,7 @@ env:
 jobs:
   installed-stack-evidence:
     name: Installed stack and recovery evidence
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v7

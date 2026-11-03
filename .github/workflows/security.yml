@@ -72,7 +72,7 @@ jobs:
           dependencies=false
           containers=false
 
-          if matches '^\.github/(workflows/(security|deploy)\.yml|dependabot\.yml)$|^scripts/(test-)?security-gate\.py$|^\.gitleaks\.toml$|^\.trivyignore'; then
+          if matches '^\.github/(workflows/(security|deploy|phase-2-release-candidate-evaluation)\.yml|dependabot\.yml)$|^scripts/((test-)?security-gate\.py|deploy-shared-test\.sh|database-recovery\.sh)$|^\.gitleaks\.toml$|^\.trivyignore'; then
             full=true
           fi
           if matches '^backend/.*\.py$|^backend/(manage\.py|pyproject\.toml)$'; then
@@ -337,16 +337,14 @@ jobs:
       TRIVY_IMAGE: aquasec/trivy:0.72.0@sha256:cffe3f5161a47a6823fbd23d985795b3ed72a4c806da4c4df16266c02accdd6f
       BACKEND_IMAGE: ict-toolkit-backend:${{ github.sha }}
       FRONTEND_IMAGE: ict-toolkit-frontend:${{ github.sha }}
+      DATABASE_IMAGE: ict-toolkit-db:${{ github.sha }}
     steps:
       - uses: actions/checkout@v7
       - name: Build candidate images
         run: |
           docker build --pull --tag "$BACKEND_IMAGE" backend
           docker build --pull --target production --tag "$FRONTEND_IMAGE" frontend
-          database_image="$(awk '$1 == "image:" {print $2; exit}' compose.production.yaml)"
-          [[ "$database_image" == postgis/postgis:* ]]
-          echo "DATABASE_IMAGE=$database_image" >> "$GITHUB_ENV"
-          docker pull "$database_image"
+          docker build --pull --tag "$DATABASE_IMAGE" database
       - name: Generate vulnerability-aware CycloneDX SBOMs
         run: |
           mkdir -p security-artifacts
@@ -406,7 +404,7 @@ jobs:
   gate:
     name: Security gate
     if: always()
-    needs: [changes, secrets, dependency-audit, backend-tests, frontend-tests, codeql-python, codeql-javascript, container-security]
+    needs: [changes, secrets, dependency-audit, backend-tests, frontend-tests, codeql-python, codeql-javascript, container-security, installed-stack]
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
@@ -418,3 +416,11 @@ jobs:
         run: |
           python scripts/test-security-gate.py
           python scripts/security-gate.py
+
+  installed-stack:
+    name: Installed stack validation
+    needs: changes
+    if: needs.changes.outputs.backend_code == 'true' || needs.changes.outputs.containers == 'true'
+    permissions:
+      contents: read
+    uses: ./.github/workflows/phase-2-release-candidate-evaluation.yml
