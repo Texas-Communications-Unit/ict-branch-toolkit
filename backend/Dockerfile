@@ -6,13 +6,17 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 RUN apt-get update \
     && apt-get upgrade -y \
-    && apt-get install --no-install-recommends -y binutils gdal-bin libgdal-dev libgeos-dev \
+    && apt-get install --no-install-recommends -y libgdal32 libgeos-c1v5 \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
 FROM base AS development
 ARG PIP_VERSION=26.2
+
+RUN apt-get update \
+    && apt-get install --no-install-recommends -y binutils gdal-bin libgdal-dev libgeos-dev \
+    && rm -rf /var/lib/apt/lists/*
 
 COPY pyproject.toml ./
 RUN python -m pip install "pip==${PIP_VERSION}"

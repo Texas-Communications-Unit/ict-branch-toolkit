@@ -8,7 +8,9 @@ RUN apk add --no-cache git \
     && git -C /src checkout --detach FETCH_HEAD
 WORKDIR /src
 ENV CGO_ENABLED=0 GOTOOLCHAIN=local
-RUN go build -trimpath -ldflags=-w -o /out/gosu .
+RUN go get golang.org/x/sys@v0.44.0 \
+    && go mod verify \
+    && go build -trimpath -ldflags=-w -o /out/gosu .
 
 FROM postgis/postgis:17-3.5-alpine
 
@@ -16,5 +18,7 @@ FROM postgis/postgis:17-3.5-alpine
 RUN apk upgrade --no-cache
 COPY --from=gosu-build /out/gosu /usr/local/bin/gosu
 COPY --from=gosu-build /src/LICENSE /usr/local/share/licenses/gosu/LICENSE
+COPY --from=gosu-build /usr/local/go/LICENSE /usr/local/share/licenses/gosu/GO-LICENSE
+COPY --from=gosu-build /go/pkg/mod/golang.org/x/sys@v0.44.0/LICENSE /usr/local/share/licenses/gosu/X-SYS-LICENSE
 RUN gosu --version \
     && test "$(gosu postgres id -u)" = "$(id -u postgres)"
