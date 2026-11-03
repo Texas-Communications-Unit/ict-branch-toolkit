@@ -25,6 +25,11 @@ The Azure agent switches to the dedicated deployment account before processing
 those helpers. Existing commit checks, consistent recovery sets, maintenance
 locking, image scans and Compose health checks remain authoritative.
 
+Manual dispatch defaults to a harmless connection verification that embeds no
+actual deployment helpers. It has a separate concurrency group so it can verify
+federation while a real deployment waits for human approval. Both operations
+retain full security checks, main-only enforcement, and environment approval.
+
 Use managed Run Command for long-running work. Check instance-view execution
 state and zero exit code; resource provisioning success is insufficient. Keep
 full logs private on the VM, exposing only status and commit identity to Actions.

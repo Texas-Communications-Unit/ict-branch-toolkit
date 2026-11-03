@@ -67,7 +67,10 @@ try:
     if result.returncode:
         print("Deployment failed. Review the private deployment-account log.", flush=True)
         sys.exit(1)
-    print("Deployed scanned commit " + payload["sha"], flush=True)
+    if payload["check_only"]:
+        print("Azure connection and deployment account verified.", flush=True)
+    else:
+        print("Deployed scanned commit " + payload["sha"], flush=True)
 finally:
     shutil.rmtree(scripts)
 """
@@ -95,7 +98,9 @@ def configuration(environ: dict[str, str]) -> dict[str, str]:
     return result
 
 
-def make_script(sha: str, run: str, user: str, directory: Path) -> str:
+def make_script(
+    sha: str, run: str, user: str, directory: Path, check_only: bool = False
+) -> str:
     if not re.fullmatch(r"[0-9a-f]{40}", sha):
         raise ValueError("Expected the exact scanned commit SHA")
     if not re.fullmatch(r"[0-9]+-[0-9]+", run):
@@ -104,14 +109,25 @@ def make_script(sha: str, run: str, user: str, directory: Path) -> str:
         raise ValueError("Invalid deployment account")
     files = {}
     for name in SCRIPT_NAMES:
-        data = (directory / name).read_bytes()
+        if check_only:
+            # A connection test cannot invoke the real deployment helpers.
+            data = (
+                f'#!/bin/bash\nset -euo pipefail\ntest "$(id -un)" = {shlex.quote(user)}\n'
+                if name == SCRIPT_NAMES[0]
+                else "# Connection test only\n"
+            ).encode()
+        else:
+            data = (directory / name).read_bytes()
         files[name] = {
             "data": base64.b64encode(data).decode(),
             "sha256": hashlib.sha256(data).hexdigest(),
         }
     payload = base64.b64encode(
         gzip.compress(
-            json.dumps({"sha": sha, "run": run, "files": files}).encode(), mtime=0
+            json.dumps(
+                {"sha": sha, "run": run, "files": files, "check_only": check_only}
+            ).encode(),
+            mtime=0,
         )
     ).decode()
     program = (
@@ -156,7 +172,9 @@ def execution_result(resource: dict) -> bool | None:
     return None
 
 
-def deploy(config: dict[str, str], sha: str, run: str) -> None:
+def deploy(
+    config: dict[str, str], sha: str, run: str, check_only: bool = False
+) -> None:
     vm_id = (
         f"/subscriptions/{config['AZURE_SUBSCRIPTION_ID']}/resourceGroups/"
         f"{quote(config['AZURE_RESOURCE_GROUP'], safe='')}/providers/Microsoft.Compute/"
@@ -166,14 +184,16 @@ def deploy(config: dict[str, str], sha: str, run: str) -> None:
     vm = az_json(
         "rest", "--method", "get", "--url", f"{base}?api-version={API_VERSION}"
     )
-    script = make_script(sha, run, config["DEPLOY_USER"], Path(__file__).parent)
+    script = make_script(
+        sha, run, config["DEPLOY_USER"], Path(__file__).parent, check_only
+    )
     command = f"{base}/runCommands/ict-deploy-{run}?api-version={API_VERSION}"
     body = {
         "location": vm["location"],
         "properties": {
             "source": {"script": script},
             "asyncExecution": True,
-            "timeoutInSeconds": REMOTE_TIMEOUT,
+            "timeoutInSeconds": 120 if check_only else REMOTE_TIMEOUT,
             "treatFailureAsDeploymentFailure": True,
         },
     }
@@ -183,10 +203,10 @@ def deploy(config: dict[str, str], sha: str, run: str) -> None:
         path.chmod(0o600)
         az_json("rest", "--method", "put", "--url", command, "--body", f"@{path}")
     print(
-        "Azure accepted the deployment command; waiting for its execution result.",
+        "Azure accepted the command; waiting for its execution result.",
         flush=True,
     )
-    deadline = time.monotonic() + POLL_TIMEOUT
+    deadline = time.monotonic() + (600 if check_only else POLL_TIMEOUT)
     while time.monotonic() < deadline:
         resource = az_json(
             "rest", "--method", "get", "--url", command + "&$expand=instanceView"
@@ -198,7 +218,15 @@ def deploy(config: dict[str, str], sha: str, run: str) -> None:
                     f"Azure deployment failed. Review deployment-logs/{run}.log under the deployment account cache; "
                     "check Azure execution status if no log exists."
                 )
-            print(f"Azure verified successful execution for commit {sha}.", flush=True)
+            if check_only:
+                print(
+                    "Azure connection verified without deploying the application.",
+                    flush=True,
+                )
+            else:
+                print(
+                    f"Azure verified successful execution for commit {sha}.", flush=True
+                )
             # Azure limits retained managed commands. Delete only after proven
             # successful guest completion; preserve failures for investigation.
             try:
@@ -219,6 +247,7 @@ def deploy(config: dict[str, str], sha: str, run: str) -> None:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--validate-only", action="store_true")
+    parser.add_argument("--check-only", action="store_true")
     args = parser.parse_args()
     try:
         config = configuration(dict(os.environ))
@@ -231,6 +260,7 @@ def main() -> int:
             config,
             os.environ.get("GITHUB_SHA", ""),
             f"{os.environ.get('GITHUB_RUN_ID', '')}-{os.environ.get('GITHUB_RUN_ATTEMPT', '')}",
+            args.check_only,
         )
         return 0
     except (ValueError, RuntimeError, OSError, subprocess.TimeoutExpired) as error:

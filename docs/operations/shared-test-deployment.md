@@ -151,6 +151,9 @@ listener that trusts this header to an untrusted network.
 
 The `Deploy to Server` GitHub Actions workflow runs the full reusable Security
 workflow on pushes to `main` and can also be dispatched manually from `main`.
+Manual runs default to `verify`, which checks Azure authentication and the
+deployment account without updating the application. Select `deploy` explicitly
+for a manual upgrade; push-triggered runs retain the approved deployment path.
 Every applicable security and regression check must succeed before the deployment
 job requests approval. Configure a protected
 `shared-test` environment and require human review before the job can access its

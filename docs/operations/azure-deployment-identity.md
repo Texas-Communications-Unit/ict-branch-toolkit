@@ -53,14 +53,22 @@ distinguish branches or workflows.
 1. Confirm the VM's Azure Linux agent is healthy and supports managed Run Command.
 2. Inspect the identity's federated credential, exact VM role assignment, and
    lack of additional group/subscription permissions.
-3. From the protected GitHub environment, authenticate with `Azure/login` and
-   execute only a harmless managed command such as `id -un`. Confirm the command
-   succeeds and produces the expected account, without changing the application.
+3. In Actions, select **Deploy to Server → Run workflow → main → verify**.
+   Approve this verification run's `shared-test` environment request after its
+   Security checks pass. It authenticates with `Azure/login` and executes only
+   an account-identity check. It cannot invoke the actual deployment helpers.
+   Verification uses a separate concurrency group so a deployment awaiting
+   approval cannot prevent this harmless check. Leave that deployment unapproved.
 4. Confirm an unapproved branch cannot use the environment. Confirm the Security
    gate succeeds for the reviewed candidate and obtain normal deployment approval.
 5. After deployment, check Azure instance-view `executionState=Succeeded` and
    `exitCode=0`, the server checkout SHA, Compose health, HTTPS API health, login,
    and operator-viewed map. Do not call provisioning success deployment success.
+
+Pushes to `main` still queue deployment after full checks and approval. Manual
+runs default to `verify`; explicitly choose `deploy` for a manual application
+upgrade. Both modes require the protected environment and exact-current-main
+check. Verification performs no backups, migrations, builds, or Docker pruning.
 
 The runner sends the three helpers from its scanned checkout as a compressed
 payload with SHA-256 checksums. The agent switches to `DEPLOY_USER` before

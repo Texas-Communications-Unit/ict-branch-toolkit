@@ -1,7 +1,14 @@
 name: Deploy to Server
+run-name: ${{ github.event_name == 'workflow_dispatch' && inputs.operation == 'verify' && 'Verify Azure deployment connection' || 'Deploy current main to Azure' }}
 
 on:
   workflow_dispatch:
+    inputs:
+      operation:
+        description: Verify Azure connection or deploy the scanned current main
+        type: choice
+        options: [verify, deploy]
+        default: verify
   push:
     branches: [main]
 
@@ -13,7 +20,7 @@ env:
   AZURE_CORE_OUTPUT: none
 
 concurrency:
-  group: live-system-deployment
+  group: ${{ github.event_name == 'workflow_dispatch' && inputs.operation == 'verify' && 'azure-deployment-connectivity-check' || 'live-system-deployment' }}
   cancel-in-progress: false
 
 jobs:
@@ -26,7 +33,7 @@ jobs:
     uses: ./.github/workflows/security.yml
 
   deploy:
-    name: Deploy current main through Azure
+    name: Approved Azure operation
     needs: security
     if: github.ref == 'refs/heads/main'
     permissions:
@@ -70,10 +77,16 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Deploy scanned commit using managed Run Command
+      - name: Execute approved operation using managed Run Command
         env:
           AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
           AZURE_RESOURCE_GROUP: ${{ secrets.AZURE_RESOURCE_GROUP }}
           AZURE_VM_NAME: ${{ secrets.AZURE_VM_NAME }}
           DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
-        run: python3 scripts/azure-deploy.py
+          OPERATION: ${{ github.event_name == 'workflow_dispatch' && inputs.operation || 'deploy' }}
+        run: |
+          case "$OPERATION" in
+            verify) python3 scripts/azure-deploy.py --check-only ;;
+            deploy) python3 scripts/azure-deploy.py ;;
+            *) echo "Unsupported operation" >&2; exit 2 ;;
+          esac

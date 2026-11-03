@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 """Synthetic Azure transport checks; never contact Azure or deploy an app."""
 
+import ast
+import base64
+import gzip
 import importlib.util
 import json
 import os
@@ -39,6 +42,26 @@ class AzureDeploymentTests(unittest.TestCase):
         self.assertIsNone(
             MODULE.execution_result(
                 {"properties": {"instanceView": {"executionState": "Running"}}}
+            )
+        )
+
+    def test_connection_check_excludes_real_deployment_helpers(self):
+        wrapper = MODULE.make_script(
+            "b" * 40, "123-1", "synthetic", Path("missing-directory"), True
+        )
+        program = shlex.split(wrapper.split("/usr/bin/python3 -c ", 1)[1])[0]
+        encoded = ast.literal_eval(program.splitlines()[0].split("=", 1)[1].strip())
+        payload = json.loads(gzip.decompress(base64.b64decode(encoded)))
+        self.assertTrue(payload["check_only"])
+        helpers = [
+            base64.b64decode(item["data"]).decode()
+            for item in payload["files"].values()
+        ]
+        self.assertIn('test "$(id -un)" = synthetic', helpers[0])
+        self.assertFalse(
+            any(
+                command in "\n".join(helpers)
+                for command in ("docker", "git ", "manage.py")
             )
         )
 
