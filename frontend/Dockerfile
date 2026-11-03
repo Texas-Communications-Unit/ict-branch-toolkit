@@ -1,4 +1,4 @@
-FROM node:24.14-alpine AS development
+FROM node:24.22-alpine AS development
 RUN corepack enable && corepack prepare pnpm@11.9.0 --activate
 WORKDIR /app
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
@@ -38,7 +38,7 @@ RUN pnpm build
 RUN mkdir -p dist/third-party \
     && cp node_modules/maplibre-gl/LICENSE.txt dist/third-party/maplibre-gl-LICENSE.txt
 
-FROM nginx:1.29-alpine AS production
+FROM nginx:1.31-alpine AS production
 RUN apk upgrade --no-cache
 COPY --from=build /app/dist /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/conf.d/default.conf
