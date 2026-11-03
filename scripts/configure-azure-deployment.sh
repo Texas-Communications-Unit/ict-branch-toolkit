@@ -14,6 +14,17 @@ repository='Texas-Communications-Unit/ict-branch-toolkit'
 environment='shared-test'
 identity_name="${vm_name}-github-deploy"
 
+# Use GitHub's effective prefix, including permanent IDs when enabled. Never
+# guess the legacy name-only subject or change GitHub's identity settings.
+oidc_prefix="$(gh api "repos/$repository/actions/oidc/customization/sub" --jq \
+  'if .use_default == true and (.sub_claim_prefix | type) == "string" then .sub_claim_prefix else error("Unsupported OIDC template or missing effective prefix") end')"
+immutable_prefix_pattern="^repo:${repository%/*}@[0-9]+/${repository#*/}@[0-9]+$"
+if [[ "$oidc_prefix" != "repo:$repository" && ! "$oidc_prefix" =~ $immutable_prefix_pattern ]]; then
+  echo 'GitHub returned an unexpected OIDC subject prefix; no Azure changes made.' >&2
+  exit 1
+fi
+oidc_subject="${oidc_prefix}:environment:${environment}"
+
 subscription="$(az account show --query id -o tsv)"
 tenant="$(az account show --query tenantId -o tsv)"
 vm_id="$(az vm show -g "$resource_group" -n "$vm_name" --query id -o tsv)"
@@ -36,7 +47,7 @@ az identity federated-credential create \
   -g "$resource_group" --identity-name "$identity_name" \
   --name github-shared-test \
   --issuer https://token.actions.githubusercontent.com \
-  --subject "repo:${repository}:environment:${environment}" \
+  --subject "$oidc_subject" \
   --audiences api://AzureADTokenExchange -o none
 
 temporary="$(mktemp -d)"
