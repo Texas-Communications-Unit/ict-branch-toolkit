@@ -84,7 +84,7 @@ jobs:
           if matches '^backend/pyproject\.toml$|^frontend/(package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml|\.npmrc)$'; then
             dependencies=true
           fi
-          if matches '(^|/)Dockerfile$|^compose[^/]*\.ya?ml$|^backend/pyproject\.toml$|^frontend/(package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml|\.npmrc)$'; then
+          if matches '(^|/)(Dockerfile|\.dockerignore)$|^compose[^/]*\.ya?ml$|^backend/pyproject\.toml$|^frontend/(package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml|\.npmrc)$'; then
             containers=true
           fi
 
