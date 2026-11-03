@@ -13,6 +13,7 @@ from pathlib import Path
 
 
 def docker(*args, **kwargs):
+    kwargs.setdefault("timeout", 240)
     try:
         return subprocess.run(["docker", *args], check=True, **kwargs)
     except subprocess.CalledProcessError as error:

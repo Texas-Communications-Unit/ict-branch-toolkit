@@ -33,6 +33,8 @@ class Command(BaseCommand):
             return
 
         with transaction.atomic(), connection.cursor() as cursor:
+            cursor.execute("SET LOCAL lock_timeout = '60s'")
+            cursor.execute("SET LOCAL statement_timeout = '120s'")
             # Serialize simultaneous backend starts without installing an extension
             # that was not already present in the spatial database.
             cursor.execute("SELECT pg_advisory_xact_lock(528005239636)")

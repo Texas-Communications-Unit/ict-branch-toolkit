@@ -46,6 +46,15 @@ Only already-installed extensions are managed; this is not authorization to add
 new capabilities. References: [PostGIS extension upgrade](https://www.postgis.net/docs/PostGIS_Extensions_Upgrade.html)
 and [upstream container upgrade helper](https://github.com/postgis/docker-postgis/blob/master/update-postgis.sh).
 
+The 3.6.4 image's generated upgrade list stops at source 3.5.5. The derived image
+registers later stable 3.5.6/3.5.7 source tags using the vendor's unchanged
+`TEMPLATED--TO--ANY` SQL template. The actual upgrade remains the vendor's
+`ANY--3.6.4` SQL, with no copied old binaries or direct catalog edits. This
+follows the upstream [upgrade-path mechanism](https://github.com/postgis/postgis/blob/3.6.4/extensions/upgrade-paths-rules.mk).
+The existing-volume rehearsal must prove that bridge works; clean initialization
+cannot validate it. Startup uses bounded lock/statement timeouts and rolls back
+failed extension changes.
+
 ## Required evidence
 
 The installed-stack workflow builds the actual derived candidate database image
