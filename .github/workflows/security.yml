@@ -2,10 +2,11 @@ name: Security
 
 on:
   pull_request:
-  push:
-    branches: [main]
+  # Main pushes run this full workflow through Deploy to Server before approval.
+  workflow_call:
+  workflow_dispatch:
   schedule:
-    - cron: "23 9 * * 1"
+    - cron: "23 9 * * *"
 
 concurrency:
   group: "${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}"
@@ -21,7 +22,7 @@ env:
 jobs:
   changes:
     name: Determine security scope
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     outputs:
       full: ${{ steps.scope.outputs.full }}
@@ -71,7 +72,7 @@ jobs:
           dependencies=false
           containers=false
 
-          if matches '^\.github/workflows/security\.yml$'; then
+          if matches '^\.github/(workflows/(security|deploy)\.yml|dependabot\.yml)$|^scripts/(test-)?security-gate\.py$'; then
             full=true
           fi
           if matches '^backend/.*\.py$|^backend/(manage\.py|pyproject\.toml)$'; then
@@ -105,7 +106,7 @@ jobs:
   secrets:
     name: Secret scan
     needs: changes
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
@@ -183,7 +184,7 @@ jobs:
     name: Dependency audit
     needs: changes
     if: needs.changes.outputs.dependencies == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
@@ -193,8 +194,76 @@ jobs:
           cache: pip
           cache-dependency-path: backend/pyproject.toml
       - run: python -m pip install --upgrade pip pip-audit
-      - run: pip install -e ".[dev]" && pip-audit
+      - run: pip install -e ".[dev]"
         working-directory: backend
+      - name: Audit Python dependencies
+        run: pip-audit
+      - name: Install frontend toolchain even if Python audit fails
+        if: ${{ !cancelled() }}
+        uses: pnpm/action-setup@v6
+        with:
+          version: 11.9.0
+      - uses: actions/setup-node@v7
+        if: ${{ !cancelled() }}
+        with:
+          node-version: "24"
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile --prefer-offline
+        if: ${{ !cancelled() }}
+        working-directory: frontend
+      - run: pnpm audit --audit-level high
+        if: ${{ !cancelled() }}
+        working-directory: frontend
+
+  backend-tests:
+    name: Backend regression
+    needs: changes
+    if: needs.changes.outputs.backend_code == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    services:
+      db:
+        image: postgis/postgis:17-3.5-alpine
+        env:
+          POSTGRES_DB: synthetic_security
+          POSTGRES_USER: synthetic_security
+          POSTGRES_PASSWORD: synthetic-security-only
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -h 127.0.0.1 -U synthetic_security"
+          --health-interval 5s --health-timeout 5s --health-retries 30
+    env:
+      DATABASE_URL: postgis://synthetic_security:synthetic-security-only@127.0.0.1:5432/synthetic_security
+      DJANGO_ENABLE_GIS: "true"
+      ICT_INVENTORY_ENCRYPTION_KEY: MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA=
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libgdal-dev libgeos-dev
+      - run: python -m pip install -e ".[dev]"
+      - run: ruff check . && ruff format --check .
+      - run: pytest --no-cov -q
+      - run: python manage.py makemigrations --check --dry-run
+      - run: python manage.py spectacular --file "$RUNNER_TEMP/openapi.yaml" --validate
+
+  frontend-tests:
+    name: Frontend regression
+    needs: changes
+    if: needs.changes.outputs.frontend_code == 'true' || needs.changes.outputs.dependencies == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
         with:
           version: 11.9.0
@@ -204,15 +273,18 @@ jobs:
           cache: pnpm
           cache-dependency-path: frontend/pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile --prefer-offline
-        working-directory: frontend
-      - run: pnpm audit --audit-level high
-        working-directory: frontend
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm exec vitest run
+      - run: pnpm build
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm test:e2e
 
   codeql-python:
     name: CodeQL (python)
     needs: changes
     if: needs.changes.outputs.backend_code == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
@@ -228,7 +300,7 @@ jobs:
     name: CodeQL (javascript-typescript)
     needs: changes
     if: needs.changes.outputs.frontend_code == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
@@ -258,7 +330,7 @@ jobs:
     name: Container security and SBOM
     needs: changes
     if: needs.changes.outputs.containers == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 25
     env:
       TRIVY_IMAGE: aquasec/trivy:0.72.0@sha256:cffe3f5161a47a6823fbd23d985795b3ed72a4c806da4c4df16266c02accdd6f
@@ -268,8 +340,8 @@ jobs:
       - uses: actions/checkout@v7
       - name: Build candidate images
         run: |
-          docker build --tag "$BACKEND_IMAGE" backend
-          docker build --target production --tag "$FRONTEND_IMAGE" frontend
+          docker build --pull --tag "$BACKEND_IMAGE" backend
+          docker build --pull --target production --tag "$FRONTEND_IMAGE" frontend
       - name: Generate vulnerability-aware CycloneDX SBOMs
         run: |
           mkdir -p security-artifacts
@@ -313,3 +385,19 @@ jobs:
           path: security-artifacts/
           if-no-files-found: error
           retention-days: 30
+
+  gate:
+    name: Security gate
+    if: always()
+    needs: [changes, secrets, dependency-audit, backend-tests, frontend-tests, codeql-python, codeql-javascript, container-security]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - name: Require every applicable security and regression check
+        env:
+          RESULTS: ${{ toJSON(needs) }}
+          FULL_SCAN: ${{ github.event_name != 'pull_request' }}
+        run: |
+          python scripts/test-security-gate.py
+          python scripts/security-gate.py

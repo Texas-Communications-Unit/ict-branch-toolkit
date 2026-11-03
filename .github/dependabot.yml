@@ -1,0 +1,40 @@
+version: 2
+updates:
+  - package-ecosystem: pip
+    directory: /backend
+    schedule:
+      interval: daily
+    open-pull-requests-limit: 5
+    assignees: [KD7CAO]
+    groups:
+      python-security:
+        applies-to: security-updates
+        patterns: ["*"]
+  - package-ecosystem: npm
+    directory: /frontend
+    schedule:
+      interval: daily
+    open-pull-requests-limit: 5
+    assignees: [KD7CAO]
+    groups:
+      javascript-security:
+        applies-to: security-updates
+        patterns: ["*"]
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    assignees: [KD7CAO]
+  - package-ecosystem: docker
+    directories: [/backend, /frontend]
+    schedule:
+      interval: daily
+    open-pull-requests-limit: 5
+    assignees: [KD7CAO]
+  - package-ecosystem: docker-compose
+    directory: /
+    schedule:
+      interval: daily
+    open-pull-requests-limit: 5
+    assignees: [KD7CAO]
