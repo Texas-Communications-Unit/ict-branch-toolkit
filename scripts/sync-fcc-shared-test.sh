@@ -1,12 +1,18 @@
 #!/usr/bin/env bash
 set -euo pipefail
+umask 077
 
-if [[ $# -ne 1 ]]; then
-  echo "Usage: sync-fcc-shared-test.sh <asr|uls_private|uls_commercial>" >&2
+if [[ $# -lt 1 || $# -gt 2 ]]; then
+  echo "Usage: sync-fcc-shared-test.sh <asr|uls_private|uls_commercial> [expected-main-sha]" >&2
   exit 2
 fi
 
 dataset="$1"
+expected_sha="${2:-}"
+if [[ -n "$expected_sha" && ! "$expected_sha" =~ ^[0-9a-f]{40}$ ]]; then
+  echo "Expected a full reviewed main commit SHA." >&2
+  exit 2
+fi
 case "$dataset" in
   asr) archive_name="r_tower.zip" ;;
   uls_private) archive_name="l_LMpriv.zip" ;;
@@ -36,6 +42,7 @@ cleanup() {
   fi
 }
 trap cleanup EXIT
+trap 'exit 143' TERM
 
 if [[ ! -f "$env_file" ]]; then
   echo "Protected deployment environment file is missing." >&2
@@ -48,7 +55,30 @@ if [[ -n "$(git status --porcelain)" ]]; then
   exit 1
 fi
 
+if [[ -n "$expected_sha" && "$(git rev-parse HEAD)" != "$expected_sha" ]]; then
+  echo "Refusing FCC import because the deployed commit differs from reviewed main." >&2
+  exit 1
+fi
+
+deadline="${ICT_FCC_DEADLINE_EPOCH:-$(($(date +%s) + 9900))}"
+if [[ ! "$deadline" =~ ^[0-9]{1,12}$ ]]; then
+  echo "Invalid FCC execution deadline." >&2
+  exit 2
+fi
+remaining_seconds() {
+  local remaining
+  remaining=$((deadline - $(date +%s)))
+  if (( remaining <= 0 )); then
+    echo "FCC execution deadline elapsed; inspect the existing operation before retrying." >&2
+    return 1
+  fi
+  printf '%s\n' "$remaining"
+}
+
+download_timeout="$(remaining_seconds)"
 curl --fail --location --retry 4 --retry-all-errors --connect-timeout 30 \
+  --proto '=https' --proto-redir '=https' \
+  --max-time "$download_timeout" --retry-max-time "$download_timeout" \
   --user-agent "ICT-Branch-Toolkit/1.0 (toolkit@tx-comu.org)" \
   --output "$download_path" "$source_url"
 test -s "$download_path"
@@ -83,9 +113,11 @@ chmod 600 "$backup_file.sha256"
 "${compose[@]}" exec -T db pg_restore --list < "$backup_file" >/dev/null
 
 docker cp "$archive_path" "$container_id:/tmp/$archive_name"
+probe_timeout="$(remaining_seconds)"
 probe_output="$(
   "${compose[@]}" exec -T backend \
-    python manage.py probe_fcc_archive_capacity "/tmp/$archive_name" --dataset "$dataset"
+    timeout --signal=TERM --kill-after=30s "$probe_timeout" \
+      python manage.py probe_fcc_archive_capacity "/tmp/$archive_name" --dataset "$dataset"
 )"
 python3 -c \
   'import json,sys; result=json.loads(sys.stdin.read()); assert result["validated"] is True; assert result["database_writes"] == 0' \
@@ -97,8 +129,11 @@ if [[ -z "$actor" ]]; then
   echo "The configured administrator username is empty." >&2
   exit 1
 fi
+import_timeout="$(remaining_seconds)"
 "${compose[@]}" exec -T backend \
-  python manage.py import_fcc_archive "/tmp/$archive_name" \
+  timeout --signal=TERM --kill-after=30s "$import_timeout" \
+    env PGOPTIONS='-c client_connection_check_interval=1s' \
+    python manage.py import_fcc_archive "/tmp/$archive_name" \
     --dataset "$dataset" --source-url "$source_url" --username "$actor" --apply
 
 digest_temporary="$digest_path.tmp"

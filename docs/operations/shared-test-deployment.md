@@ -171,8 +171,12 @@ deployment account. Public SSH access from Actions is not required. See
 [Azure identity setup and verification](azure-deployment-identity.md).
 The old `DEPLOY_HOST`, `DEPLOY_PORT`, `DEPLOY_SSH_KEY`, and
 `DEPLOY_KNOWN_HOSTS` secrets are no longer read by this workflow. Retain the old
-credentials privately until the Azure path has passed verification, then revoke
-the obsolete key and remove unused secrets as a separate administrator action.
+credentials privately until both Azure deployment and FCC synchronization have
+passed verification, then revoke the obsolete key and remove unused secrets as
+a separate administrator action. Follow the
+[FCC migration and key-retirement procedure](azure-fcc-synchronization.md);
+`DEPLOY_USER` remains required. The former server-connected capacity Actions
+workflow is retired; use only an isolated synthetic host for capacity tests.
 
 The workflow accepts only the exact commit on `main`, refuses a dirty server
 checkout, creates a matched PostgreSQL, attachment, and protected-configuration

@@ -1,21 +1,30 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+if [[ "${ICT_CAPACITY_CONFIRMATION:-}" != "RUN-SYNTHETIC-CAPACITY" ]]; then
+  echo "Set ICT_CAPACITY_CONFIRMATION=RUN-SYNTHETIC-CAPACITY only for an approved isolated synthetic host." >&2
+  exit 2
+fi
+
 if [[ $# -ne 3 || ! "$1" =~ ^[0-9a-f]{40}$ || ! "$2" =~ ^[0-9]+$ || ! "$3" =~ ^[0-9]+$ ]]; then
   echo "Usage: run-shared-test-capacity.sh <40-character-main-commit> <run-id> <attempt>" >&2
   exit 2
 fi
 
 expected_sha="$1"
-github_run_id="$2"
-github_run_attempt="$3"
+manual_run_id="$2"
+manual_run_attempt="$3"
 app_dir="$HOME/apps/ict-branch-toolkit"
 env_file="$HOME/.config/ict-branch-toolkit/deployment.env"
 report_dir="$HOME/reports/ict-branch-toolkit/capacity"
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 report_validator="$script_dir/validate-capacity-report.py"
-report_name="capacity-${expected_sha:0:12}-github-${github_run_id}-${github_run_attempt}.jsonl"
+report_name="capacity-${expected_sha:0:12}-manual-${manual_run_id}-${manual_run_attempt}.jsonl"
 report_file="$report_dir/$report_name"
+
+install -d -m 700 "$HOME/.cache/ict-branch-toolkit"
+exec 9>"$HOME/.cache/ict-branch-toolkit/maintenance.lock"
+flock -n 9 || { echo "Another maintenance operation is active; retry later." >&2; exit 1; }
 
 if [[ ! -f "$env_file" ]]; then
   echo "Refusing capacity run because the protected environment file is missing." >&2

@@ -5,6 +5,8 @@ on:
     paths:
       - ".github/workflows/deploy.yml"
       - ".github/workflows/deployment-checks.yml"
+      - ".github/workflows/sync-fcc-data.yml"
+      - ".github/workflows/collaboration-capacity.yml"
       - "scripts/deploy-shared-test.sh"
       - "scripts/deployment-recovery-set.py"
       - "scripts/test-deployment-recovery-set.py"
@@ -12,8 +14,12 @@ on:
       - "scripts/test-deploy-preflight.py"
       - "scripts/azure-deploy.py"
       - "scripts/test-azure-deploy.py"
+      - "scripts/azure-fcc-sync.py"
+      - "scripts/test-azure-fcc-sync.py"
+      - "scripts/test-fcc-sync-preflight.py"
       - "scripts/configure-azure-deployment.sh"
       - "scripts/sync-fcc-shared-test.sh"
+      - "scripts/run-shared-test-capacity.sh"
   push:
     branches: [main]
 
@@ -33,9 +39,13 @@ jobs:
         run: |
           bash -n scripts/deploy-shared-test.sh
           bash -n scripts/sync-fcc-shared-test.sh
+          bash -n scripts/run-shared-test-capacity.sh
           bash -n scripts/configure-azure-deployment.sh
       - name: Verify Azure transport failure handling with synthetic data
-        run: python3 scripts/test-azure-deploy.py
+        run: |
+          python3 scripts/test-azure-deploy.py
+          python3 scripts/test-azure-fcc-sync.py
+          python3 scripts/test-fcc-sync-preflight.py
       - name: Test synthetic recovery success and failure paths
         run: python3 scripts/test-deployment-recovery-set.py
       - name: Verify failed image scans cannot replace running containers

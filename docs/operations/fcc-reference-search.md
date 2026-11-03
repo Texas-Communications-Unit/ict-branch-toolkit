@@ -26,9 +26,13 @@ python manage.py probe_fcc_archive_capacity /temporary/path/l_LMpriv.zip --datas
 
 The JSON output reports archive digest, compressed and expanded sizes, expansion ratio, member count, available disk space, and confirms zero database writes. This validates archive structure and storage headroom; it does not import or reconcile records. Production import remains a separately approved operation.
 
-The **Sync FCC reference data** workflow runs each Monday at 09:00 UTC, after
+The **Sync FCC reference data** workflow runs each Monday at 10:30 UTC, after
 the FCC creates complete files Sunday at 05:00 Eastern. It can also be started
-manually for one dataset or all datasets. The workflow retains the current
+manually for one dataset or all datasets. Both paths require protected-environment
+approval and use Azure OIDC rather than SSH. Manual runs default to a no-import
+verification; explicitly choose `sync` to apply data. See
+[Azure FCC synchronization](azure-fcc-synchronization.md) for the verification,
+timeout, schedule, and credential-retirement procedure. The workflow retains the current
 archives in a mode-700 server directory and skips database work when a digest
 is unchanged. For every changed archive it creates and validates a PostgreSQL
 backup, runs the no-write capacity validation, and transactionally reconciles
