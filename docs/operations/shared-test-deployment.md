@@ -156,13 +156,20 @@ job requests approval. Configure a protected
 `shared-test` environment and require human review before the job can access its
 repository secrets.
 
-Required repository or environment secrets:
+Required `shared-test` environment secrets:
 
-- `DEPLOY_HOST`
-- `DEPLOY_PORT`
-- `DEPLOY_USER`
-- `DEPLOY_SSH_KEY`
-- `DEPLOY_KNOWN_HOSTS`
+- `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`
+- `AZURE_RESOURCE_GROUP`, `AZURE_VM_NAME`
+- `DEPLOY_USER` (the existing dedicated Linux deployment account)
+
+Azure OIDC authenticates the job after approval. Managed Run Command delivers
+the exact scanned deployment helpers to the VM agent, which switches to the
+deployment account. Public SSH access from Actions is not required. See
+[Azure identity setup and verification](azure-deployment-identity.md).
+The old `DEPLOY_HOST`, `DEPLOY_PORT`, `DEPLOY_SSH_KEY`, and
+`DEPLOY_KNOWN_HOSTS` secrets are no longer read by this workflow. Retain the old
+credentials privately until the Azure path has passed verification, then revoke
+the obsolete key and remove unused secrets as a separate administrator action.
 
 The workflow accepts only the exact commit on `main`, refuses a dirty server
 checkout, creates a matched PostgreSQL, attachment, and protected-configuration
@@ -213,13 +220,13 @@ retried; this does not create an unbounded queue or bypass approval.
 
 ### Azure host preparation
 
-Use a dedicated deployment account with an OpenSSH deployment key. Its home must
+Use a dedicated deployment account. Its home must
 contain `apps/ict-branch-toolkit`, the protected
 `.config/ict-branch-toolkit/deployment.env`, and `backups/ict-branch-toolkit`.
 Keep backups on the managed data disk through a directory or symlink. Configure
 Docker's `data-root` on the persistent data disk and a systemd `RequiresMountsFor`
 dependency so a missing disk cannot initialize an empty replacement database.
-Docker access is root-equivalent and must be limited to trusted deployment keys.
+Docker access is root-equivalent and must be limited to trusted deployment identities.
 When Apache and the application run on the same VM, use
 `APP_BIND_ADDRESS=127.0.0.1` and `APP_PORT=8088`. Do not publish the application,
 backend, or database ports to the Internet; expose HTTP/HTTPS and approved SSH only.
@@ -233,9 +240,10 @@ Check the live frontend policy, API health, and an operator-viewed map after a
 proxy change. Do not automate map browsing, tile prefetching, or cache bypass.
 
 Keep server addresses, private keys, credentials, certificates, and recovery data
-out of the repository. Store the five `DEPLOY_*` values in GitHub secrets and
+out of the repository. Store the Azure connection values in environment secrets and
 preserve existing application/database/encryption secrets on the server during
-retargeting. Verify SSH from the actual Actions runner before the first deployment.
+retargeting. Verify federated identity and a harmless Azure Run Command before
+the first deployment. Keep SSH restricted to approved administrator addresses.
 
 The `shared-test` environment requires human review before the deployment job
 can run. The job checks out the exact SHA already scanned and compares it with

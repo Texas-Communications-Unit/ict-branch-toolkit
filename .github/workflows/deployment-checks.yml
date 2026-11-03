@@ -10,6 +10,9 @@ on:
       - "scripts/test-deployment-recovery-set.py"
       - "scripts/test-deployment-recovery-integration.py"
       - "scripts/test-deploy-preflight.py"
+      - "scripts/azure-deploy.py"
+      - "scripts/test-azure-deploy.py"
+      - "scripts/configure-azure-deployment.sh"
       - "scripts/sync-fcc-shared-test.sh"
   push:
     branches: [main]
@@ -30,6 +33,9 @@ jobs:
         run: |
           bash -n scripts/deploy-shared-test.sh
           bash -n scripts/sync-fcc-shared-test.sh
+          bash -n scripts/configure-azure-deployment.sh
+      - name: Verify Azure transport failure handling with synthetic data
+        run: python3 scripts/test-azure-deploy.py
       - name: Test synthetic recovery success and failure paths
         run: python3 scripts/test-deployment-recovery-set.py
       - name: Verify failed image scans cannot replace running containers

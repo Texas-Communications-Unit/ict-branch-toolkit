@@ -72,7 +72,7 @@ jobs:
           dependencies=false
           containers=false
 
-          if matches '^\.github/(workflows/(security|deploy|phase-2-release-candidate-evaluation)\.yml|dependabot\.yml)$|^scripts/((test-)?security-gate\.py|deploy-shared-test\.sh|database-recovery\.sh)$|^\.gitleaks\.toml$|^\.trivyignore'; then
+          if matches '^\.github/(workflows/(security|deploy|deployment-checks|phase-2-release-candidate-evaluation)\.yml|dependabot\.yml)$|^scripts/((test-)?security-gate\.py|(test-)?azure-deploy\.py|configure-azure-deployment\.sh|deploy-shared-test\.sh|database-recovery\.sh)$|^\.gitleaks\.toml$|^\.trivyignore'; then
             full=true
           fi
           if matches '^backend/.*\.py$|^backend/(manage\.py|pyproject\.toml)$'; then
@@ -429,6 +429,7 @@ jobs:
           FULL_SCAN: ${{ github.event_name != 'pull_request' }}
         run: |
           python scripts/test-security-gate.py
+          python scripts/test-azure-deploy.py
           python scripts/security-gate.py
 
   installed-stack:
