@@ -11,10 +11,7 @@ def _reject_disallowed_update_fields(serializer, data, allowed_fields):
     disallowed = set(data) - allowed_fields
     if disallowed:
         raise serializers.ValidationError(
-            {
-                field: "This field cannot be changed after creation."
-                for field in sorted(disallowed)
-            }
+            {field: "This field cannot be changed after creation." for field in sorted(disallowed)}
         )
 
 

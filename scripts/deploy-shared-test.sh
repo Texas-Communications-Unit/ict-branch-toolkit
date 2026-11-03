@@ -51,7 +51,17 @@ if [[ ! -f "$recovery_helper" ]]; then
 fi
 
 resolved_env="$(mktemp)"
+previous_sha=""
+checkout_promoted=false
+candidate_started=false
 cleanup() {
+  local status=$?
+  # Before container replacement, the old images still serve the old commit.
+  # Restore that checkout identity if candidate preparation or scanning fails.
+  if (( status != 0 )) && [[ "$checkout_promoted" == true && "$candidate_started" == false ]]; then
+    git -C "$app_dir" switch --detach "$previous_sha" \
+      || echo "Candidate preparation failed; operator must verify the checkout identity." >&2
+  fi
   rm -f "$resolved_env"
 }
 trap cleanup EXIT
@@ -207,12 +217,31 @@ if (( free_build_kb < build_reserve_kb )); then
   exit 1
 fi
 
+previous_sha="$(git rev-parse HEAD)"
 git switch main
 git merge --ff-only "$expected_sha"
+checkout_promoted=true
 
 "${compose[@]}" config --quiet
 "${compose[@]}" config --format json | python3 "$environment_validator"
-"${compose[@]}" build
+"${compose[@]}" build --pull --no-cache
+
+# Scan the images that this server will actually start, not only CI rebuilds.
+# A registry/scanner error or fixable high/critical finding must abort before up.
+trivy_image='aquasec/trivy:0.72.0@sha256:cffe3f5161a47a6823fbd23d985795b3ed72a4c806da4c4df16266c02accdd6f'
+docker volume create ict-toolkit-security-cache >/dev/null
+candidate_images="$("${compose[@]}" config --images)"
+test -n "$candidate_images"
+while IFS= read -r image; do
+  test -n "$image" || continue
+  docker run --rm \
+    --volume /var/run/docker.sock:/var/run/docker.sock \
+    --volume ict-toolkit-security-cache:/root/.cache/trivy \
+    "$trivy_image" image --scanners vuln --ignore-unfixed \
+    --severity HIGH,CRITICAL --exit-code 1 "$image"
+done <<< "$candidate_images"
+
+candidate_started=true
 if "${compose[@]}" up --detach --wait; then
   :
 else

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 
-import { enhanceFccMapUnits } from "./FccUnitEnhancer";
+import { enhanceFccMapUnits } from "./fccMapUnits";
 
 afterEach(() => {
   document.body.innerHTML = "";
@@ -34,7 +34,10 @@ describe("FCC map companion units", () => {
     enhanceFccMapUnits();
     enhanceFccMapUnits();
 
-    const values = Array.from(document.querySelectorAll("dd"), (item) => item.textContent);
+    const values = Array.from(
+      document.querySelectorAll("dd"),
+      (item) => item.textContent,
+    );
     expect(values).toEqual(["Not listed", "100 m"]);
   });
 });

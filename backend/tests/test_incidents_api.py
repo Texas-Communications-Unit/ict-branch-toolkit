@@ -73,9 +73,7 @@ def test_administrator_creates_incident_and_operational_period(client):
 
 @pytest.mark.django_db
 def test_operational_period_requires_end_after_start(client):
-    admin = get_user_model().objects.create_superuser(
-        "admin", password="safe-test-password"
-    )
+    admin = get_user_model().objects.create_superuser("admin", password="safe-test-password")
     incident = Incident.objects.create(name="Synthetic Incident", created_by=admin)
     response = client.post(
         "/api/operational-periods/",
@@ -94,9 +92,7 @@ def test_operational_period_requires_end_after_start(client):
 
 @pytest.mark.django_db
 def test_authorized_incident_name_update_preserves_identity_and_audits_values(client):
-    admin = get_user_model().objects.create_superuser(
-        "edit-admin", password="safe-test-password"
-    )
+    admin = get_user_model().objects.create_superuser("edit-admin", password="safe-test-password")
     incident = Incident.objects.create(
         name="Synthetic Incdent",
         incident_number="SYN-EDIT-1",
@@ -127,9 +123,7 @@ def test_authorized_incident_name_update_preserves_identity_and_audits_values(cl
 
 @pytest.mark.django_db
 def test_authorized_operational_period_update_preserves_scope_and_audits_values(client):
-    admin = get_user_model().objects.create_superuser(
-        "period-admin", password="safe-test-password"
-    )
+    admin = get_user_model().objects.create_superuser("period-admin", password="safe-test-password")
     incident = Incident.objects.create(name="Synthetic Incident", created_by=admin)
     period = OperationalPeriod.objects.create(
         incident=incident,
@@ -156,9 +150,7 @@ def test_authorized_operational_period_update_preserves_scope_and_audits_values(
     period.refresh_from_db()
     assert period.incident_id == incident.id
 
-    event = AuditEvent.objects.get(
-        action="operational_period.updated", target_id=str(period.id)
-    )
+    event = AuditEvent.objects.get(action="operational_period.updated", target_id=str(period.id))
     assert event.actor == admin
     assert event.details["incident_id"] == str(incident.id)
     assert event.details["changed_fields"] == ["ends_at", "name", "starts_at"]
@@ -168,12 +160,8 @@ def test_authorized_operational_period_update_preserves_scope_and_audits_values(
 
 @pytest.mark.django_db
 def test_read_only_incident_member_cannot_edit_incident_or_period(client):
-    admin = get_user_model().objects.create_superuser(
-        "scope-admin", password="safe-test-password"
-    )
-    reader = get_user_model().objects.create_user(
-        "scope-reader", password="safe-test-password"
-    )
+    admin = get_user_model().objects.create_superuser("scope-admin", password="safe-test-password")
+    reader = get_user_model().objects.create_user("scope-reader", password="safe-test-password")
     incident = Incident.objects.create(name="Synthetic Incident", created_by=admin)
     add_incident_member(incident, reader, Role.READ_ONLY, admin)
     period = OperationalPeriod.objects.create(

@@ -10,6 +10,7 @@ personal, credential, and restricted channel information according to applicable
 
 ## Preconditions
 
+- Require the full pre-deployment Security workflow to pass for the exact candidate commit before protected environment approval. Follow the [security maintenance runbook](security-maintenance.md).
 - Back up the reverse-proxy configuration before editing it.
 - Install Docker Engine and the Compose plugin from Docker's supported repository.
 - Bind the published application port to an appropriate interface and permit access only from the reverse proxy.
@@ -148,8 +149,10 @@ listener that trusts this header to an untrusted network.
 
 ## Controlled GitHub deployment
 
-The `Deploy to Server` GitHub Actions workflow runs on pushes to `main` and can
-also be dispatched manually. Configure a protected
+The `Deploy to Server` GitHub Actions workflow runs the full reusable Security
+workflow on pushes to `main` and can also be dispatched manually from `main`.
+Every applicable security and regression check must succeed before the deployment
+job requests approval. Configure a protected
 `shared-test` environment and require human review before the job can access its
 repository secrets.
 
@@ -234,16 +237,11 @@ out of the repository. Store the five `DEPLOY_*` values in GitHub secrets and
 preserve existing application/database/encryption secrets on the server during
 retargeting. Verify SSH from the actual Actions runner before the first deployment.
 
-The `shared-test` environment requires human review before the job can run.
-The job re-resolves `origin/main` immediately after that approval gate and
-deploys that commit, not the commit that was current when the run was
-dispatched, so an approval delay cannot by itself cause a mismatch. Even so,
-**approve or reject a pending run within about 15 minutes of dispatch.** If a
-run is left pending for hours, treat it as stale: reject it and re-dispatch
-before approving, so the checked-out and validated commit stays close to the
-one actually deployed. Merging to `main` while a run is awaiting approval is
-still safe to do, but do so deliberately, and prefer re-dispatching after such
-a merge rather than approving an older pending run against a moving target.
+The `shared-test` environment requires human review before the deployment job
+can run. The job checks out the exact SHA already scanned and compares it with
+`origin/main` after approval. If main has advanced, deployment refuses to proceed;
+it never substitutes a newer, unscanned commit. Reject stale pending runs and
+re-dispatch from current main, which runs the full checks again before approval.
 
 ## Reverse proxy
 

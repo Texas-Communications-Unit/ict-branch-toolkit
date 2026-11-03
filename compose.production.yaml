@@ -2,7 +2,8 @@ name: ict-branch-toolkit
 
 services:
   db:
-    image: postgis/postgis:17-3.5-alpine
+    build:
+      context: ./database
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-ict_toolkit}

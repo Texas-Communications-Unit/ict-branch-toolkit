@@ -8,7 +8,9 @@ Selected on 2026-07-22 from the official PyPI and npm package registries, then i
 | --- | --- | --- |
 | Python | 3.12 | Supported, conservative runtime for Django 5.2 LTS |
 | Django | 5.2.17 | Current 5.2 long-term-support line rather than the newer non-LTS major |
-| Django REST Framework | 3.17.1 | Current stable API framework compatible with Django 5.2 |
+| Django REST Framework | 3.18.3 | Security update verified against Django 5.2 on 2026-11-03 |
+| Pillow | 13.0.0 | Security update; image and document regression checks required |
+| pypdf | 6.21.4 | Security update; PDF regression checks required |
 | PostgreSQL/PostGIS image | 17 / 3.5 | Stable spatial database baseline with an official PostGIS project image |
 | React / React DOM | 19.2.8 | Current stable UI runtime |
 | TypeScript | 6.0.3 | Current stable version compatible with the selected type-aware tooling |
@@ -19,4 +21,4 @@ Selected on 2026-07-22 from the official PyPI and npm package registries, then i
 
 ## Verification policy
 
-Renovate or Dependabot may propose upgrades later, but upgrades must remain isolated, pass the full check suite, and preserve the no-paid-provider and credential-free test boundaries. CI audits Python and JavaScript dependencies and reviews pull-request dependency changes. Official sources: [PyPI](https://pypi.org/), [npm](https://www.npmjs.com/), [Django](https://docs.djangoproject.com/en/5.2/), [PostGIS](https://postgis.net/docs/), [MapLibre GL JS](https://maplibre.org/maplibre-gl-js/docs/), and [Docker Compose](https://docs.docker.com/compose/).
+Dependabot proposes upgrades through the repository configuration. Upgrades must remain isolated, pass the full check suite, and preserve the no-paid-provider and credential-free test boundaries. CI audits Python and JavaScript dependencies and reviews pull-request dependency changes. Follow the [security maintenance runbook](../operations/security-maintenance.md). Official sources: [PyPI](https://pypi.org/), [npm](https://www.npmjs.com/), [Django](https://docs.djangoproject.com/en/5.2/), [PostGIS](https://postgis.net/docs/), [MapLibre GL JS](https://maplibre.org/maplibre-gl-js/docs/), and [Docker Compose](https://docs.docker.com/compose/).

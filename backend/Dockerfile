@@ -1,4 +1,4 @@
-FROM python:3.12.11-slim-bookworm AS base
+FROM python:3.12.16-slim-trixie AS base
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
@@ -6,13 +6,17 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 RUN apt-get update \
     && apt-get upgrade -y \
-    && apt-get install --no-install-recommends -y binutils gdal-bin libgdal-dev libgeos-dev \
+    && apt-get install --no-install-recommends -y libgdal36 libgeos-c1t64 \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
 FROM base AS development
 ARG PIP_VERSION=26.2
+
+RUN apt-get update \
+    && apt-get install --no-install-recommends -y binutils gdal-bin libgdal-dev libgeos-dev \
+    && rm -rf /var/lib/apt/lists/*
 
 COPY pyproject.toml ./
 RUN python -m pip install "pip==${PIP_VERSION}"

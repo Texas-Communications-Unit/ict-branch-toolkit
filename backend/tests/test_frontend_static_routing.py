@@ -1,6 +1,5 @@
 from pathlib import Path
 
-
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 NGINX_CONFIG = REPOSITORY_ROOT / "frontend" / "nginx.conf"
 

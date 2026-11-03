@@ -95,9 +95,7 @@ def test_what3words_fails_closed_when_provider_is_not_approved(client):
 @pytest.mark.django_db
 @override_settings(
     ICT_WHAT3WORDS_PROVIDER="apps.sites.what3words.DeterministicTestWhat3WordsProvider",
-    ICT_APPROVED_WHAT3WORDS_PROVIDERS=[
-        "apps.sites.what3words.DeterministicTestWhat3WordsProvider"
-    ],
+    ICT_APPROVED_WHAT3WORDS_PROVIDERS=["apps.sites.what3words.DeterministicTestWhat3WordsProvider"],
 )
 def test_approved_what3words_adapter_returns_normalized_synthetic_result(client):
     response = client.post(

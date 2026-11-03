@@ -9,6 +9,7 @@ on:
       - "scripts/deployment-recovery-set.py"
       - "scripts/test-deployment-recovery-set.py"
       - "scripts/test-deployment-recovery-integration.py"
+      - "scripts/test-deploy-preflight.py"
       - "scripts/sync-fcc-shared-test.sh"
   push:
     branches: [main]
@@ -21,7 +22,7 @@ env:
 
 jobs:
   recovery:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
@@ -31,6 +32,8 @@ jobs:
           bash -n scripts/sync-fcc-shared-test.sh
       - name: Test synthetic recovery success and failure paths
         run: python3 scripts/test-deployment-recovery-set.py
+      - name: Verify failed image scans cannot replace running containers
+        run: python3 scripts/test-deploy-preflight.py
       - name: Exercise isolated Docker recovery with synthetic data
         run: python3 scripts/test-deployment-recovery-integration.py
       - name: Check environment validation and documentation links

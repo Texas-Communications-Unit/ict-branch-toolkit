@@ -903,7 +903,9 @@ test("administrator signs in and sees the incident planning workspace", async ({
   await page.getByLabel("Username", { exact: true }).fill("admin");
   await page.getByLabel("Password", { exact: true }).fill("synthetic-password");
   await page.getByRole("button", { name: "Sign in" }).click();
-  await expect(page.getByRole("tab", { name: "ICS 205" })).toBeVisible();
+  await expect(
+    page.getByRole("tab", { name: "ICS 205", exact: true }),
+  ).toBeVisible();
   await page.keyboard.press("Tab");
   const skipLink = page.getByRole("link", {
     name: "Skip to planning workspace",
@@ -911,10 +913,9 @@ test("administrator signs in and sees the incident planning workspace", async ({
   await expect(skipLink).toBeFocused();
   await skipLink.press("Enter");
   await expect(page.locator("#main-content")).toBeFocused();
-  await expect(page.getByRole("tab", { name: "ICS 205" })).toHaveAttribute(
-    "aria-selected",
-    "true",
-  );
+  await expect(
+    page.getByRole("tab", { name: "ICS 205", exact: true }),
+  ).toHaveAttribute("aria-selected", "true");
   await expect(page.locator("#workspace-panel-ics-205")).toBeVisible();
   await expect(page.locator("#workspace-panel-incidents")).toBeHidden();
   await expect(page.locator("#workspace-panel-map")).toBeHidden();
@@ -925,7 +926,7 @@ test("administrator signs in and sees the incident planning workspace", async ({
   await expect(
     page.getByRole("button", { name: /^Synthetic Flood Exercise/ }),
   ).toBeVisible();
-  await page.getByRole("tab", { name: "ICS 205" }).click();
+  await page.getByRole("tab", { name: "ICS 205", exact: true }).click();
   const workspaceLogo = page.getByRole("img", {
     name: "Texas Communications Unit (TX-COMU) logo",
   });
@@ -1159,7 +1160,7 @@ test("administrator signs in and sees the incident planning workspace", async ({
   await expect(
     page.getByText("14SQB7401876781", { exact: true }).first(),
   ).toBeVisible();
-  await page.getByRole("tab", { name: "ICS 205" }).click();
+  await page.getByRole("tab", { name: "ICS 205", exact: true }).click();
   page.once("dialog", (dialog) => dialog.accept());
   await page.getByRole("button", { name: "Approve and lock revision" }).click();
   await expect(

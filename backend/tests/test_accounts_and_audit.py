@@ -72,11 +72,12 @@ def test_incident_membership_scopes_access_and_change_policy(client):
 
     response = client.patch(
         f"/api/incidents/{incident.id}/",
-        {"status": "active"},
+        {"name": "Synthetic Updated Communications Exercise"},
         content_type="application/json",
         **auth_header(technician),
     )
     assert response.status_code == 200
+    assert response.json()["name"] == "Synthetic Updated Communications Exercise"
     period = client.post(
         "/api/operational-periods/",
         {

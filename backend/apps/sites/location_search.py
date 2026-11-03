@@ -1,5 +1,7 @@
 import re
 
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import extend_schema
 from rest_framework import serializers, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -8,7 +10,6 @@ from rest_framework.views import APIView
 from .coordinates import CoordinateError, coordinate_formats, parse_coordinate
 from .geocoders import GeocoderError, configured_geocoder
 from .what3words import What3WordsError, configured_what3words
-
 
 WHAT3WORDS_RE = re.compile(
     r"^(?:https?://(?:www\.)?what3words\.com/)?/?/?/?([a-z]+\.[a-z]+\.[a-z]+)$",
@@ -41,6 +42,7 @@ def _what3words_value(query: str) -> str | None:
 class LocationResolveView(APIView):
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(request=LocationResolveSerializer, responses={200: OpenApiTypes.OBJECT})
     def post(self, request):
         serializer = LocationResolveSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)

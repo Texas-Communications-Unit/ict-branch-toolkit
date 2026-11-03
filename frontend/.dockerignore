@@ -1,0 +1,10 @@
+.env
+.env.*
+.npmrc
+node_modules
+dist
+coverage
+playwright-report
+test-results
+*.pem
+*.key
