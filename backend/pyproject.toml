@@ -31,7 +31,7 @@ dev = [
   "pytest==9.0.3",
   "pytest-django==4.12.0",
   "pytest-cov==7.0.0",
-  "pdfplumber==0.11.9",
+  "pdfplumber==0.11.10",
   "lxml==6.1.1",
   "ruff==0.13.2",
 ]
