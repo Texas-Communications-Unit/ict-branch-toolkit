@@ -174,25 +174,28 @@ hidden named synthetic accounts and synthetic incidents, never imports
 operational data, and revokes every generated token when the command ends.
 Fixtures and audit evidence are retained.
 
-Run it only on the approved shared-test server after the exact release
+Run it only on an approved isolated synthetic test server after the exact release
 candidate is deployed:
 
 ```sh
-docker compose -f compose.production.yaml exec backend \
-  python manage.py probe_collaboration_capacity \
-  --base-url http://127.0.0.1:8000 \
-  --host-header backend
+ICT_CAPACITY_CONFIRMATION=RUN-SYNTHETIC-CAPACITY \
+  bash scripts/run-shared-test-capacity.sh '<full-reviewed-main-sha>' '<run-id>' '<attempt>'
 ```
 
-The preferred operator path is the manual **Characterize shared-test
-collaboration capacity** GitHub Actions workflow. It requires the protected
-`shared-test` environment, the exact confirmation text
-`RUN-SYNTHETIC-CAPACITY`, a clean server checkout at current `main`, healthy
+The server-connected **Characterize shared-test collaboration capacity**
+Actions workflow is retired because that deployment target is now the live
+application VM. Existing reports are preserved. Do not run a production load
+test using the deployment identity. See
+[Azure workflow retirement](azure-fcc-synchronization.md#retired-server-connected-capacity-workflow).
+
+For a separately approved isolated synthetic test host, the retained
+`scripts/run-shared-test-capacity.sh` helper still requires the exact confirmation
+text `RUN-SYNTHETIC-CAPACITY`, a clean checkout at current `main`, healthy
 database/backend/frontend containers, no pending migrations, and disabled live
-external SSO. It shares the deployment concurrency lock so a deployment and a
-capacity run cannot overlap. The JSON Lines report and SHA-256 checksum are
-retained on the server; the workflow also retains a 90-day artifact when the
-restricted SSH account permits report retrieval.
+external SSO. It takes the shared host maintenance lock, validates its report,
+and retains the JSON Lines output and SHA-256 checksum. Report retrieval must
+recheck the checksum and use `scripts/validate-capacity-report.py`. There is no
+automatic production invocation or replacement production load-test workflow.
 
 The default ramp is 5, 10, 25, 50, and 100 total users, with no more than 25
 users assigned to one synthetic incident. Each level exercises presence,

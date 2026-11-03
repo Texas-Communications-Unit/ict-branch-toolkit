@@ -72,7 +72,7 @@ jobs:
           dependencies=false
           containers=false
 
-          if matches '^\.github/(workflows/(security|deploy|deployment-checks|phase-2-release-candidate-evaluation)\.yml|dependabot\.yml)$|^scripts/((test-)?security-gate\.py|(test-)?azure-deploy\.py|configure-azure-deployment\.sh|deploy-shared-test\.sh|database-recovery\.sh)$|^\.gitleaks\.toml$|^\.trivyignore'; then
+          if matches '^\.github/(workflows/(security|deploy|deployment-checks|phase-2-release-candidate-evaluation|sync-fcc-data|collaboration-capacity)\.yml|dependabot\.yml)$|^scripts/((test-)?security-gate\.py|(test-)?azure-(deploy|fcc-sync)\.py|test-fcc-sync-preflight\.py|sync-fcc-shared-test\.sh|configure-azure-deployment\.sh|deploy-shared-test\.sh|database-recovery\.sh)$|^\.gitleaks\.toml$|^\.trivyignore'; then
             full=true
           fi
           if matches '^backend/.*\.py$|^backend/(manage\.py|pyproject\.toml)$'; then
@@ -430,6 +430,8 @@ jobs:
         run: |
           python scripts/test-security-gate.py
           python scripts/test-azure-deploy.py
+          python scripts/test-azure-fcc-sync.py
+          python scripts/test-fcc-sync-preflight.py
           python scripts/security-gate.py
 
   installed-stack:

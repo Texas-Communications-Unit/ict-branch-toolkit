@@ -65,8 +65,10 @@ Check the CISA Known Exploited Vulnerabilities catalog using its version/date;
 absence from that catalog is not evidence that an issue is unexploitable.
 
 Retiring deployment SSH secrets requires checking **all** workflow consumers.
-The main deployment uses Azure OIDC, while FCC synchronization and the retained
-capacity workflow still need transport migration. Keep the administrator SSH
+The main deployment and FCC synchronization use Azure OIDC; the former
+server-connected capacity workflow is retired. Follow the staged
+[FCC verification and credential-retirement procedure](azure-fcc-synchronization.md).
+Keep the administrator SSH
 credential separate. Remove a machine credential from the server and GitHub only
 after its consumers have migrated and the replacement operations are verified.
 

@@ -172,9 +172,22 @@ def execution_result(resource: dict) -> bool | None:
     return None
 
 
-def deploy(
-    config: dict[str, str], sha: str, run: str, check_only: bool = False
+def execute_script(
+    config: dict[str, str],
+    script: str,
+    run: str,
+    *,
+    command_prefix: str,
+    remote_timeout: int,
+    poll_timeout: int,
+    operation: str,
+    log_directory: str,
+    success_message: str,
 ) -> None:
+    if command_prefix not in {"ict-deploy", "ict-fcc"} or not re.fullmatch(
+        r"[0-9]+-[0-9]+", run
+    ):
+        raise ValueError("Invalid managed command identifier")
     vm_id = (
         f"/subscriptions/{config['AZURE_SUBSCRIPTION_ID']}/resourceGroups/"
         f"{quote(config['AZURE_RESOURCE_GROUP'], safe='')}/providers/Microsoft.Compute/"
@@ -184,16 +197,13 @@ def deploy(
     vm = az_json(
         "rest", "--method", "get", "--url", f"{base}?api-version={API_VERSION}"
     )
-    script = make_script(
-        sha, run, config["DEPLOY_USER"], Path(__file__).parent, check_only
-    )
-    command = f"{base}/runCommands/ict-deploy-{run}?api-version={API_VERSION}"
+    command = f"{base}/runCommands/{command_prefix}-{run}?api-version={API_VERSION}"
     body = {
         "location": vm["location"],
         "properties": {
             "source": {"script": script},
             "asyncExecution": True,
-            "timeoutInSeconds": 120 if check_only else REMOTE_TIMEOUT,
+            "timeoutInSeconds": remote_timeout,
             "treatFailureAsDeploymentFailure": True,
         },
     }
@@ -206,7 +216,7 @@ def deploy(
         "Azure accepted the command; waiting for its execution result.",
         flush=True,
     )
-    deadline = time.monotonic() + (600 if check_only else POLL_TIMEOUT)
+    deadline = time.monotonic() + poll_timeout
     while time.monotonic() < deadline:
         resource = az_json(
             "rest", "--method", "get", "--url", command + "&$expand=instanceView"
@@ -215,18 +225,10 @@ def deploy(
         if result is not None:
             if not result:
                 raise RuntimeError(
-                    f"Azure deployment failed. Review deployment-logs/{run}.log under the deployment account cache; "
+                    f"Azure {operation} failed. Review {log_directory}/{run}.log under the deployment account cache; "
                     "check Azure execution status if no log exists."
                 )
-            if check_only:
-                print(
-                    "Azure connection verified without deploying the application.",
-                    flush=True,
-                )
-            else:
-                print(
-                    f"Azure verified successful execution for commit {sha}.", flush=True
-                )
+            print(success_message, flush=True)
             # Azure limits retained managed commands. Delete only after proven
             # successful guest completion; preserve failures for investigation.
             try:
@@ -241,6 +243,26 @@ def deploy(
     # Never delete a live command or retry blindly: it can still be running.
     raise RuntimeError(
         "Azure result timed out. Check the existing Run Command and service health before retrying."
+    )
+
+
+def deploy(
+    config: dict[str, str], sha: str, run: str, check_only: bool = False
+) -> None:
+    execute_script(
+        config,
+        make_script(sha, run, config["DEPLOY_USER"], Path(__file__).parent, check_only),
+        run,
+        command_prefix="ict-deploy",
+        remote_timeout=120 if check_only else REMOTE_TIMEOUT,
+        poll_timeout=600 if check_only else POLL_TIMEOUT,
+        operation="deployment",
+        log_directory="deployment-logs",
+        success_message=(
+            "Azure connection verified without deploying the application."
+            if check_only
+            else f"Azure verified successful execution for commit {sha}."
+        ),
     )
 
 

@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+if [[ "${ICT_CAPACITY_CONFIRMATION:-}" != "RUN-SYNTHETIC-CAPACITY" ]]; then
+  echo "Set ICT_CAPACITY_CONFIRMATION=RUN-SYNTHETIC-CAPACITY only for an approved isolated synthetic host." >&2
+  exit 2
+fi
+
 if [[ $# -ne 3 || ! "$1" =~ ^[0-9a-f]{40}$ || ! "$2" =~ ^[0-9]+$ || ! "$3" =~ ^[0-9]+$ ]]; then
   echo "Usage: run-shared-test-capacity.sh <40-character-main-commit> <run-id> <attempt>" >&2
   exit 2

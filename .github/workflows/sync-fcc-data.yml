@@ -2,117 +2,89 @@ name: Sync FCC reference data
 
 on:
   schedule:
-    # FCC complete files are generated Sunday at 05:00 Eastern. This runs
-    # Monday at 09:00 UTC (03:00 CST / 04:00 CDT) after publication settles.
-    - cron: "0 9 * * 1"
+    # Leave an hour after the daily 09:30 UTC backup window. Complete FCC files
+    # are generated Sunday; Monday 10:30 UTC is 04:30 CST / 05:30 CDT.
+    - cron: "30 10 * * 1"
   workflow_dispatch:
     inputs:
+      operation:
+        description: Verify Azure/checkout without import, or synchronize FCC data
+        required: true
+        default: verify
+        type: choice
+        options: [verify, sync]
       dataset:
         description: FCC dataset to synchronize
         required: true
         default: all
         type: choice
-        options:
-          - all
-          - asr
-          - uls_commercial
-          - uls_private
+        options: [all, asr, uls_commercial, uls_private]
 
 permissions:
   contents: read
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+  AZURE_CORE_OUTPUT: none
 
+# Also serialize against application deployments. Guest maintenance locks remain
+# authoritative for host-local backups and administrator-started operations.
 concurrency:
-  group: shared-test-fcc-data-sync
+  group: live-system-deployment
   cancel-in-progress: false
 
 jobs:
   sync:
-    name: Download and reconcile official FCC complete files
-    runs-on: ubuntu-latest
+    name: Approved Azure FCC operation
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
     timeout-minutes: 180
+    environment: shared-test
+    permissions:
+      contents: read
+      id-token: write
 
     steps:
-      - name: Check out current main
+      - name: Check out reviewed main commit
         uses: actions/checkout@v7
         with:
-          ref: main
+          ref: ${{ github.sha }}
 
-      - name: Validate required secrets
-        env:
-          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
-          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
-          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
-          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
-          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+      - name: Reject stale main commit
+        shell: bash
         run: |
-          test -n "$DEPLOY_HOST"
-          test -n "$DEPLOY_KNOWN_HOSTS"
-          test -n "$DEPLOY_PORT"
-          test -n "$DEPLOY_SSH_KEY"
-          test -n "$DEPLOY_USER"
+          git fetch origin main:refs/remotes/origin/main
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$GITHUB_SHA" = "$(git rev-parse refs/remotes/origin/main)"
 
-      - name: Configure SSH
+      - name: Validate Azure FCC configuration
         env:
-          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
-          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
-        run: |
-          install -d -m 700 "$HOME/.ssh"
-          printf '%s\n' "$DEPLOY_SSH_KEY" > "$HOME/.ssh/deploy_key"
-          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
-          chmod 600 "$HOME/.ssh/deploy_key"
-          chmod 644 "$HOME/.ssh/known_hosts"
-
-      - name: Upload synchronization script
-        env:
-          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
-          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          AZURE_RESOURCE_GROUP: ${{ secrets.AZURE_RESOURCE_GROUP }}
+          AZURE_VM_NAME: ${{ secrets.AZURE_VM_NAME }}
           DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
-        run: |
-          remote_script=".cache/ict-branch-toolkit/sync-fcc-${GITHUB_RUN_ID}.sh"
-          ssh -i "$HOME/.ssh/deploy_key" -p "$DEPLOY_PORT" \
-            -o BatchMode=yes -o ConnectTimeout=15 -o IdentitiesOnly=yes \
-            -o ServerAliveInterval=30 -o ServerAliveCountMax=20 \
-            -o StrictHostKeyChecking=yes "$DEPLOY_USER@$DEPLOY_HOST" \
-            "install -d -m 700 '.cache/ict-branch-toolkit' && cat > '$remote_script' && chmod 700 '$remote_script'" \
-            < scripts/sync-fcc-shared-test.sh
+        run: python3 scripts/azure-fcc-sync.py --validate-only
 
-      - name: Synchronize selected FCC datasets
+      - name: Authenticate to Azure with GitHub identity
+        uses: Azure/login@a641126d1b8aa4d1fa005f4f92df94a3a4c4c906 # v3
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Execute approved FCC operation using managed Run Command
         env:
-          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
-          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          AZURE_RESOURCE_GROUP: ${{ secrets.AZURE_RESOURCE_GROUP }}
+          AZURE_VM_NAME: ${{ secrets.AZURE_VM_NAME }}
           DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          OPERATION: ${{ github.event_name == 'schedule' && 'sync' || inputs.operation }}
           REQUESTED_DATASET: ${{ inputs.dataset || 'all' }}
         run: |
-          remote_script=".cache/ict-branch-toolkit/sync-fcc-${GITHUB_RUN_ID}.sh"
-          datasets=(asr uls_commercial uls_private)
-          if [[ "$REQUESTED_DATASET" != "all" ]]; then
-            datasets=("$REQUESTED_DATASET")
-          fi
-          for dataset in "${datasets[@]}"; do
-            ssh -i "$HOME/.ssh/deploy_key" -p "$DEPLOY_PORT" \
-              -o BatchMode=yes -o ConnectTimeout=15 -o IdentitiesOnly=yes \
-              -o ServerAliveInterval=30 -o ServerAliveCountMax=20 \
-              -o StrictHostKeyChecking=yes "$DEPLOY_USER@$DEPLOY_HOST" \
-              "bash '$remote_script' '$dataset'"
-          done
-
-      - name: Remove remote synchronization script
-        if: always()
-        env:
-          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
-          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
-          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
-        run: |
-          remote_script=".cache/ict-branch-toolkit/sync-fcc-${GITHUB_RUN_ID}.sh"
-          ssh -i "$HOME/.ssh/deploy_key" -p "$DEPLOY_PORT" \
-            -o BatchMode=yes -o ConnectTimeout=15 -o IdentitiesOnly=yes \
-            -o ServerAliveInterval=30 -o ServerAliveCountMax=20 \
-            -o StrictHostKeyChecking=yes "$DEPLOY_USER@$DEPLOY_HOST" \
-            "rm -f -- '$remote_script'"
-
-      - name: Remove temporary key
-        if: always()
-        run: rm -f "$HOME/.ssh/deploy_key"
+          case "$OPERATION" in
+            verify) python3 scripts/azure-fcc-sync.py --check-only ;;
+            sync) python3 scripts/azure-fcc-sync.py --dataset "$REQUESTED_DATASET" ;;
+            *) echo "Unsupported FCC operation" >&2; exit 2 ;;
+          esac
