@@ -24,6 +24,10 @@ services:
       context: ./backend
       target: production
     restart: unless-stopped
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
     environment:
       DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?Set DJANGO_SECRET_KEY in the deployment environment file}
       ICT_INVENTORY_ENCRYPTION_KEY: ${ICT_INVENTORY_ENCRYPTION_KEY:?Set ICT_INVENTORY_ENCRYPTION_KEY in the deployment environment file}

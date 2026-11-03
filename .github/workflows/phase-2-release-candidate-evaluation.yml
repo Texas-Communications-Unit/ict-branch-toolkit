@@ -88,6 +88,23 @@ jobs:
             -f compose.production.yaml \
             ps > evaluation-evidence/compose-services.txt
 
+      - name: Verify backend privilege restrictions in the installed container
+        shell: bash
+        run: |
+          docker compose --env-file "$DEPLOY_ENV" -f compose.production.yaml \
+            exec -T backend python - <<'PY'
+          from pathlib import Path
+
+          status = dict(
+              line.split(":", 1) for line in Path("/proc/1/status").read_text().splitlines()
+              if ":" in line
+          )
+          for key in ("CapInh", "CapPrm", "CapEff", "CapBnd", "CapAmb"):
+              assert int(status[key].strip(), 16) == 0, f"Unexpected {key} privileges"
+          assert status["NoNewPrivs"].strip() == "1", "Privilege escalation is not disabled"
+          print("Running backend has no Linux capabilities and cannot gain new privileges.")
+          PY
+
       - name: Verify installed health and fail-closed profile status
         shell: bash
         run: |
