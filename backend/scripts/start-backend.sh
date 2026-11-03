@@ -1,6 +1,7 @@
 #!/bin/sh
 set -eu
 
+python manage.py upgrade_postgis
 python manage.py migrate --noinput
 python manage.py ensure_admin
 python manage.py import_bundled_nifog \
