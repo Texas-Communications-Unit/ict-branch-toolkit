@@ -44,9 +44,11 @@ class Command(BaseCommand):
                 )
             for name, installed, available in before:
                 if not available or not re.fullmatch(r"3\.6\.\d+", available):
-                    raise CommandError(f"{name} does not have an approved stable 3.6 target.")
+                    raise CommandError(f"{name} target {available!r} is not approved stable 3.6.")
                 if not re.fullmatch(r"3\.(5|6)\.\d+", installed):
-                    raise CommandError(f"{name} requires a separately reviewed upgrade path.")
+                    raise CommandError(
+                        f"{name} version {installed!r} requires a reviewed upgrade path."
+                    )
             if all(installed == available for _, installed, available in before):
                 self.stdout.write("Installed PostGIS extensions are already current on 3.6.")
                 return

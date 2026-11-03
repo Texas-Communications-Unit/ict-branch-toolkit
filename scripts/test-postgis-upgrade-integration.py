@@ -5,6 +5,7 @@ import argparse
 import hashlib
 import json
 import subprocess
+import sys
 import tempfile
 import time
 import uuid
@@ -12,7 +13,18 @@ from pathlib import Path
 
 
 def docker(*args, **kwargs):
-    return subprocess.run(["docker", *args], check=True, **kwargs)
+    try:
+        return subprocess.run(["docker", *args], check=True, **kwargs)
+    except subprocess.CalledProcessError as error:
+        # This fixture contains synthetic data/credentials only. Preserve the
+        # captured cause so a failed upgrade is diagnosable in CI evidence.
+        if error.stderr:
+            detail = error.stderr
+            print(
+                detail.decode() if isinstance(detail, bytes) else detail,
+                file=sys.stderr,
+            )
+        raise
 
 
 def main():
