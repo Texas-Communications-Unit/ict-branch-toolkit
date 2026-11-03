@@ -20,14 +20,28 @@ def checksum(path):
     with path.open("rb") as stream:
         for chunk in iter(lambda: stream.read(1024 * 1024), b""):
             digest.update(chunk)
-    path.with_name(path.name + ".sha256").write_text(f"{digest.hexdigest()}  {path.name}\n")
+    path.with_name(path.name + ".sha256").write_text(
+        f"{digest.hexdigest()}  {path.name}\n"
+    )
 
 
 def create_recovery_set(
-    env_file, compose_file, backup_dir, source_commit, target_commit, protected_env_file=None
+    env_file,
+    compose_file,
+    backup_dir,
+    source_commit,
+    target_commit,
+    protected_env_file=None,
 ):
     os.umask(0o077)
-    compose = ["docker", "compose", "--env-file", str(env_file), "-f", str(compose_file)]
+    compose = [
+        "docker",
+        "compose",
+        "--env-file",
+        str(env_file),
+        "-f",
+        str(compose_file),
+    ]
 
     def run(arguments, **kwargs):
         # Do not print Compose configuration or subprocess errors containing secrets.
@@ -38,7 +52,9 @@ def create_recovery_set(
 
     running = set(output(["ps", "--status", "running", "--services"]).splitlines())
     if not {"db", "backend", "frontend"}.issubset(running):
-        raise RuntimeError("All production services must be running before an upgrade backup")
+        raise RuntimeError(
+            "All production services must be running before an upgrade backup"
+        )
     db_size = int(
         output(
             [
@@ -69,9 +85,14 @@ def create_recovery_set(
     )
     backup_dir.mkdir(parents=True, exist_ok=True, mode=0o700)
     if shutil.disk_usage(backup_dir).free < db_size + media_kib * 1024 + 1024**3:
-        raise RuntimeError("Insufficient free space for the database and attachments recovery set")
+        raise RuntimeError(
+            "Insufficient free space for the database and attachments recovery set"
+        )
     timestamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%S%fZ")
-    prefix = backup_dir / f"postgresql-{timestamp}-pre-{target_commit[:12]}-{uuid.uuid4().hex[:8]}"
+    prefix = (
+        backup_dir
+        / f"postgresql-{timestamp}-pre-{target_commit[:12]}-{uuid.uuid4().hex[:8]}"
+    )
     dump = Path(str(prefix) + ".dump")
     attachments = Path(str(dump) + ".attachments.tar.gz")
     environment = Path(str(dump) + ".deployment.env")
@@ -152,13 +173,30 @@ def create_recovery_set(
             stream.write("\n")
     finally:
         if paused:
-            run(["start", "--wait", "backend", "frontend"], stdout=sys.stderr)
+            run(
+                [
+                    "up",
+                    "--no-deps",
+                    "--no-recreate",
+                    "--no-build",
+                    "--wait",
+                    "backend",
+                    "frontend",
+                ],
+                stdout=sys.stderr,
+            )
     return dump
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    for name in ("env-file", "compose-file", "backup-dir", "source-commit", "target-commit"):
+    for name in (
+        "env-file",
+        "compose-file",
+        "backup-dir",
+        "source-commit",
+        "target-commit",
+    ):
         parser.add_argument("--" + name, required=True)
     parser.add_argument(
         "--protected-env-file", help="Original protected configuration before overlays"
@@ -180,7 +218,9 @@ def main():
             Path(args.backup_dir).resolve(),
             args.source_commit,
             args.target_commit,
-            Path(args.protected_env_file).resolve() if args.protected_env_file else None,
+            Path(args.protected_env_file).resolve()
+            if args.protected_env_file
+            else None,
         )
     except Exception as error:
         print(

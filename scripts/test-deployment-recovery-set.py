@@ -60,7 +60,7 @@ class RecoveryTests(unittest.TestCase):
             stage = "attachment_validation"
             with tarfile.open(fileobj=kwargs["stdin"], mode="r:gz") as archive:
                 self.assertEqual(archive.extractfile("synthetic.txt").read(), b"test")
-        elif arguments[0] == "start":
+        elif arguments[0] == "up":
             stage = "resume"
         else:
             self.fail(f"Unexpected Docker operation: {arguments}")
@@ -90,22 +90,53 @@ class RecoveryTests(unittest.TestCase):
             if os.name == "posix":
                 self.assertEqual(path.stat().st_mode & 0o077, 0)
         self.assertEqual(
-            Path(str(dump) + ".deployment.env").read_bytes(), self.environment.read_bytes()
+            Path(str(dump) + ".deployment.env").read_bytes(),
+            self.environment.read_bytes(),
         )
         operations = [c[0] for c in self.calls]
-        self.assertLess(operations.index("stop"), operations.index("start"))
-        self.assertEqual(self.calls[-1], ["start", "--wait", "backend", "frontend"])
+        self.assertLess(operations.index("stop"), operations.index("up"))
+        self.assertEqual(
+            self.calls[-1],
+            [
+                "up",
+                "--no-deps",
+                "--no-recreate",
+                "--no-build",
+                "--wait",
+                "backend",
+                "frontend",
+            ],
+        )
         self.assertNotIn("fixture-only", json.dumps(manifest))
 
     def test_failures_resume_original_services_and_do_not_mark_complete(self):
-        for stage in ("stop", "dump", "catalog", "attachments", "attachment_validation"):
+        for stage in (
+            "stop",
+            "dump",
+            "catalog",
+            "attachments",
+            "attachment_validation",
+        ):
             with self.subTest(stage=stage):
                 self.failure = stage
                 self.calls = []
                 with self.assertRaises(subprocess.CalledProcessError):
                     self.create()
-                self.assertEqual(self.calls[-1], ["start", "--wait", "backend", "frontend"])
-                self.assertEqual(list((self.root / "backups").glob("*.recovery.json")), [])
+                self.assertEqual(
+                    self.calls[-1],
+                    [
+                        "up",
+                        "--no-deps",
+                        "--no-recreate",
+                        "--no-build",
+                        "--wait",
+                        "backend",
+                        "frontend",
+                    ],
+                )
+                self.assertEqual(
+                    list((self.root / "backups").glob("*.recovery.json")), []
+                )
 
     def test_inactive_stack_is_not_started_or_stopped(self):
         self.services = b"db\nbackend\n"
@@ -125,7 +156,9 @@ class RecoveryTests(unittest.TestCase):
                 "b" * 40,
                 original,
             )
-        self.assertEqual(Path(str(dump) + ".deployment.env").read_bytes(), original.read_bytes())
+        self.assertEqual(
+            Path(str(dump) + ".deployment.env").read_bytes(), original.read_bytes()
+        )
 
     def test_insufficient_space_does_not_pause_application(self):
         with patch.object(
@@ -153,10 +186,15 @@ class RecoveryTests(unittest.TestCase):
 class RetentionTests(unittest.TestCase):
     def test_expired_complete_set_is_removed_but_corrupt_companions_are_retained(self):
         script = Path(__file__).with_name("deploy-shared-test.sh").read_text()
-        code = script.split('python3 - "$backup_dir" "$backup_retention_count" <<\'PY\'\n', 1)[1]
+        code = script.split(
+            'python3 - "$backup_dir" "$backup_retention_count" <<\'PY\'\n', 1
+        )[1]
         code = code.split("\nPY\n", 1)[0]
         for corrupt in (False, True):
-            with self.subTest(corrupt=corrupt), tempfile.TemporaryDirectory() as directory:
+            with (
+                self.subTest(corrupt=corrupt),
+                tempfile.TemporaryDirectory() as directory,
+            ):
                 root = Path(directory)
                 dumps = []
                 for index in range(2):
@@ -182,11 +220,15 @@ class RetentionTests(unittest.TestCase):
                 if corrupt:
                     Path(str(dumps[0]) + ".attachments.tar.gz.sha256").write_text("")
                 result = subprocess.run(
-                    [sys.executable, "-c", code, str(root), "2"], check=True, capture_output=True
+                    [sys.executable, "-c", code, str(root), "2"],
+                    check=True,
+                    capture_output=True,
                 )
                 self.assertTrue(dumps[1].is_file())
                 self.assertEqual(dumps[0].exists(), corrupt)
-                self.assertEqual(Path(str(dumps[0]) + ".deployment.env").exists(), corrupt)
+                self.assertEqual(
+                    Path(str(dumps[0]) + ".deployment.env").exists(), corrupt
+                )
                 self.assertNotIn(b"synthetic fixture", result.stdout)
 
 
