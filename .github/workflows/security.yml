@@ -367,9 +367,23 @@ jobs:
             --volume "${{ github.workspace }}/security-artifacts:/artifacts" \
             "$TRIVY_IMAGE" image --scanners vuln --format cyclonedx \
             --output /artifacts/database.cdx.json "$DATABASE_IMAGE"
+          # Keep canonical severity, vendor status, and fixed-version fields for triage.
+          for target in backend frontend database; do
+            case "$target" in
+              backend) image="$BACKEND_IMAGE" ;;
+              frontend) image="$FRONTEND_IMAGE" ;;
+              database) image="$DATABASE_IMAGE" ;;
+            esac
+            docker run --rm \
+              --volume /var/run/docker.sock:/var/run/docker.sock \
+              --volume trivy-cache:/root/.cache/trivy \
+              --volume "${{ github.workspace }}/security-artifacts:/artifacts" \
+              "$TRIVY_IMAGE" image --scanners vuln --format json \
+              --output "/artifacts/$target.trivy.json" "$image"
+          done
           (
             cd security-artifacts
-            sha256sum ./*.cdx.json > SHA256SUMS
+            sha256sum ./*.json > SHA256SUMS
           )
       - name: Reject actionable high and critical vulnerabilities
         run: |
