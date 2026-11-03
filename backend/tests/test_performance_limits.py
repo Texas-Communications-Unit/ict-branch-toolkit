@@ -178,12 +178,12 @@ def test_incident_update_envelope_includes_append_only_audit():
     response, query_count, response_bytes = measured_patch(
         authenticated_client(user),
         f"/api/incidents/{incident.id}/",
-        {"status": Incident.Status.ACTIVE},
+        {"name": "Synthetic Updated Performance Write Exercise"},
     )
 
-    assert response.json()["status"] == Incident.Status.ACTIVE
+    assert response.json()["name"] == "Synthetic Updated Performance Write Exercise"
     event = AuditEvent.objects.get(action="incident.updated")
-    assert event.details == {"changed_fields": ["status"]}
+    assert event.details == {"changed_fields": ["name"]}
     assert_envelope(
         name="incident-update-with-audit",
         query_count=query_count,

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 
-import { enhanceFccMapUnits } from "./FccUnitEnhancer";
+import { enhanceFccMapUnits } from "./fccMapUnits";
 
 afterEach(() => {
   document.body.innerHTML = "";

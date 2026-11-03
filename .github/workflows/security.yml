@@ -72,7 +72,7 @@ jobs:
           dependencies=false
           containers=false
 
-          if matches '^\.github/(workflows/(security|deploy)\.yml|dependabot\.yml)$|^scripts/(test-)?security-gate\.py$'; then
+          if matches '^\.github/(workflows/(security|deploy)\.yml|dependabot\.yml)$|^scripts/(test-)?security-gate\.py$|^\.gitleaks\.toml$|^\.trivyignore'; then
             full=true
           fi
           if matches '^backend/.*\.py$|^backend/(manage\.py|pyproject\.toml)$'; then
@@ -81,10 +81,10 @@ jobs:
           if matches '^frontend/(src|tests|e2e)/|^frontend/.*\.(ts|tsx|js|jsx)$'; then
             frontend_code=true
           fi
-          if matches '^backend/pyproject\.toml$|^frontend/(package\.json|pnpm-lock\.yaml)$'; then
+          if matches '^backend/pyproject\.toml$|^frontend/(package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml|\.npmrc)$'; then
             dependencies=true
           fi
-          if matches '(^|/)Dockerfile$|^compose[^/]*\.ya?ml$|^backend/pyproject\.toml$|^frontend/(package\.json|pnpm-lock\.yaml)$'; then
+          if matches '(^|/)Dockerfile$|^compose[^/]*\.ya?ml$|^backend/pyproject\.toml$|^frontend/(package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml|\.npmrc)$'; then
             containers=true
           fi
 

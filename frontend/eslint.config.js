@@ -22,6 +22,11 @@ export default tseslint.config(
     rules: {
       ...jsxA11y.configs.recommended.rules,
       ...reactHooks.configs.recommended.rules,
+      // Named scroll regions need keyboard focus to pan wide frequency tables.
+      "jsx-a11y-x/no-noninteractive-tabindex": [
+        "error",
+        { roles: ["tabpanel", "region"] },
+      ],
       // Preserve the existing data-fetching effect while upgrading the security toolchain.
       "react-hooks/set-state-in-effect": "off",
       "react-refresh/only-export-components": [

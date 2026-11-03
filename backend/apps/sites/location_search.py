@@ -9,7 +9,6 @@ from .coordinates import CoordinateError, coordinate_formats, parse_coordinate
 from .geocoders import GeocoderError, configured_geocoder
 from .what3words import What3WordsError, configured_what3words
 
-
 WHAT3WORDS_RE = re.compile(
     r"^(?:https?://(?:www\.)?what3words\.com/)?/?/?/?([a-z]+\.[a-z]+\.[a-z]+)$",
     re.IGNORECASE,

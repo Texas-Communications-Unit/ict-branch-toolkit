@@ -10,6 +10,7 @@ personal, credential, and restricted channel information according to applicable
 
 ## Preconditions
 
+- Require the full pre-deployment Security workflow to pass for the exact candidate commit before protected environment approval. Follow the [security maintenance runbook](security-maintenance.md).
 - Back up the reverse-proxy configuration before editing it.
 - Install Docker Engine and the Compose plugin from Docker's supported repository.
 - Bind the published application port to an appropriate interface and permit access only from the reverse proxy.
