@@ -1,9 +1,8 @@
 name: Deploy to Server
+run-name: Read-only Azure SSH connectivity probe
 
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
 
 permissions:
   contents: read
@@ -16,9 +15,57 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  connectivity:
+    name: Read-only runner connectivity
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Compare target and probe public SSH connectivity
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+        run: |
+          python3 - <<'PY'
+          import os
+          import socket
+
+          configured = os.environ["DEPLOY_HOST"].strip()
+          canonical = "toolkit.tx-comu.org"
+          port = int(os.environ["DEPLOY_PORT"].strip())
+          try:
+              same = socket.gethostbyname(configured) == socket.gethostbyname(canonical)
+              print(f"Configured host matches public Toolkit IPv4: {same}", flush=True)
+          except OSError as error:
+              print(f"Target comparison failed: {type(error).__name__}", flush=True)
+          print(f"Configured port is standard SSH port: {port == 22}", flush=True)
+          for label, host, number in (("Configured", configured, port), ("Public Toolkit", canonical, 22)):
+              try:
+                  with socket.create_connection((host, number), timeout=10):
+                      print(f"{label} TCP connection: reachable", flush=True)
+              except OSError as error:
+                  print(f"{label} TCP connection: {type(error).__name__}", flush=True)
+          PY
+      - name: Verify SSH identity without changing server state
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        run: |
+          install -d -m 700 "$HOME/.ssh"
+          trap 'rm -f "$HOME/.ssh/probe_key" "$HOME/.ssh/probe_hosts"' EXIT
+          printf '%s\n' "$DEPLOY_SSH_KEY" > "$HOME/.ssh/probe_key"
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > "$HOME/.ssh/probe_hosts"
+          chmod 600 "$HOME/.ssh/probe_key" "$HOME/.ssh/probe_hosts"
+          ssh -i "$HOME/.ssh/probe_key" -p "$DEPLOY_PORT" \
+            -o UserKnownHostsFile="$HOME/.ssh/probe_hosts" \
+            -o BatchMode=yes -o ConnectTimeout=10 -o IdentitiesOnly=yes \
+            -o StrictHostKeyChecking=yes "$DEPLOY_USER@$DEPLOY_HOST" true
+
   security:
     name: Pre-deployment security
-    if: github.ref == 'refs/heads/main'
+    if: ${{ false }}
     permissions:
       contents: read
       security-events: write
@@ -26,6 +73,7 @@ jobs:
 
   deploy:
     name: Deploy current main
+    if: ${{ false }}
     needs: security
     permissions:
       contents: read
