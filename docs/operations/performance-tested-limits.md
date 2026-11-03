@@ -20,7 +20,7 @@ tests these authenticated list paths:
 | Workload                   | Synthetic dataset and returned page                                                           | Database-query budget | JSON response budget |
 | -------------------------- | --------------------------------------------------------------------------------------------- | --------------------: | -------------------: |
 | Incident list              | 101 incident memberships; first 100 incidents, each with 2 operational periods                |                     6 |              128 KiB |
-| Incident update with audit | 1 incident membership; status patch plus append-only audit event                              |                    12 |                8 KiB |
+| Incident update with audit | 1 incident membership; permitted name patch plus append-only before/after audit event          |                    14 |                8 KiB |
 | Conventional-channel list  | 1,001 channels; oversized request is clamped to 1,000 results                                 |                     4 |              1.5 MiB |
 | Radio-site list            | 101 sites; first 100 sites, each with 3 manual rings                                          |                     5 |              256 KiB |
 | ICS-205 plan list          | 25 plans, 2 revisions per plan, 10 assignments and 1 two-assignment relationship per revision |                    10 |              512 KiB |
@@ -31,6 +31,8 @@ and audit append. They exclude the single token-authentication lookup so the
 tests isolate endpoint data-access behavior. The response budgets cover the
 uncompressed JSON body produced by the fixed synthetic fixtures; they do not
 cap arbitrarily long text values or HTTP headers.
+
+On November 3, 2026, the update fixture was aligned with the existing immutable-status policy and before/after audit payload. SQLite measured 13 statements for a permitted name change, including the nested savepoint pair protecting metadata and audit together. The budget of 14 retains one statement of headroom over that measurement. This changes the regression fixture and its documented envelope, not update permissions or audit behavior.
 
 P3.3 adds two bounded plan-list queries: one resolves the requester's
 incident-scoped role for restricted fields and one loads the incident's

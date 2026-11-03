@@ -251,7 +251,7 @@ jobs:
       - run: ruff check . && ruff format --check .
       - run: pytest --no-cov -q
       - run: python manage.py makemigrations --check --dry-run
-      - run: python manage.py spectacular --file "$RUNNER_TEMP/openapi.yaml" --validate
+      - run: python manage.py spectacular --file "$RUNNER_TEMP/openapi.yaml" --validate --fail-on-warn
 
   frontend-tests:
     name: Frontend regression

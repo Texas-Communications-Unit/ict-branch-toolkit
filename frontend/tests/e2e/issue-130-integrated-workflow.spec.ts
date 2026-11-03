@@ -63,24 +63,35 @@ test("Issue 130 integrated workflow preserves search, selection, units, provenan
         </div>
       </article>
     `;
-    panel.querySelector("button:not([class])")?.addEventListener("click", () => {
-      panel.dataset.previewed = "true";
-    });
+    panel
+      .querySelector("button:not([class])")
+      ?.addEventListener("click", () => {
+        panel.dataset.previewed = "true";
+      });
     document.body.append(panel);
   });
 
   const search = page.getByRole("heading", { name: "Map location search" });
   await expect(search).toBeVisible();
 
-  await page.getByLabel("Location").fill("33.214500, -97.133100");
+  await page
+    .getByRole("textbox", { name: "Location", exact: true })
+    .fill("33.214500, -97.133100");
   await page.getByRole("button", { name: "Resolve location" }).click();
-  await expect(page.getByRole("status")).toContainText("1 normalized WGS 84 result available");
+  await expect(
+    page
+      .getByRole("region", { name: "Map location search" })
+      .getByRole("status"),
+  ).toContainText("1 normalized WGS 84 result available");
 
   await page.getByRole("button", { name: /synthetic command site/i }).click();
-  await expect(page.locator('input[placeholder="33.214500, -97.133100"]')).toHaveValue(
-    "33.214500, -97.133100",
+  await expect(
+    page.locator('input[placeholder="33.214500, -97.133100"]'),
+  ).toHaveValue("33.214500, -97.133100");
+  await expect(page.locator("section.map-panel")).toHaveAttribute(
+    "data-previewed",
+    "true",
   );
-  await expect(page.locator("section.map-panel")).toHaveAttribute("data-previewed", "true");
 
   const incidentSite = page.getByRole("button", {
     name: /incident-created radio site synthetic icp/i,
@@ -100,10 +111,15 @@ test("Issue 130 integrated workflow preserves search, selection, units, provenan
   await expect(fccResult).toHaveAttribute("aria-pressed", "true");
   await expect(fccMarker).toContainText("Selected");
   await expect(detail).toBeFocused();
-  await expect(incidentSite).not.toHaveAttribute("data-selected-object", "ASR 12345");
+  await expect(incidentSite).not.toHaveAttribute(
+    "data-selected-object",
+    "ASR 12345",
+  );
 
   await expect(detail.getByText("328 ft (100 m)")).toBeVisible();
-  await expect(detail).toContainText("FCC source: Synthetic ASR/ULS reference fixture");
+  await expect(detail).toContainText(
+    "FCC source: Synthetic ASR/ULS reference fixture",
+  );
 
   const nifogMatch = detail.locator(".nifog-frequency-match");
   await expect(nifogMatch).toContainText("Interoperability reference match");
@@ -168,8 +184,12 @@ test("Issue 130 local coordinate planning remains available without optional pro
     document.body.append(panel);
   });
 
-  await page.getByLabel("Location").fill("33.214500, -97.133100");
+  await page
+    .getByRole("textbox", { name: "Location", exact: true })
+    .fill("33.214500, -97.133100");
   await expect(page.getByLabel(/Allow this query/)).not.toBeChecked();
   await page.getByRole("button", { name: "Resolve location" }).click();
-  await expect(page.getByRole("button", { name: /local coordinate/i })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: /local coordinate/i }),
+  ).toBeVisible();
 });

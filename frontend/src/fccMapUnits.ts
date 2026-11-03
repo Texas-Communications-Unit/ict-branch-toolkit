@@ -4,7 +4,9 @@ const METRIC_HEIGHT_PATTERN = /^(-?\d+(?:\.\d+)?)\s*m$/i;
 
 export function enhanceFccMapUnits(root: ParentNode = document) {
   root
-    .querySelectorAll<HTMLElement>(".fcc-tower-detail .coordinate-preview > div")
+    .querySelectorAll<HTMLElement>(
+      ".fcc-tower-detail .coordinate-preview > div",
+    )
     .forEach((row) => {
       const term = row.querySelector("dt")?.textContent?.trim();
       const value = row.querySelector("dd");

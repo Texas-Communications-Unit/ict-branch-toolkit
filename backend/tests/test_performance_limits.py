@@ -21,7 +21,8 @@ INCIDENT_PAGE_SIZE = 100
 PERIODS_PER_INCIDENT = 2
 INCIDENT_QUERY_BUDGET = 6
 INCIDENT_RESPONSE_BUDGET = 128 * 1024
-INCIDENT_UPDATE_QUERY_BUDGET = 12
+# Include the nested savepoint pair protecting metadata and audit as one operation.
+INCIDENT_UPDATE_QUERY_BUDGET = 14
 INCIDENT_UPDATE_RESPONSE_BUDGET = 8 * 1024
 
 RESOURCE_TOTAL = 1_001
@@ -183,7 +184,12 @@ def test_incident_update_envelope_includes_append_only_audit():
 
     assert response.json()["name"] == "Synthetic Updated Performance Write Exercise"
     event = AuditEvent.objects.get(action="incident.updated")
-    assert event.details == {"changed_fields": ["name"]}
+    assert event.details == {
+        "changed_fields": ["name"],
+        "incident_id": str(incident.id),
+        "before": {"name": "Synthetic Performance Write Exercise"},
+        "after": {"name": "Synthetic Updated Performance Write Exercise"},
+    }
     assert_envelope(
         name="incident-update-with-audit",
         query_count=query_count,
