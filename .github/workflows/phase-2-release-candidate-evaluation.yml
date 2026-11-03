@@ -171,6 +171,16 @@ jobs:
             pytest --no-cov -q tests/test_phase2_validation_api.py \
             | tee evaluation-evidence/phase2-integration.txt
 
+      - name: Rehearse an existing PostGIS 3.5 volume upgrade and dump-based rollback
+        shell: bash
+        run: |
+          db_container="$(docker compose --env-file "$DEPLOY_ENV" -f compose.production.yaml ps --quiet db)"
+          backend_container="$(docker compose --env-file "$DEPLOY_ENV" -f compose.production.yaml ps --quiet backend)"
+          python3 scripts/test-postgis-upgrade-integration.py \
+            --database-image "$(docker inspect --format '{{.Image}}' "$db_container")" \
+            --backend-image "$(docker inspect --format '{{.Image}}' "$backend_container")" \
+            --evidence evaluation-evidence/postgis-upgrade.json
+
       - name: Verify backup and isolated restore
         shell: bash
         env:

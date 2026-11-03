@@ -12,10 +12,26 @@ RUN go get golang.org/x/sys@v0.44.0 \
     && go mod verify \
     && go build -trimpath -ldflags=-w -o /out/gosu .
 
-FROM postgis/postgis:17-3.5-alpine
+FROM postgis/postgis:17-3.6-alpine
 
 # Preserve database engine, extensions, entrypoint, and data-directory format.
 RUN apk upgrade --no-cache
+
+# PostGIS 3.6.4's generated upgrade list predates stable 3.5.6/3.5.7.
+# Register those source versions using the vendor's unmodified ANY tag template;
+# the actual schema upgrade still uses the vendor's ANY-to-current SQL.
+RUN set -eu; \
+    extension_dir="$(pg_config --sharedir)/extension"; \
+    for template in "$extension_dir"/postgis*--TEMPLATED--TO--ANY.sql; do \
+      test -f "$template"; \
+      template_name="${template##*/}"; \
+      extension="${template_name%--TEMPLATED--TO--ANY.sql}"; \
+      for source_version in 3.5.6 3.5.7; do \
+        target="$extension_dir/$extension--$source_version--ANY.sql"; \
+        if [ ! -e "$target" ]; then ln -s "$template_name" "$target"; fi; \
+      done; \
+    done; \
+    test -f "$extension_dir/postgis--3.5.7--ANY.sql"
 COPY --from=gosu-build /out/gosu /usr/local/bin/gosu
 COPY --from=gosu-build /src/LICENSE /usr/local/share/licenses/gosu/LICENSE
 COPY --from=gosu-build /usr/local/go/LICENSE /usr/local/share/licenses/gosu/GO-LICENSE

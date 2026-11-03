@@ -11,7 +11,7 @@ Selected on 2026-07-22 from the official PyPI and npm package registries, then i
 | Django REST Framework | 3.18.3 | Security update verified against Django 5.2 on 2026-11-03 |
 | Pillow | 13.0.0 | Security update; image and document regression checks required |
 | pypdf | 6.21.4 | Security update; PDF regression checks required |
-| PostgreSQL/PostGIS image | 17 / 3.5 | Stable spatial database baseline with an official PostGIS project image |
+| PostgreSQL/PostGIS image | 17 / 3.6 | Coordinated image/SQL upgrade; existing-volume, restore, and rollback checks required |
 | React / React DOM | 19.2.8 | Current stable UI runtime |
 | TypeScript | 6.0.3 | Current stable version compatible with the selected type-aware tooling |
 | Vite | 8.1.5 | Current stable build and development server |

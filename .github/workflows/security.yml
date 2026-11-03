@@ -84,7 +84,7 @@ jobs:
           if matches '^backend/pyproject\.toml$|^frontend/(package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml|\.npmrc)$'; then
             dependencies=true
           fi
-          if matches '(^|/)(Dockerfile|\.dockerignore)$|^compose[^/]*\.ya?ml$|^backend/pyproject\.toml$|^frontend/(package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml|\.npmrc)$'; then
+          if matches '(^|/)(Dockerfile|\.dockerignore)$|^compose[^/]*\.ya?ml$|^backend/pyproject\.toml$|^scripts/test-postgis-upgrade-integration\.py$|^frontend/(package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml|\.npmrc)$'; then
             containers=true
           fi
 
@@ -225,7 +225,7 @@ jobs:
     timeout-minutes: 25
     services:
       db:
-        image: postgis/postgis:17-3.5-alpine
+        image: postgis/postgis:17-3.6-alpine
         env:
           POSTGRES_DB: synthetic_security
           POSTGRES_USER: synthetic_security

@@ -18,7 +18,7 @@ spec.loader.exec_module(recovery)
 with tempfile.TemporaryDirectory(prefix="ict-recovery-check-") as directory:
     root = Path(directory)
     project = "ict-recovery-check-" + uuid.uuid4().hex[:12]
-    image = "postgis/postgis:17-3.5-alpine"
+    image = "postgis/postgis:17-3.6-alpine"
     sleeping = {
         "image": image,
         "entrypoint": ["sh"],
