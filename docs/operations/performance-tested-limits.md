@@ -196,6 +196,8 @@ external SSO. It takes the shared host maintenance lock, validates its report,
 and retains the JSON Lines output and SHA-256 checksum. Report retrieval must
 recheck the checksum and use `scripts/validate-capacity-report.py`. There is no
 automatic production invocation or replacement production load-test workflow.
+New manual reports use a `manual-<run-id>-<attempt>` filename; historical
+`github-<run-id>-<attempt>` reports retain their original provenance and names.
 
 The default ramp is 5, 10, 25, 50, and 100 total users, with no more than 25
 users assigned to one synthetic incident. Each level exercises presence,

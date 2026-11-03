@@ -143,6 +143,31 @@ class FCCPreflightTests(unittest.TestCase):
         self.assertIn("RUN-SYNTHETIC-CAPACITY", result.stderr)
         self.assertEqual(self.events(), [])
 
+    def test_confirmed_capacity_run_refuses_an_active_maintenance_lock(self):
+        import fcntl
+
+        lock = self.root / ".cache/ict-branch-toolkit/maintenance.lock"
+        lock.parent.mkdir(parents=True)
+        with lock.open("w") as stream:
+            fcntl.flock(stream, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            result = subprocess.run(
+                [
+                    "bash",
+                    str(SCRIPT.with_name("run-shared-test-capacity.sh")),
+                    "b" * 40,
+                    "123",
+                    "1",
+                ],
+                env=self.environment
+                | {"ICT_CAPACITY_CONFIRMATION": "RUN-SYNTHETIC-CAPACITY"},
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("maintenance", result.stderr)
+        self.assertEqual(self.events(), [])
+
     def test_success_is_private_bounded_and_unchanged_archive_skips_import(self):
         for _ in range(2):
             result = self.run_helper()
