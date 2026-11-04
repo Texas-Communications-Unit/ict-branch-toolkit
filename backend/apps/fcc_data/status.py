@@ -15,8 +15,7 @@ COUNT_KEYS = {
 
 
 def dataset_status():
-    now = timezone.now()
-    datasets = []
+    snapshots = []
     for dataset, label in FccImportBatch.Dataset.choices:
         # Limit conflicting metadata as well as the ordinary single-current case.
         batches = list(
@@ -33,6 +32,12 @@ def dataset_status():
                 "record_counts",
             )[:2]
         )
+        snapshots.append((dataset, label, batches))
+    # An import may commit while these queries run. Sample the clock afterward
+    # so a valid newly committed timestamp is not reported as future-dated.
+    now = timezone.now()
+    datasets = []
+    for dataset, label, batches in snapshots:
         item = {
             "dataset": dataset,
             "label": label,
