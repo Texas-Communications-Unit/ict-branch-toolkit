@@ -2,6 +2,31 @@
 
 Authenticated users with channel-library view permission can search the current imported FCC datasets at `/api/fcc-licenses/` and `/api/fcc-antenna-structures/`. The website exposes the same functions in the **FCC Reference** workspace. Searches are read-only and results include archive provenance.
 
+## Dataset status
+
+Expand **FCC dataset status and provenance** in the FCC Reference workspace for
+read-only status cards for ASR, ULS private
+land mobile, and ULS commercial land mobile. It shows the current local import's
+archive retrieval/import timestamps, retrieval age, retained record counts, and
+expandable archive/source/digest provenance. Missing imports and conflicting
+current imports are explicit; future timestamps require review rather than
+displaying a negative age. Missing count metadata is shown as unknown, not zero.
+
+The `/api/fcc-dataset-status/` endpoint uses the existing `library.view` policy
+and three bounded import-metadata queries. It does not scan the nationwide
+reference tables, launch a synchronization, or return operator identities,
+private paths, or workflow logs. Counts are the parser's retained archive counts,
+not a new recount of records or a statement about all FCC licenses.
+
+Retrieval age is not an FCC publication date, licensing-validity determination,
+or proof of the last source check. Unchanged-archive checks do not create an
+import batch, so their check time is currently unavailable in this dashboard.
+The separate protected synchronization workflow remains the operator source for
+those execution results. A status request failure leaves reference search usable.
+
+The panel has automated keyboard, error/retry, narrow-reflow, and WCAG A/AA axe
+checks. Those checks do not replace the human accessibility review in Issue #69.
+
 ## Map layer
 
 The radio-site planning map uses

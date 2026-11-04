@@ -30,6 +30,7 @@ import type {
   ExternalIdentityStatus,
   FieldObservation,
   FccAntennaStructure,
+  FccDatasetStatus,
   FccLicenseSearchResult,
   FccMapFeatureCollection,
   FccTowerDetail,
@@ -1406,6 +1407,49 @@ export function searchFccLicenses(
   params: Record<string, string>,
 ): Promise<Paginated<FccLicenseSearchResult>> {
   return request(`/api/fcc-licenses/?${fccQuery(params)}`);
+}
+
+export async function getFccDatasetStatus(): Promise<FccDatasetStatus> {
+  const result = await request<FccDatasetStatus>("/api/fcc-dataset-status/");
+  if (
+    !result ||
+    typeof result.generated_at !== "string" ||
+    !Number.isFinite(Date.parse(result.generated_at)) ||
+    !Array.isArray(result.datasets) ||
+    result.datasets.length !== 3 ||
+    new Set(result.datasets.map((item) => item?.dataset)).size !== 3 ||
+    !result.datasets.every(
+      (item) =>
+        item &&
+        ["asr", "uls_private", "uls_commercial"].includes(item.dataset) &&
+        typeof item.label === "string" &&
+        ["available", "not_imported", "ambiguous"].includes(item.status) &&
+        typeof item.timestamp_warning === "boolean" &&
+        (item.retrieved_age_days === null ||
+          (Number.isSafeInteger(item.retrieved_age_days) &&
+            item.retrieved_age_days >= 0)) &&
+        [item.retrieved_at, item.imported_at, item.last_checked_at].every(
+          (value) =>
+            value === null ||
+            (typeof value === "string" && Number.isFinite(Date.parse(value))),
+        ) &&
+        item.record_counts &&
+        typeof item.record_counts === "object" &&
+        !Array.isArray(item.record_counts) &&
+        Object.values(item.record_counts).every(
+          (value) =>
+            value === null || (Number.isSafeInteger(value) && value >= 0),
+        ) &&
+        [
+          item.archive_name,
+          item.source_url,
+          item.content_sha256,
+          item.parser_version,
+        ].every((value) => value === null || typeof value === "string"),
+    )
+  )
+    throw new Error("Invalid FCC dataset status response.");
+  return result;
 }
 
 export function searchFccAntennaStructures(

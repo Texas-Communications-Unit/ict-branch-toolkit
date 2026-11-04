@@ -1299,6 +1299,25 @@ export interface FccBatchSummary {
   retrieved_at: string;
 }
 
+export interface FccDatasetStatus {
+  generated_at: string;
+  datasets: {
+    dataset: "asr" | "uls_private" | "uls_commercial";
+    label: string;
+    status: "available" | "not_imported" | "ambiguous";
+    retrieved_at: string | null;
+    imported_at: string | null;
+    retrieved_age_days: number | null;
+    timestamp_warning: boolean;
+    last_checked_at: string | null;
+    record_counts: Record<string, number | null>;
+    archive_name: string | null;
+    source_url: string | null;
+    content_sha256: string | null;
+    parser_version: string | null;
+  }[];
+}
+
 export interface FccAntennaStructure {
   id: string;
   registration_number: string;
