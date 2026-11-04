@@ -1,0 +1,20 @@
+[Unit]
+Description=ICT Toolkit weekly FCC synchronization
+After=network-online.target docker.service
+Wants=network-online.target
+Requires=docker.service
+RequiresMountsFor=@DATA_DIR@
+OnFailure=toolkit-fcc-notify@weekly.service
+
+[Service]
+Type=oneshot
+User=@DEPLOY_USER@
+Group=@DEPLOY_GROUP@
+UMask=0077
+WorkingDirectory=@APP_DIR@
+ExecStart=/usr/bin/python3 /usr/local/lib/ict-toolkit-fcc-sync.py --config /etc/ict-toolkit-fcc.json --job-name weekly
+TimeoutStartSec=12h
+KillMode=control-group
+Nice=10
+NoNewPrivileges=yes
+PrivateTmp=yes

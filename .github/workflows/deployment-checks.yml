@@ -19,6 +19,10 @@ on:
       - "scripts/test-fcc-sync-preflight.py"
       - "scripts/configure-azure-deployment.sh"
       - "scripts/sync-fcc-shared-test.sh"
+      - "scripts/fcc-server-automation.py"
+      - "scripts/fcc-temporary-memory-cleanup.py"
+      - "scripts/test-fcc-server-automation.py"
+      - "systemd/**"
       - "scripts/run-shared-test-capacity.sh"
   push:
     branches: [main]
@@ -46,6 +50,7 @@ jobs:
           python3 scripts/test-azure-deploy.py
           python3 scripts/test-azure-fcc-sync.py
           python3 scripts/test-fcc-sync-preflight.py
+          python3 scripts/test-fcc-server-automation.py
       - name: Test synthetic recovery success and failure paths
         run: python3 scripts/test-deployment-recovery-set.py
       - name: Verify failed image scans cannot replace running containers

@@ -1,0 +1,21 @@
+[Unit]
+Description=Finish the approved ICT Toolkit FCC migration
+After=network-online.target docker.service
+Wants=network-online.target
+Requires=docker.service
+RequiresMountsFor=@DATA_DIR@
+OnSuccess=toolkit-fcc-temporary-memory-cleanup.service
+OnFailure=toolkit-fcc-notify@bootstrap.service toolkit-fcc-temporary-memory-cleanup.service
+
+[Service]
+Type=oneshot
+User=@DEPLOY_USER@
+Group=@DEPLOY_GROUP@
+UMask=0077
+WorkingDirectory=@APP_DIR@
+ExecStart=/usr/bin/python3 /usr/local/lib/ict-toolkit-fcc-sync.py --config /etc/ict-toolkit-fcc.json --job-name bootstrap --after-external-log @EXTERNAL_LOG@ --after-dataset @AFTER_DATASET@ --dataset @REMAINING_DATASET@
+TimeoutStartSec=12h
+KillMode=control-group
+Nice=10
+NoNewPrivileges=yes
+PrivateTmp=yes
