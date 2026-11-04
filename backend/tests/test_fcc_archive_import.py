@@ -22,6 +22,122 @@ from apps.fcc_data.parser import (
     parse_fcc_archive,
 )
 from apps.fcc_data.services import apply_complete_archive
+from apps.fcc_data.spool import private_record_spool
+
+
+@pytest.mark.parametrize("dataset", ["uls_private", "uls_commercial"])
+def test_disk_spooled_uls_matches_in_memory_parser(tmp_path, dataset):
+    name = "l_LMpriv.zip" if dataset == "uls_private" else "l_LMcomm.zip"
+    archive = tmp_path / name
+    _uls_archive(archive)
+    expected = parse_fcc_archive(archive, dataset=dataset)
+    with private_record_spool() as store:
+        actual = parse_fcc_archive(archive, dataset=dataset, spool=store)
+        assert actual.content_sha256 == expected.content_sha256
+        assert actual.record_counts == expected.record_counts
+        for name in ("licenses", "locations", "frequencies", "emissions"):
+            assert list(getattr(actual, name)) == list(getattr(expected, name))
+
+
+@pytest.mark.django_db
+def test_management_command_spools_uls_and_cleans_selected_work_directory(tmp_path, capsys):
+    archive = tmp_path / "l_LMpriv.zip"
+    _uls_archive(archive)
+    work = tmp_path / "private-work"
+    work.mkdir()
+    actor = get_user_model().objects.create_user(username="fcc-spool-command", password="unused")
+    UserRoleAssignment.objects.create(user=actor, role=Role.ADMINISTRATOR, assigned_by=actor)
+    call_command(
+        "import_fcc_archive",
+        archive,
+        dataset="uls_private",
+        source_url="https://data.fcc.gov/download/pub/uls/complete/l_LMpriv.zip",
+        username=actor.username,
+        apply=True,
+        work_dir=work,
+    )
+    assert list(work.iterdir()) == []
+    assert archive.exists()
+    assert FccImportBatch.objects.get(is_current=True).record_counts["frequencies"] == 2
+    assert UlsFrequency.objects.count() == 2
+    output = capsys.readouterr().out
+    assert "Staged 2/2 ulsfrequency records (transaction not committed)." in output
+    assert output.index("transaction not committed") < output.index("Imported FCC batch")
+
+
+@pytest.mark.django_db
+def test_management_command_capacity_failure_cleans_storage_before_application_writes(
+    tmp_path,
+    monkeypatch,
+):
+    from importlib import import_module
+
+    from django.core.management.base import CommandError
+
+    command = import_module("apps.fcc_data.management.commands.import_fcc_archive")
+    archive = tmp_path / "l_LMpriv.zip"
+    _uls_archive(archive)
+    work = tmp_path / "private-work"
+    work.mkdir()
+    monkeypatch.setattr(
+        command,
+        "private_record_spool",
+        lambda **options: private_record_spool(maximum_bytes=4096, directory=options["directory"]),
+    )
+    with pytest.raises(CommandError, match="temporary parsing storage failed"):
+        call_command(
+            "import_fcc_archive",
+            archive,
+            dataset="uls_private",
+            source_url="https://data.fcc.gov/download/pub/uls/complete/l_LMpriv.zip",
+            work_dir=work,
+        )
+    assert list(work.iterdir()) == []
+    assert archive.exists()
+    assert FccImportBatch.objects.count() == 0
+    assert UlsLicense.objects.count() == 0
+
+
+@pytest.mark.django_db
+def test_spooled_import_rolls_back_new_batch_and_preserves_current_reference(tmp_path, monkeypatch):
+    from django.db.models.query import QuerySet
+
+    archive = tmp_path / "l_LMpriv.zip"
+    _uls_archive(archive)
+    actor = get_user_model().objects.create_user(username="fcc-rollback", password="unused")
+    UserRoleAssignment.objects.create(user=actor, role=Role.ADMINISTRATOR, assigned_by=actor)
+    original, _created = apply_complete_archive(
+        parsed=parse_fcc_archive(archive, dataset="uls_private"),
+        source_url="https://data.fcc.gov/download/pub/uls/complete/l_LMpriv.zip",
+        retrieved_at=datetime(2026, 11, 4, tzinfo=UTC),
+        actor=actor,
+    )
+    with zipfile.ZipFile(archive, "a") as source:
+        source.writestr("revision.txt", "Synthetic second revision")
+    original_bulk_create = QuerySet.bulk_create
+
+    def failing_bulk_create(queryset, objects, **kwargs):
+        if queryset.model is UlsEmission:
+            raise RuntimeError("synthetic emission failure")
+        return original_bulk_create(queryset, objects, **kwargs)
+
+    monkeypatch.setattr(QuerySet, "bulk_create", failing_bulk_create)
+    with pytest.raises(RuntimeError, match="synthetic emission failure"):
+        with private_record_spool() as store:
+            directory = store.directory
+            parsed = parse_fcc_archive(archive, dataset="uls_private", spool=store)
+            apply_complete_archive(
+                parsed=parsed,
+                source_url="https://data.fcc.gov/download/pub/uls/complete/l_LMpriv.zip",
+                retrieved_at=datetime(2026, 11, 4, tzinfo=UTC),
+                actor=actor,
+            )
+    assert not directory.exists()
+    assert FccImportBatch.objects.get(is_current=True).id == original.id
+    assert FccImportBatch.objects.count() == 1
+    assert UlsLicense.objects.count() == 2
+    assert UlsFrequency.objects.count() == 2
+    assert UlsEmission.objects.count() == 2
 
 
 def _row(size, values):

@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 import pytest
 from django.contrib.auth import get_user_model
 
@@ -85,6 +87,10 @@ def test_latest_effective_release_is_selected_per_source():
     old = make_release(user=user, source=source, version="SYN-OLD")
     make_channel(release=old, identifier="OLD-ID", rx=159_472_500)
     latest = make_release(user=user, source=source, version="SYN-LATEST")
+    # Clock resolution must not turn a strict latest-release test into a version tie test.
+    ResourceRelease.objects.filter(pk=old.pk).update(
+        imported_at=latest.imported_at - timedelta(seconds=1)
+    )
     make_channel(release=latest, identifier="LATEST-ID", rx=159_472_500)
 
     matches = build_nifog_match_index([159_472_500])[159_472_500]

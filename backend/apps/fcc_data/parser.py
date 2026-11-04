@@ -11,6 +11,7 @@ from pathlib import Path, PurePosixPath
 from django.core.exceptions import ValidationError
 
 from .models import MAX_FCC_FREQUENCY_HZ, FccImportBatch
+from .spool import RecordSpool, SpoolRecords
 
 PARSER_VERSION = "fcc-public-access-v1"
 MAX_ARCHIVE_BYTES = 1_000_000_000
@@ -92,9 +93,9 @@ class ParsedFccArchive:
     content_sha256: str
     structures: tuple[dict, ...] = ()
     licenses: tuple[dict, ...] = ()
-    locations: tuple[dict, ...] = ()
-    frequencies: tuple[dict, ...] = ()
-    emissions: tuple[dict, ...] = ()
+    locations: tuple[dict, ...] | SpoolRecords = ()
+    frequencies: tuple[dict, ...] | SpoolRecords = ()
+    emissions: tuple[dict, ...] | SpoolRecords = ()
     record_counts: dict[str, int] = field(default_factory=dict)
 
 
@@ -142,7 +143,9 @@ def _frequency_hz(value: str) -> int | None:
     return result
 
 
-def _unique_records(records: list[dict]) -> list[dict]:
+def _unique_records(records: list[dict] | SpoolRecords) -> list[dict] | SpoolRecords:
+    if isinstance(records, SpoolRecords):
+        return records
     seen = set()
     write_index = 0
     for record in records:
@@ -348,7 +351,12 @@ def _parse_asr(archive: zipfile.ZipFile, members: dict[str, zipfile.ZipInfo], ma
     return structures
 
 
-def _parse_uls(archive: zipfile.ZipFile, members: dict[str, zipfile.ZipInfo], maximum: int):
+def _parse_uls(
+    archive: zipfile.ZipFile,
+    members: dict[str, zipfile.ZipInfo],
+    maximum: int,
+    spool: RecordSpool | None = None,
+):
     entities = {}
     for fields in _rows(
         archive, members["EN.dat"], expected_record_type="EN", maximum_records=maximum
@@ -399,7 +407,7 @@ def _parse_uls(archive: zipfile.ZipFile, members: dict[str, zipfile.ZipInfo], ma
             }
         )
 
-    locations = []
+    locations = spool.records("locations") if spool is not None else []
     for fields in _rows(
         archive, members["LO.dat"], expected_record_type="LO", maximum_records=maximum
     ):
@@ -441,7 +449,7 @@ def _parse_uls(archive: zipfile.ZipFile, members: dict[str, zipfile.ZipInfo], ma
             }
         )
 
-    frequencies = []
+    frequencies = spool.records("frequencies") if spool is not None else []
     for fields in _rows(
         archive, members["FR.dat"], expected_record_type="FR", maximum_records=maximum
     ):
@@ -467,7 +475,7 @@ def _parse_uls(archive: zipfile.ZipFile, members: dict[str, zipfile.ZipInfo], ma
             }
         )
 
-    emissions = []
+    emissions = spool.records("emissions") if spool is not None else []
     for fields in _rows(
         archive, members["EM.dat"], expected_record_type="EM", maximum_records=maximum
     ):
@@ -510,6 +518,7 @@ def parse_fcc_archive(
     maximum_archive_bytes: int = MAX_ARCHIVE_BYTES,
     maximum_expanded_bytes: int = MAX_EXPANDED_BYTES,
     maximum_records: int = MAX_RECORDS,
+    spool: RecordSpool | None = None,
 ) -> ParsedFccArchive:
     if dataset not in EXPECTED_ARCHIVES:
         raise FccArchiveError(f"Unsupported FCC dataset: {dataset!r}.")
@@ -533,16 +542,20 @@ def parse_fcc_archive(
                     record_counts={"antenna_structures": len(structures)},
                 )
             licenses, locations, frequencies, emissions = _parse_uls(
-                archive, members, maximum_records
+                archive, members, maximum_records, spool
             )
+            if spool is not None:
+                spool.check_capacity()
             return ParsedFccArchive(
                 dataset=dataset,
                 archive_name=archive_path.name,
                 content_sha256=digest,
                 licenses=tuple(licenses),
-                locations=tuple(locations),
-                frequencies=tuple(frequencies),
-                emissions=tuple(emissions),
+                locations=locations if isinstance(locations, SpoolRecords) else tuple(locations),
+                frequencies=frequencies
+                if isinstance(frequencies, SpoolRecords)
+                else tuple(frequencies),
+                emissions=emissions if isinstance(emissions, SpoolRecords) else tuple(emissions),
                 record_counts={
                     "licenses": len(licenses),
                     "locations": len(locations),

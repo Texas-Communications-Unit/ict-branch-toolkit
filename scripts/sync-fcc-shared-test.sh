@@ -38,11 +38,32 @@ container_archive_dir=""
 container_archive=""
 
 cleanup() {
-  rm -f -- "$download_path"
+  local status=$?
+  local cleanup_failed=0
+  rm -f -- "$download_path" || cleanup_failed=1
   if [[ -n "$container_id" && -n "$container_archive_dir" ]]; then
-    docker exec "$container_id" sh -c 'rm -f -- "$1"; rmdir -- "$2"' \
-      sh "$container_archive" "$container_archive_dir" >/dev/null 2>&1 || true
+    if ! docker exec "$container_id" python -c '
+import os, re, shutil, sys
+path = sys.argv[1]
+if not re.fullmatch(r"/tmp/ict-fcc-[A-Za-z0-9]{8}", path):
+    raise SystemExit("Refusing invalid FCC temporary directory")
+if os.path.islink(path) or os.path.realpath(path) != path:
+    raise SystemExit("Refusing redirected FCC temporary directory")
+if os.path.isdir(path):
+    if os.stat(path).st_uid != os.geteuid():
+        raise SystemExit("Refusing a foreign-owned FCC temporary directory")
+    if not shutil.rmtree.avoids_symlink_attacks:
+        raise SystemExit("Safe recursive temporary cleanup is unavailable")
+    shutil.rmtree(path)
+' "$container_archive_dir" >/dev/null; then
+      cleanup_failed=1
+    fi
   fi
+  if (( cleanup_failed )); then
+    echo "FCC temporary cleanup failed for $container_archive_dir; inspect before retrying." >&2
+    if (( status == 0 )); then status=1; fi
+  fi
+  exit "$status"
 }
 trap cleanup EXIT
 trap 'exit 143' TERM
@@ -147,7 +168,8 @@ import_timeout="$(remaining_seconds)"
   timeout --signal=TERM --kill-after=30s "$import_timeout" \
     env PGOPTIONS='-c client_connection_check_interval=1s' \
     python manage.py import_fcc_archive "$container_archive" \
-    --dataset "$dataset" --source-url "$source_url" --username "$actor" --apply
+    --dataset "$dataset" --source-url "$source_url" --username "$actor" --apply \
+    --work-dir "$container_archive_dir"
 
 digest_temporary="$digest_path.tmp"
 printf '%s\n' "$download_digest" > "$digest_temporary"

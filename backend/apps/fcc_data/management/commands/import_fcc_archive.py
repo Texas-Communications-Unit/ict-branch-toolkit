@@ -1,3 +1,4 @@
+import sqlite3
 from pathlib import Path
 
 from django.contrib.auth import get_user_model
@@ -8,6 +9,7 @@ from apps.accounts.policy import LIBRARY_IMPORT, user_has_permission
 from apps.fcc_data.models import FccImportBatch
 from apps.fcc_data.parser import FccArchiveError, parse_fcc_archive
 from apps.fcc_data.services import apply_complete_archive
+from apps.fcc_data.spool import FccSpoolError, private_record_spool
 
 
 class Command(BaseCommand):
@@ -27,10 +29,22 @@ class Command(BaseCommand):
         )
         parser.add_argument("--apply", action="store_true")
         parser.add_argument("--username", help="Administrator recorded as the import actor.")
+        parser.add_argument(
+            "--work-dir",
+            type=Path,
+            help="Private parsing-storage parent (default: system temporary directory).",
+        )
 
     def handle(self, *args, **options):
         try:
-            parsed = parse_fcc_archive(options["archive"], dataset=options["dataset"])
+            with private_record_spool(directory=options["work_dir"]) as spool:
+                return self._import_archive(options, spool)
+        except (FccSpoolError, sqlite3.Error, OSError) as error:
+            raise CommandError(f"FCC temporary parsing storage failed: {error}") from error
+
+    def _import_archive(self, options, spool):
+        try:
+            parsed = parse_fcc_archive(options["archive"], dataset=options["dataset"], spool=spool)
         except FccArchiveError as error:
             raise CommandError(" ".join(error.messages)) from error
 
@@ -63,6 +77,9 @@ class Command(BaseCommand):
             source_url=options["source_url"],
             retrieved_at=timezone.now(),
             actor=actor,
+            progress=lambda kind, completed, total: self.stdout.write(
+                f"Staged {completed}/{total} {kind} records (transaction not committed)."
+            ),
         )
         if created:
             self.stdout.write(self.style.SUCCESS(f"Imported FCC batch {batch.id}: {counts}."))
