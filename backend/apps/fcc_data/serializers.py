@@ -1,5 +1,6 @@
 from urllib.parse import quote
 
+from drf_spectacular.utils import extend_schema_serializer
 from rest_framework import serializers
 
 from .models import (
@@ -11,6 +12,32 @@ from .models import (
     UlsLocation,
 )
 from .nifog import build_nifog_match_index, matches_for_frequency
+
+
+class FccDatasetStatusSerializer(serializers.Serializer):
+    dataset = serializers.ChoiceField(choices=FccImportBatch.Dataset.choices)
+    label = serializers.CharField()
+    status = serializers.ChoiceField(choices=["available", "not_imported", "ambiguous"])
+    retrieved_at = serializers.DateTimeField(allow_null=True)
+    imported_at = serializers.DateTimeField(allow_null=True)
+    retrieved_age_days = serializers.IntegerField(min_value=0, allow_null=True)
+    timestamp_warning = serializers.BooleanField()
+    last_checked_at = serializers.DateTimeField(
+        allow_null=True, help_text="Not recorded by the current importer; always null."
+    )
+    record_counts = serializers.DictField(
+        child=serializers.IntegerField(min_value=0, allow_null=True)
+    )
+    archive_name = serializers.CharField(allow_null=True)
+    source_url = serializers.URLField(allow_null=True)
+    content_sha256 = serializers.CharField(allow_null=True)
+    parser_version = serializers.CharField(allow_null=True)
+
+
+@extend_schema_serializer(many=False)
+class FccDatasetStatusResponseSerializer(serializers.Serializer):
+    generated_at = serializers.DateTimeField()
+    datasets = FccDatasetStatusSerializer(many=True)
 
 
 class FccBatchSummarySerializer(serializers.ModelSerializer):

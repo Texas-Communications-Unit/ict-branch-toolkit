@@ -1442,6 +1442,20 @@ paths:
               schema:
                 $ref: '#/components/schemas/FccMapFeatureCollection'
           description: ''
+  /api/fcc-dataset-status/:
+    get:
+      operationId: fcc_dataset_status_list
+      tags:
+      - fcc-dataset-status
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FccDatasetStatusResponse'
+          description: ''
   /api/fcc-licenses/:
     get:
       operationId: fcc_licenses_list
@@ -7951,6 +7965,90 @@ components:
       - parser_version
       - retrieved_at
       - source_url
+    FccDatasetStatus:
+      type: object
+      properties:
+        dataset:
+          $ref: '#/components/schemas/DatasetEnum'
+        label:
+          type: string
+        status:
+          $ref: '#/components/schemas/FccDatasetStatusStatusEnum'
+        retrieved_at:
+          type: string
+          format: date-time
+          nullable: true
+        imported_at:
+          type: string
+          format: date-time
+          nullable: true
+        retrieved_age_days:
+          type: integer
+          minimum: 0
+          nullable: true
+        timestamp_warning:
+          type: boolean
+        last_checked_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Not recorded by the current importer; always null.
+        record_counts:
+          type: object
+          additionalProperties:
+            type: integer
+            minimum: 0
+            nullable: true
+        archive_name:
+          type: string
+          nullable: true
+        source_url:
+          type: string
+          format: uri
+          nullable: true
+        content_sha256:
+          type: string
+          nullable: true
+        parser_version:
+          type: string
+          nullable: true
+      required:
+      - archive_name
+      - content_sha256
+      - dataset
+      - imported_at
+      - label
+      - last_checked_at
+      - parser_version
+      - record_counts
+      - retrieved_age_days
+      - retrieved_at
+      - source_url
+      - status
+      - timestamp_warning
+    FccDatasetStatusResponse:
+      type: object
+      properties:
+        generated_at:
+          type: string
+          format: date-time
+        datasets:
+          type: array
+          items:
+            $ref: '#/components/schemas/FccDatasetStatus'
+      required:
+      - datasets
+      - generated_at
+    FccDatasetStatusStatusEnum:
+      enum:
+      - available
+      - not_imported
+      - ambiguous
+      type: string
+      description: |-
+        * `available` - available
+        * `not_imported` - not_imported
+        * `ambiguous` - ambiguous
     FccMapFeature:
       type: object
       properties:

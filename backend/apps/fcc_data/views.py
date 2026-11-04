@@ -15,11 +15,22 @@ from apps.accounts.policy import LIBRARY_VIEW
 from .models import AntennaStructure, UlsEmission, UlsFrequency, UlsLicense, UlsLocation
 from .serializers import (
     AntennaStructureSerializer,
+    FccDatasetStatusResponseSerializer,
     FccMapFeatureCollectionSerializer,
     FccMapFeatureSerializer,
     FccTowerDetailSerializer,
     UlsLicenseSerializer,
 )
+from .status import dataset_status
+
+
+class FccDatasetStatusViewSet(viewsets.ViewSet):
+    permission_classes = [PolicyPermission]
+    policy_actions = {"list": LIBRARY_VIEW}
+
+    @extend_schema(responses=FccDatasetStatusResponseSerializer(many=False))
+    def list(self, request):
+        return Response(FccDatasetStatusResponseSerializer(dataset_status()).data)
 
 
 class FccSearchPagination(PageNumberPagination):

@@ -4,6 +4,9 @@ import userEvent from "@testing-library/user-event";
 import { FccReferenceWorkspace } from "../src/FccReferenceWorkspace";
 
 const api = vi.hoisted(() => ({
+  getFccDatasetStatus: vi
+    .fn()
+    .mockResolvedValue({ generated_at: "2026-11-04T12:00:00Z", datasets: [] }),
   searchFccAntennaStructures: vi.fn(),
   searchFccLicenses: vi.fn(),
 }));

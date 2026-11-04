@@ -1,6 +1,7 @@
 import { FormEvent, useState } from "react";
 
 import { searchFccAntennaStructures, searchFccLicenses } from "./api";
+import { FccDatasetStatusPanel } from "./FccDatasetStatusPanel";
 import type { FccAntennaStructure, FccLicenseSearchResult } from "./types";
 import { formatMetersAsFeet } from "./unitFormatting";
 
@@ -94,6 +95,10 @@ export function FccReferenceWorkspace() {
         Antenna Structure Registration records. Results retain their FCC archive
         provenance.
       </p>
+      <details>
+        <summary>FCC dataset status and provenance</summary>
+        <FccDatasetStatusPanel />
+      </details>
       <form className="import-panel" onSubmit={submit}>
         <fieldset>
           <legend>Record type</legend>
@@ -181,15 +186,21 @@ export function FccReferenceWorkspace() {
                       <strong>Interoperability reference match</strong>
                       <span>
                         {(entry.frequency_hz / 1_000_000).toFixed(6)} MHz ·{" "}
-                        {entry.matches.map((match) => match.identifier).join(", ")}
+                        {entry.matches
+                          .map((match) => match.identifier)
+                          .join(", ")}
                       </span>
                       {entry.matches.map((match) => (
                         <small key={`${match.release.id}-${match.identifier}`}>
-                          {match.identifier} · {match.name} · matched {match.matched_roles.join("/").toUpperCase()} · {match.source.name} {match.release.version}
+                          {match.identifier} · {match.name} · matched{" "}
+                          {match.matched_roles.join("/").toUpperCase()} ·{" "}
+                          {match.source.name} {match.release.version}
                         </small>
                       ))}
                       <small>
-                        Decision-support only. Exact frequency matching does not authorize transmission, establish licensing applicability, or confirm emission compatibility.
+                        Decision-support only. Exact frequency matching does not
+                        authorize transmission, establish licensing
+                        applicability, or confirm emission compatibility.
                       </small>
                     </div>
                   ))}
