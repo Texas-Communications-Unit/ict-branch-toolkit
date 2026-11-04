@@ -38,9 +38,11 @@ container_archive_dir=""
 container_archive=""
 
 cleanup() {
-  rm -f -- "$download_path"
+  local status=$?
+  local cleanup_failed=0
+  rm -f -- "$download_path" || cleanup_failed=1
   if [[ -n "$container_id" && -n "$container_archive_dir" ]]; then
-    docker exec "$container_id" python -c '
+    if ! docker exec "$container_id" python -c '
 import os, re, shutil, sys
 path = sys.argv[1]
 if not re.fullmatch(r"/tmp/ict-fcc-[A-Za-z0-9]{8}", path):
@@ -53,8 +55,15 @@ if os.path.isdir(path):
     if not shutil.rmtree.avoids_symlink_attacks:
         raise SystemExit("Safe recursive temporary cleanup is unavailable")
     shutil.rmtree(path)
-' "$container_archive_dir" >/dev/null 2>&1 || true
+' "$container_archive_dir" >/dev/null; then
+      cleanup_failed=1
+    fi
   fi
+  if (( cleanup_failed )); then
+    echo "FCC temporary cleanup failed for $container_archive_dir; inspect before retrying." >&2
+    if (( status == 0 )); then status=1; fi
+  fi
+  exit "$status"
 }
 trap cleanup EXIT
 trap 'exit 143' TERM

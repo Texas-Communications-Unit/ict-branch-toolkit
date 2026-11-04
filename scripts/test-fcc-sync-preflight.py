@@ -53,6 +53,7 @@ elif tool == "docker":
             assert args[-1] == "/tmp/ict-fcc-1234abcd"
             assert "shutil.rmtree(path)" in args[args.index("-c") + 1]
             event({"operation": "cleanup"})
+            sys.exit(int(os.environ.get("SYNTHETIC_CLEANUP_EXIT", "0")))
     elif args[0] == "compose":
         if "config" in args:
             pass
@@ -220,6 +221,16 @@ class FCCPreflightTests(unittest.TestCase):
             ["download", "private_transfer", "probe", "import", "cleanup"],
         )
         self.assertTrue(list((self.root / "backups/ict-branch-toolkit").glob("*.dump")))
+
+    def test_cleanup_failure_is_reported_after_a_successful_import(self):
+        result = self.run_helper(SYNTHETIC_CLEANUP_EXIT="7")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("temporary cleanup failed", result.stderr)
+        self.assertTrue(
+            (
+                self.root / "data/ict-branch-toolkit/fcc/r_tower.zip.imported.sha256"
+            ).exists()
+        )
 
 
 @unittest.skipUnless(os.name == "posix", "Cleanup runs inside the Linux backend")

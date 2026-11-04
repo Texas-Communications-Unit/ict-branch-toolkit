@@ -79,6 +79,9 @@ cleanup also removes that exact operation directory after the container command
 returns, including leftovers after a forced inner timeout. It requires the exact
 `/tmp/ict-fcc-XXXXXXXX` form, the backend account's ownership, an unredirected root,
 and symlink-resistant recursive deletion; nested links are not followed.
+Cleanup failure produces an operation failure and a private-log warning. If the
+import committed before cleanup failed, its success digest remains valid; verify
+the current batch before deciding whether to retry or perform cleanup only.
 For a manually launched command killed forcibly outside this wrapper, inspect
 and remove only its confirmed inactive private parsing directory. Never broadly
 clear `/tmp` or remove files belonging to a live import.
