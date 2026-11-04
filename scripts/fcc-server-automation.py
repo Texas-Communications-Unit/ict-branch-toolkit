@@ -321,7 +321,7 @@ def run_dataset(config, dataset, sha, state, job_name):
         "ICT_FCC_DEADLINE_EPOCH": str(int(time.time()) + seconds - 60),
     }
     expected = None
-    state.update(dataset=dataset, progress=None, updated_at=utc())
+    state.update(phase="importing", dataset=dataset, progress=None, updated_at=utc())
     save_status(config, job_name, state)
     with log.open("x") as stream:
         log.chmod(0o600)
@@ -498,6 +498,7 @@ def execute(config, args):
         KeyError,
         TypeError,
         subprocess.SubprocessError,
+        smtplib.SMTPException,
         KeyboardInterrupt,
     ) as error:
         state.update(
@@ -577,6 +578,7 @@ def main(argv=None):
         KeyError,
         TypeError,
         subprocess.SubprocessError,
+        smtplib.SMTPException,
         KeyboardInterrupt,
     ) as error:
         code = str(error) if isinstance(error, JobError) else type(error).__name__
