@@ -41,6 +41,10 @@ The synchronization helper retains its official FCC HTTPS archive URLs,
 digest-based no-change detection, private retained files, validated database
 backup, no-write archive-capacity probe, transactional reconciliation, and
 post-success digest marker. A failed import must not advance that marker.
+Archives are streamed through the configured backend account into its own
+mode-0700 temporary directory, with mode-0600 files. `docker cp` would create
+root-owned files that the hardened non-root backend cannot read. The transfer
+does not grant capabilities, change the backend user, or make archives public.
 
 ## Execution limits and failure handling
 

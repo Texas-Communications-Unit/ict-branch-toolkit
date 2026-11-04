@@ -36,9 +36,16 @@ elif tool == "curl":
     event({"operation": "download"})
     Path(args[args.index("--output") + 1]).write_bytes(b"synthetic archive")
 elif tool == "docker":
-    if args[:1] == ["cp"] or args[:2] == ["exec", "synthetic-container"]:
+    assert args[:1] != ["cp"], "Root-owned docker cp archive is not readable by hardened backend"
+    if args[:2] == ["exec", "synthetic-container"] or args[:3] == ["exec", "-i", "synthetic-container"]:
         if "printenv" in args:
             print("synthetic-actor")
+        elif "mktemp" in args:
+            print("/tmp/ict-fcc-1234abcd")
+        elif "cat >" in " ".join(args):
+            assert "umask 077" in " ".join(args)
+            assert args[-1] == "/tmp/ict-fcc-1234abcd/r_tower.zip"
+            event({"operation": "private_transfer", "bytes": len(sys.stdin.buffer.read())})
     elif args[0] == "compose":
         if "config" in args:
             pass
@@ -175,7 +182,7 @@ class FCCPreflightTests(unittest.TestCase):
         events = self.events()
         self.assertEqual(
             [e["operation"] for e in events],
-            ["download", "probe", "import", "download"],
+            ["download", "private_transfer", "probe", "import", "download"],
         )
         for e in events:
             if "timeout" in e:
@@ -198,7 +205,8 @@ class FCCPreflightTests(unittest.TestCase):
             ).exists()
         )
         self.assertEqual(
-            [e["operation"] for e in self.events()], ["download", "probe", "import"]
+            [e["operation"] for e in self.events()],
+            ["download", "private_transfer", "probe", "import"],
         )
         self.assertTrue(list((self.root / "backups/ict-branch-toolkit").glob("*.dump")))
 

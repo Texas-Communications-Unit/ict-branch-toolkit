@@ -105,6 +105,13 @@ jobs:
           print("Running backend has no Linux capabilities and cannot gain new privileges.")
           PY
 
+      - name: Verify private FCC archive staging in a hardened backend image
+        shell: bash
+        run: |
+          backend="$(docker compose --env-file "$DEPLOY_ENV" -f compose.production.yaml ps -q backend)"
+          image="$(docker inspect --format '{{.Image}}' "$backend")"
+          python3 scripts/test-fcc-private-transfer.py --backend-image "$image"
+
       - name: Verify installed health and fail-closed profile status
         shell: bash
         run: |
