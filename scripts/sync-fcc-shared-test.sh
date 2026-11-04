@@ -34,11 +34,14 @@ archive_path="$data_dir/$archive_name"
 download_path="$archive_path.download"
 digest_path="$archive_path.imported.sha256"
 container_id=""
+container_archive_dir=""
+container_archive=""
 
 cleanup() {
   rm -f -- "$download_path"
-  if [[ -n "$container_id" ]]; then
-    docker exec "$container_id" rm -f -- "/tmp/$archive_name" >/dev/null 2>&1 || true
+  if [[ -n "$container_id" && -n "$container_archive_dir" ]]; then
+    docker exec "$container_id" sh -c 'rm -f -- "$1"; rmdir -- "$2"' \
+      sh "$container_archive" "$container_archive_dir" >/dev/null 2>&1 || true
   fi
 }
 trap cleanup EXIT
@@ -112,12 +115,22 @@ sha256sum "$backup_file" > "$backup_file.sha256"
 chmod 600 "$backup_file.sha256"
 "${compose[@]}" exec -T db pg_restore --list < "$backup_file" >/dev/null
 
-docker cp "$archive_path" "$container_id:/tmp/$archive_name"
+# docker cp creates a root-owned file even when the image runs as a non-root
+# account. Stream through that account into its own private temporary directory.
+container_archive_dir="$(docker exec "$container_id" mktemp -d /tmp/ict-fcc-XXXXXXXX)"
+if [[ ! "$container_archive_dir" =~ ^/tmp/ict-fcc-[A-Za-z0-9]{8}$ ]]; then
+  container_archive_dir=""
+  echo "Backend returned an invalid private archive directory." >&2
+  exit 1
+fi
+container_archive="$container_archive_dir/$archive_name"
+docker exec -i "$container_id" sh -c 'umask 077; cat > "$1"' sh "$container_archive" \
+  < "$archive_path"
 probe_timeout="$(remaining_seconds)"
 probe_output="$(
   "${compose[@]}" exec -T backend \
     timeout --signal=TERM --kill-after=30s "$probe_timeout" \
-      python manage.py probe_fcc_archive_capacity "/tmp/$archive_name" --dataset "$dataset"
+      python manage.py probe_fcc_archive_capacity "$container_archive" --dataset "$dataset"
 )"
 python3 -c \
   'import json,sys; result=json.loads(sys.stdin.read()); assert result["validated"] is True; assert result["database_writes"] == 0' \
@@ -133,7 +146,7 @@ import_timeout="$(remaining_seconds)"
 "${compose[@]}" exec -T backend \
   timeout --signal=TERM --kill-after=30s "$import_timeout" \
     env PGOPTIONS='-c client_connection_check_interval=1s' \
-    python manage.py import_fcc_archive "/tmp/$archive_name" \
+    python manage.py import_fcc_archive "$container_archive" \
     --dataset "$dataset" --source-url "$source_url" --username "$actor" --apply
 
 digest_temporary="$digest_path.tmp"
