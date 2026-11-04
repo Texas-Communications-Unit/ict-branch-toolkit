@@ -1,0 +1,12 @@
+[Unit]
+Description=Weekly ICT Toolkit FCC public-reference update
+
+[Timer]
+OnCalendar=Mon *-*-* 10:30:00 UTC
+RandomizedDelaySec=120
+AccuracySec=1min
+Persistent=false
+Unit=toolkit-fcc-sync.service
+
+[Install]
+WantedBy=timers.target

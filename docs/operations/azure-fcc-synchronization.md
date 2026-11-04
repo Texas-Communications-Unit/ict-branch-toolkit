@@ -14,16 +14,16 @@ refuses stale runs. The host helper independently requires the same deployed
 commit and a clean checkout while holding the host maintenance lock. Deploy
 the reviewed main commit before verifying or running its FCC workflow.
 
-Scheduled runs are Mondays at **10:30 UTC (04:30 CST / 05:30 CDT)**. This moves
-the former 09:00 UTC schedule past the 09:30 UTC application-backup window.
-Schedule timing is a buffer; the maintenance lock still prevents overlap.
-FCC operations and application deployments also share the Actions concurrency
-group. A queued job does not replace or cancel a running operation.
+Unattended scheduling now runs through the
+[server FCC automation](fcc-server-automation.md), on Mondays at
+**10:30 UTC (04:30 CST / 05:30 CDT)**. The GitHub workflow has no scheduled
+trigger and remains a manual recovery and verification tool. The shared host
+maintenance lock prevents overlap with backups, deployment, or server imports.
 
-Both scheduled and manual runs require the existing `shared-test` environment
-approval. Scheduled synchronization therefore waits for a reviewer; it does
-not silently bypass approval to run unattended. Keep environment deployment
-branches restricted to `main` and keep the reviewer requirement enabled.
+Manual GitHub runs still require the existing `shared-test` environment
+approval. Keep environment deployment branches restricted to `main` and keep
+the reviewer requirement enabled. Application deployments remain separately
+approved; the server timer never pulls code or deploys an application release.
 
 After merging and deploying the reviewed main commit:
 

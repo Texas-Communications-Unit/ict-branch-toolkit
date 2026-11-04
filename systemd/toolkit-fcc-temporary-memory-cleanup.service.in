@@ -1,0 +1,16 @@
+[Unit]
+Description=Remove recorded temporary FCC import memory after imports stop
+After=docker.service
+ConditionPathExists=@SWAP_PATH@
+
+[Service]
+Type=oneshot
+User=root
+UMask=0077
+ExecStart=/usr/bin/python3 /usr/local/lib/ict-toolkit-fcc-memory-cleanup.py --swap-path @SWAP_PATH@ --record @RESOURCE_RECORD@ --allowed-directory @DATA_DIR@ --maintenance-lock @MAINTENANCE_LOCK@
+TimeoutStartSec=12h
+Restart=on-failure
+RestartSec=5min
+
+[Install]
+WantedBy=multi-user.target
