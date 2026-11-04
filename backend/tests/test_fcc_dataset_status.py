@@ -81,6 +81,9 @@ def test_conflicting_current_imports_do_not_silently_select_one(reader):
 @pytest.mark.parametrize("field", ["retrieved_at", "imported_at"])
 def test_future_timestamps_are_explicit_not_negative_freshness(reader, field):
     current = batch(reader)
+    FccImportBatch.objects.filter(pk=current.pk).update(
+        retrieved_at=NOW - timedelta(days=2), imported_at=NOW - timedelta(days=1)
+    )
     FccImportBatch.objects.filter(pk=current.pk).update(**{field: NOW + timedelta(days=1)})
     row = status()["datasets"][0]
     assert row["timestamp_warning"] is True
