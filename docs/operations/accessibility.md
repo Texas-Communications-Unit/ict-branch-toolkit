@@ -23,6 +23,8 @@ The browser workflow currently checks:
 - terrain capability, fail-closed status, and disabled-action presentation
   within the authenticated workflow;
 - the authenticated workspace at 320 CSS pixels;
+- FCC dataset-status error/retry, keyboard-operated provenance disclosure, and
+  expanded status at 320 CSS pixels;
 - document-level horizontal overflow at 320 CSS pixels.
 
 Run the checks locally:
@@ -64,6 +66,13 @@ At minimum:
 
 Use synthetic data only. Evidence from a different commit is not sufficient
 when the affected process or generated artifact changed.
+
+For the FCC dataset-status change (Issue #203), include the collapsed and
+expanded status disclosure, loading, retry after failure, missing datasets,
+conflicting imports, future timestamps, unknown counts, long digests, and the
+existing search form. Confirm screen-reader announcement order and date meaning,
+focus after refresh/retry, keyboard access to source links, and 200/400 percent
+text/zoom behavior. Automated evidence does not complete this manual scope.
 
 ## Keyboard and screen-reader design
 
