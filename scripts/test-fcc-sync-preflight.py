@@ -3,11 +3,14 @@
 
 import json
 import os
+import re
+import shutil
 import subprocess
 import sys
 import tempfile
 import time
 import unittest
+import uuid
 from pathlib import Path
 
 SCRIPT = Path(__file__).with_name("sync-fcc-shared-test.sh")
@@ -46,6 +49,10 @@ elif tool == "docker":
             assert "umask 077" in " ".join(args)
             assert args[-1] == "/tmp/ict-fcc-1234abcd/r_tower.zip"
             event({"operation": "private_transfer", "bytes": len(sys.stdin.buffer.read())})
+        elif "python" in args:
+            assert args[-1] == "/tmp/ict-fcc-1234abcd"
+            assert "shutil.rmtree(path)" in args[args.index("-c") + 1]
+            event({"operation": "cleanup"})
     elif args[0] == "compose":
         if "config" in args:
             pass
@@ -63,6 +70,7 @@ elif tool == "docker":
                 print(json.dumps({"validated": True, "database_writes": 0}))
             elif "import_fcc_archive" in args:
                 assert "PGOPTIONS=-c client_connection_check_interval=1s" in args
+                assert args[args.index("--work-dir") + 1] == "/tmp/ict-fcc-1234abcd"
                 event({"operation": "import", "timeout": duration})
                 sys.exit(int(os.environ.get("SYNTHETIC_IMPORT_EXIT", "0")))
             else:
@@ -104,6 +112,7 @@ class FCCPreflightTests(unittest.TestCase):
         return subprocess.run(
             ["bash", str(SCRIPT), "asr", "b" * 40],
             env=self.environment | changes,
+            check=False,
             capture_output=True,
             text=True,
             timeout=15,
@@ -142,6 +151,7 @@ class FCCPreflightTests(unittest.TestCase):
                 "1",
             ],
             env=environment,
+            check=False,
             capture_output=True,
             text=True,
             timeout=10,
@@ -167,6 +177,7 @@ class FCCPreflightTests(unittest.TestCase):
                 ],
                 env=self.environment
                 | {"ICT_CAPACITY_CONFIRMATION": "RUN-SYNTHETIC-CAPACITY"},
+                check=False,
                 capture_output=True,
                 text=True,
                 timeout=10,
@@ -182,7 +193,7 @@ class FCCPreflightTests(unittest.TestCase):
         events = self.events()
         self.assertEqual(
             [e["operation"] for e in events],
-            ["download", "private_transfer", "probe", "import", "download"],
+            ["download", "private_transfer", "probe", "import", "cleanup", "download"],
         )
         for e in events:
             if "timeout" in e:
@@ -206,9 +217,63 @@ class FCCPreflightTests(unittest.TestCase):
         )
         self.assertEqual(
             [e["operation"] for e in self.events()],
-            ["download", "private_transfer", "probe", "import"],
+            ["download", "private_transfer", "probe", "import", "cleanup"],
         )
         self.assertTrue(list((self.root / "backups/ict-branch-toolkit").glob("*.dump")))
+
+
+@unittest.skipUnless(os.name == "posix", "Cleanup runs inside the Linux backend")
+class FCCTemporaryCleanupTests(unittest.TestCase):
+    def setUp(self):
+        match = re.search(
+            r'''python -c '(.*?)' "\$container_archive_dir"''',
+            SCRIPT.read_text(),
+            re.DOTALL,
+        )
+        self.assertIsNotNone(match)
+        self.program = match.group(1)
+        self.target = Path("/tmp") / ("ict-fcc-" + uuid.uuid4().hex[:8])
+        self.target.mkdir(mode=0o700)
+        self.addCleanup(self.remove_target)
+
+    def remove_target(self):
+        if self.target.is_symlink():
+            self.target.unlink()
+        elif self.target.exists():
+            shutil.rmtree(self.target)
+
+    def clean(self, path):
+        return subprocess.run(
+            [sys.executable, "-c", self.program, str(path)],
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+
+    def test_removes_only_owned_operation_directory_without_following_nested_links(
+        self,
+    ):
+        with tempfile.TemporaryDirectory() as outside:
+            sentinel = Path(outside) / "retain.txt"
+            sentinel.write_text("synthetic unrelated data")
+            nested = self.target / "ict-fcc-parsed-synthetic"
+            nested.mkdir()
+            (nested / "records.sqlite3").write_bytes(b"synthetic parsing storage")
+            (nested / "outside").symlink_to(outside, target_is_directory=True)
+            result = self.clean(self.target)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertFalse(self.target.exists())
+            self.assertEqual(sentinel.read_text(), "synthetic unrelated data")
+
+    def test_refuses_redirected_root_and_broad_directory(self):
+        with tempfile.TemporaryDirectory() as outside:
+            self.target.rmdir()
+            self.target.symlink_to(outside, target_is_directory=True)
+            self.assertNotEqual(self.clean(self.target).returncode, 0)
+            self.assertTrue(self.target.is_symlink())
+            self.assertTrue(Path(outside).exists())
+        self.assertNotEqual(self.clean("/tmp").returncode, 0)
 
 
 if __name__ == "__main__":

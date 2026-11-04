@@ -46,6 +46,48 @@ mode-0700 temporary directory, with mode-0600 files. `docker cp` would create
 root-owned files that the hardened non-root backend cannot read. The transfer
 does not grant capabilities, change the backend user, or make archives public.
 
+## Temporary parsing storage and insertion progress
+
+The management command spools ULS locations, frequencies, and emissions to a
+private disposable SQLite file instead of retaining every related dictionary
+and deduplication identity in Python memory. It preserves input order, typed
+values, numeric precision, and exact duplicate suppression. Non-finite related
+decimal values are refused; scientific notation is not expanded into potentially
+huge strings. Digest collisions fail the import rather than discarding records.
+
+The spool has a 20 GiB file-size limit, a 2 GiB free-space reserve checked every
+1,000 input records, and a 32 MiB SQLite cache target. These are parsing-storage
+guards, not a guarantee of fixed total process memory: license/entity lookup
+data and each collection's UUID allocation still scale with the configured
+archive record limit. Validate real archive capacity before relying on a schedule.
+
+The spool is disposable, not a backup. Its journal and synchronization are
+disabled; corruption or a storage error must fail the import. The application
+database retains its normal transaction and durability protections. See
+[SQLite temporary-file behavior](https://www.sqlite.org/tempfiles.html).
+
+Each collection receives randomly generated UUIDv4 identifiers in sorted order
+to improve index-write locality while preserving public source-record order.
+This changes neither source identifiers nor the UUID format. Production runtime
+improvement must be measured by an approved synchronization; it is not guaranteed
+by the unit tests. No timeout, archive limit, container privilege, or retention
+policy is relaxed.
+
+The host helper supplies `--work-dir` pointing inside its own private operation
+directory. Normal Python success/failure removes the parsing child. Workflow
+cleanup also removes that exact operation directory after the container command
+returns, including leftovers after a forced inner timeout. It requires the exact
+`/tmp/ict-fcc-XXXXXXXX` form, the backend account's ownership, an unredirected root,
+and symlink-resistant recursive deletion; nested links are not followed.
+For a manually launched command killed forcibly outside this wrapper, inspect
+and remove only its confirmed inactive private parsing directory. Never broadly
+clear `/tmp` or remove files belonging to a live import.
+
+Aggregate `Staged completed/total` messages describe uncommitted work. Only the
+final successful import, successful remote exit, current batch metadata, and
+matching success digest establish completion. A staging count is not a published
+dataset or evidence that rollback protection has been bypassed.
+
 ## Execution limits and failure handling
 
 The Actions job retains its **180-minute** budget. Guest work is bounded at

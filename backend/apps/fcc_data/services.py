@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import uuid
+from itertools import islice
+
 from django.db import transaction
 
 from apps.audit.services import record_event
@@ -19,20 +22,33 @@ IMPORT_BATCH_SIZE = 5_000
 
 def _chunks(records, size=None):
     size = size or IMPORT_BATCH_SIZE
-    for start in range(0, len(records), size):
-        yield records[start : start + size]
+    iterator = iter(records)
+    while chunk := tuple(islice(iterator, size)):
+        yield chunk
 
 
-def _bulk_create(model, records, factory):
+def _bulk_create(model, records, factory, progress=None):
+    total = len(records)
+    # Keep UUIDv4 semantics while walking the retained UUID index in ascending order.
+    # Allocate identifiers for only this collection; related payloads remain disk-backed.
+    identifiers = sorted((uuid.uuid4() for _ in range(total)), reverse=True)
+    completed = 0
+    if progress:
+        progress(model._meta.model_name, completed, total)
     for records_chunk in _chunks(records):
         model.objects.bulk_create(
-            [factory(record) for record in records_chunk],
+            [factory(record, identifiers.pop()) for record in records_chunk],
             batch_size=IMPORT_BATCH_SIZE,
         )
+        completed += len(records_chunk)
+        if progress and (completed % 100_000 == 0 or completed == total):
+            progress(model._meta.model_name, completed, total)
 
 
 @transaction.atomic
-def apply_complete_archive(*, parsed: ParsedFccArchive, source_url: str, retrieved_at, actor):
+def apply_complete_archive(
+    *, parsed: ParsedFccArchive, source_url: str, retrieved_at, actor, progress=None
+):
     existing = FccImportBatch.objects.filter(
         dataset=parsed.dataset, content_sha256=parsed.content_sha256
     ).first()
@@ -57,13 +73,15 @@ def apply_complete_archive(*, parsed: ParsedFccArchive, source_url: str, retriev
         _bulk_create(
             AntennaStructure,
             parsed.structures,
-            lambda record: AntennaStructure(batch=batch, **record),
+            lambda record, identifier: AntennaStructure(id=identifier, batch=batch, **record),
+            progress,
         )
     if parsed.licenses:
         _bulk_create(
             UlsLicense,
             parsed.licenses,
-            lambda record: UlsLicense(batch=batch, **record),
+            lambda record, identifier: UlsLicense(id=identifier, batch=batch, **record),
+            progress,
         )
         license_ids_by_source_id = dict(
             UlsLicense.objects.filter(batch=batch)
@@ -72,12 +90,14 @@ def apply_complete_archive(*, parsed: ParsedFccArchive, source_url: str, retriev
         )
 
         def related(model, records):
-            def make_object(record):
+            def make_object(record, identifier):
                 values = dict(record)
                 source_id = values.pop("license_source_id")
-                return model(license_id=license_ids_by_source_id[source_id], **values)
+                return model(
+                    id=identifier, license_id=license_ids_by_source_id[source_id], **values
+                )
 
-            _bulk_create(model, records, make_object)
+            _bulk_create(model, records, make_object, progress)
 
         related(UlsLocation, parsed.locations)
         related(UlsFrequency, parsed.frequencies)
