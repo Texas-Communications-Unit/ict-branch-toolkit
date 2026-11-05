@@ -21,7 +21,7 @@ dependencies = [
   "pypdf==6.21.4",
   "openpyxl==3.1.5",
   "cryptography==50.0.2",
-  "sqlparse==0.6.0",
+  "sqlparse==0.6.1",
   "mgrs==1.5.4",
 ]
 
