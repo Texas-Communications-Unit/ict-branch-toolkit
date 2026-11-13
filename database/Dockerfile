@@ -12,7 +12,7 @@ RUN go get golang.org/x/sys@v0.44.0 \
     && go mod verify \
     && go build -trimpath -ldflags=-w -o /out/gosu .
 
-FROM postgis/postgis:17-3.6-alpine
+FROM postgis/postgis:17-3.7-alpine
 
 # Preserve database engine, extensions, entrypoint, and data-directory format.
 RUN apk upgrade --no-cache
