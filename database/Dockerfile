@@ -1,4 +1,4 @@
-FROM golang:1.27.3-alpine3.24 AS gosu-build
+FROM golang:1.27.4-alpine3.24 AS gosu-build
 
 # Upstream gosu 1.20, rebuilt with a patched Go toolchain instead of Go 1.24.6.
 ARG GOSU_COMMIT=29b939aa5bd4dc588af765b8248f6e39150d2565
